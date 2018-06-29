@@ -1,5 +1,3 @@
-include("NSOLT/MDCDL.jl")
-
 using MDCDL
 
 D = 1

@@ -1,5 +1,3 @@
-include("NSOLT/MDCDL.jl")
-
 using NLopt
 using MDCDL
 using TestImages, Images

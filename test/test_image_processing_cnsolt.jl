@@ -1,5 +1,3 @@
-include("NSOLT/MDCDL.jl")
-
 using Images, ImageView
 using TestImages
 using MDCDL

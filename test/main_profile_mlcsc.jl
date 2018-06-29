@@ -1,4 +1,3 @@
-include("NSOLT/CnsoltSystem.jl")
 using CnsoltSystem
 using NLopt
 using Images, ImageView, TestImages
