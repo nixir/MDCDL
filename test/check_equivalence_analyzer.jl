@@ -1,5 +1,7 @@
 using MDCDL
 
+include("randomInit.jl")
+
 D = 1
 # df = ntuple(v -> 2, D) # must be even
 df = (2,)
@@ -10,21 +12,7 @@ ord = (2,)
 
 # create a CNSOLT object
 cnsolt = Cnsolt(df, nch, ord)
-
-# set random values to CNSOLT's parameters
-if false
-    # initialize parameter matrices
-    cnsolt.symmetry .= Diagonal(exp.(1im*rand(nch)))
-    cnsolt.initMatrices[1] = Array(qr(rand(nch,nch))[1])
-
-    for d = 1:D
-        map!(cnsolt.PropMatrices[d], cnsolt.PropMatrices[d]) do A
-            Array(qr(rand(size(A)))[1])
-        end
-
-        @. cnsolt.paramAngles[d] = rand(size(cnsolt.paramAngles[d]))
-    end
-end
+randomInit!(cnsolt)
 
 # atmimshow(cnsolt)
 

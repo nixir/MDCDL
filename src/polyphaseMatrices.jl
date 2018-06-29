@@ -57,17 +57,56 @@ function getAnalysisBank(cc::MDCDL.Cnsolt{D,1,T}) where {D,T}
     cc.symmetry * ppm
 end
 
-function getAnalysisFilters(cc::MDCDL.Cnsolt{D,S,T}) where {D,S,T}
-    df = cc.decimationFactor
+function getAnalysisBank(rc::MDCDL.Rnsolt{D,1,T}) where {D,T}
+    df = rc.decimationFactor
+    nch = rc.nChannels
+    P = sum(nch)
+    M = prod(df)
+    ord = rc.polyphaseOrder
 
-    afb = MDCDL.getAnalysisBank(cc)
+    rngUpper = (1:nch[1], :)
+    rngLower = (nch[1]+1:P, :)
+
+    # output
+    ppm = zeros(T, P, prod(df .* (ord .+ 1)))
+    # ppm[1:M,1:M] = rc.matrixF
+    ppm[1:cld(M,2), 1:M] = rc.matrixC[1:cld(M,2),:]
+    ppm[nch[1]+(1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
+
+    # Initial matrix process
+    ppm[rngUpper...] = rc.initMatrices[1] * ppm[rngUpper...]
+    ppm[rngLower...] = rc.initMatrices[2] * ppm[rngLower...]
+
+    nStride = M
+    for d = 1:D
+        propMats = rc.propMatrices[d]
+        for k = 1:ord[d]
+            U = propMats[k]
+
+            # B Λ(z_d) B'
+            ppm = MDCDL.butterfly(ppm, nch[1])
+            ppm[rngLower...] = circshift(ppm[rngLower...],(0, nStride))
+            ppm = MDCDL.butterfly(ppm, nch[1])
+
+            ppm[rngLower...] = U * ppm[rngLower...]
+        end
+        nStride *= ord[d] + 1
+    end
+    ppm
+end
+
+function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
+    df = pfb.decimationFactor
+    P = sum(pfb.nChannels)
+
+    afb = MDCDL.getAnalysisBank(pfb)
     # primeBlock = ntuple(d -> 1:df[d], D)
     primeBlock = colon.(1,df)
-    ordm = cc.polyphaseOrder .+ 1
-    vecfs = [ afb[p,:] for p in 1:cc.nChannels ]
+    ordm = pfb.polyphaseOrder .+ 1
+    vecfs = [ afb[p,:] for p in 1:P ]
 
-    return map(1:cc.nChannels) do p
-        out = complex(zeros(cc.decimationFactor .* ordm ))
+    return map(1:P) do p
+        out = Array{T}(df .* ordm )
 
         foreach(1:prod(ordm)) do idx
             sub = ind2sub(ordm, idx)
@@ -84,6 +123,13 @@ function getSynthesisFilters(cc::MDCDL.Cnsolt)
     map(MDCDL.getAnalysisFilters(cc)) do af
         sz = size(af)
         reshape(flipdim(vec(conj.(af)),1),sz)
+    end
+end
+
+function getSynthesisFilters(rc::MDCDL.Rnsolt)
+    map(MDCDL.getAnalysisFilters(rc)) do af
+        sz = size(af)
+        reshape(flipdim(vec(af),1),sz)
     end
 end
 

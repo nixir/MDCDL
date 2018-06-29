@@ -1,5 +1,5 @@
 # circular convolution
-function cconv(x::Array{T,D}, h::Array{T,D}) where {T, D}
+function cconv(x::Array{TX,D}, h::Array{TY,D}) where {TX,TY,D}
     ifft( fft(x) .* fft(h))
 end
 
@@ -27,9 +27,9 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
 end
 
 # multidimensional FIR filtering
-function mdfilter(A::Array{Complex{T},D}, h::Array{Complex{T},D}; boundary=:circular, outputSize=:same) where {T,D}
+function mdfilter(A::Array{TA,D}, h::Array{TX,D}; boundary=:circular, outputSize=:same) where {TA,TX,D}
     # center = cld.(size(h), 2)
-    ker = complex(zeros(T,size(A)...))
+    ker = zeros(TX,size(A)...)
     ker[colon.(1,size(h))...] = h
 
     cconv(A,ker) # boundary="circular", outputsize="same", convOrCorr="conv"

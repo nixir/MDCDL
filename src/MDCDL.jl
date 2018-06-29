@@ -2,7 +2,7 @@ module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
 # A type of D-dimensional CNSOLT
 
-export FilterBank, PolyphaseFB, ParallelFB, Cnsolt
+export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export MultiLayerCsc
 export analyze, synthesize
 # export cconv
@@ -12,6 +12,8 @@ export atmimshow
 export getAnalysisFilters, getSynthesisFilters
 export mdfilter
 export getAngleParameters, setAngleParameters!
+
+include("basicComplexDSP.jl")
 
 abstract type FilterBank{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
@@ -43,11 +45,11 @@ struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
         end
         # dirPerm = ntuple(d -> d, D)
         initMts = Array[ eye(dataType, p) for p in nChs ]
-        propMts = Array[ Array[ (n % 4 == 0 ? -1 : 1) * eye(dataType,nChs[1]) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
+        propMts = Array[ Array[ (n % 2 == 0 ? 1 : -1) * eye(dataType,nChs[1]) for n in 1:ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
 
-        mtxc = flipdim(permdctmtx(df...),2)
+        mtxc = flipdim(MDCDL.permdctmtx(df...),2)
 
-        new{D,structType,dataType}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxf)
+        new{D,structType,dataType}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxc)
     end
 end
 
@@ -78,7 +80,7 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
         propMts = Array[ Array[ (n % 2 == 0 ? -1 : 1) * eye(dataType,fld(nChs,2)) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I CNSOLT
         paramAngs = Array[ Array[ zeros(dataType,fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
         sym = Diagonal{Complex{dataType}}(ones(nChs))
-        mtxf = flipdim(cdftmtx(df...),2)
+        mtxf = flipdim(MDCDL.cdftmtx(df...),2)
 
         new{D,structType,dataType}(df, nChs, ppo, vanishingMoment, initMts, propMts, paramAngs, sym, mtxf)
     end
@@ -109,15 +111,14 @@ struct MultiLayerCsc{T,D}
 
     function MultiLayerCsc{T,D}(nl::Integer) where{T,D}
         dics = Vector(nl)
-        lmds = fill(convert(T,1.0), (nl,))
-        pos = fill( (y,lm) -> identity(y) , (nl,))
+        # lmds = fill(convert(T,1.0), (nl,))
+        # pos = fill( (y,lm) -> identity(y) , (nl,))
 
         # new{T,D}(nl, dics, lmds, pos)
         new{T,D}(nl, dics)
     end
 end
 
-include("basicComplexDSP.jl")
 include("convexOptimization.jl")
 
 include("blockproc.jl")

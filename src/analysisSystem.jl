@@ -1,11 +1,11 @@
 
 function analyze(fb::MDCDL.FilterBank{TF,D}, x::Array{TX,D}, level::Integer = 1) where {TF,TX,D}
-    function subanalyze(sx::Array{TX,D}, k::Integer)
+    function subanalyze(sx::Array{TS,D}, k::Integer) where TS
         sy = stepAnalysisBank(fb, sx)
         if k <= 1
             return [ sy ]
         else
-            res = Array{Array{Array{TX,D},1},1}(k)
+            res = Array{Array{Array{TF,D},1},1}(k)
             res[1] = sy[2:end]
             res[2:end] = subanalyze(sy[1], k-1)
             return res
@@ -40,13 +40,13 @@ function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMod
     return y
 end
 
-function multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,T}, x::Matrix{Complex{T}}, nBlocks::NTuple{D}) where {T,D}
+function multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, x::Matrix{TX}, nBlocks::NTuple{D}) where {TF,TX,D}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
 
     px = cc.matrixF * flipdim(x, 1)
 
-    const V0 = cc.initMatrices[1] * [ eye(T,M) ; zeros(T,P-M,M) ]
+    const V0 = cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]
     ux = V0 * px
 
     cc.symmetry * extendAtoms(cc, ux, nBlocks)
@@ -56,7 +56,7 @@ end
 #     multipleAnalysisPolyphaseMat(cc, complex(x), nBlocks)
 # end
 
-function extendAtoms(cc::MDCDL.Cnsolt{D,1,T}, px::Matrix{Complex{T}}, nBlocks::NTuple{D}) where {T,D}
+function extendAtoms(cc::MDCDL.Cnsolt{D,1,TF}, px::Matrix{TX}, nBlocks::NTuple{D}) where {TF,TX,D}
     const rngUpper = (1:fld(cc.nChannels,2),:)
     const rngLower = (fld(cc.nChannels,2)+1:cc.nChannels,:)
 
@@ -78,6 +78,48 @@ function extendAtoms(cc::MDCDL.Cnsolt{D,1,T}, px::Matrix{Complex{T}}, nBlocks::N
 
             px[rngUpper...] = cc.propMatrices[d][2*k-1] * px[rngUpper...]
             px[rngLower...] = cc.propMatrices[d][2*k]   * px[rngLower...]
+        end
+    end
+    return px
+end
+
+function multipleAnalysisPolyphaseMat(cc::MDCDL.Rnsolt{D,1,TF}, x::Matrix{TX}, nBlocks::NTuple{D}) where {TF,TX,D}
+    const M = prod(cc.decimationFactor)
+    const hM = fld(M,2)
+    const P = cc.nChannels
+
+    px = cc.matrixC * flipdim(x, 1)
+
+    # const V0 = cc.initMatrices[1] * [ eye(T,M) ; zeros(T,P-M,M) ]
+    const W0 = cc.initMatrices[1] * vcat(eye(TF, hM), zeros(TF, P[1] - hM, hM))
+    const U0 = cc.initMatrices[2] * vcat(eye(TF, hM), zeros(TF, P[2] - hM, hM))
+
+    ux = vcat(W0 * px[1:hM, :], U0 * px[hM+1:end, :])
+
+    extendAtoms(cc, ux, nBlocks)
+end
+
+function extendAtoms(cc::MDCDL.Rnsolt{D,1,TF}, px::Matrix{TX}, nBlocks::NTuple{D}) where {TF,TX,D}
+    const P = cc.nChannels[1]
+    # const rngUpper = (1:P,:)
+    const rngLower = ((1:P)+P,:)
+
+    const nShifts = [ fld.(size(px,2),nBlocks)[d] for d in 1:D ]
+    # for d in cc.directionPermutation
+    for d = 1:D # original order
+        px = permutePolyphaseSignalDims(px, nBlocks[d])
+        for k = 1:cc.polyphaseOrder[d]
+
+            px = butterfly(px, P)
+            px[rngLower...] = circshift(px[rngLower...], (0, nShifts[d]))
+            # if k % 2 == 1
+            #     px[rngLower...] = circshift(px[rngLower...],(0, nShifts[d]))
+            # else
+            #     px[rngUpper...] = circshift(px[rngUpper...],(0, -nShifts[d]))
+            # end
+            px = butterfly(px, P)
+
+            px[rngLower...] = cc.propMatrices[d][k]   * px[rngLower...]
         end
     end
     return px

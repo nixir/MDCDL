@@ -2,11 +2,13 @@ using MDCDL
 using NLopt
 using Images, ImageView, TestImages
 
+include("randomInit.jl")
+
 # configurations
 D = 2
 nl = 3
 szSubData = ntuple( d -> 32, D)
-nSubData = 1
+nSubData = 16
 
 dt = Float64
 
@@ -15,6 +17,7 @@ cplxImg = complex.(Array{Float64}(orgImg))
 normalizedImg = cplxImg .- (sum(cplxImg) / length(cplxImg))
 x = [ normalizedImg[(colon.(1,szSubData) .+ rand.(colon.(0,size(cplxImg) .- szSubData)))...] for nsd in 1:nSubData]
 
+x = real.(x)
 
 mlcsc = MultiLayerCsc{Float64,D}(nl)
 
@@ -22,29 +25,20 @@ for l = 1:nl
     Dl = D + l - 1
     # df = ntuple( d -> 2, Dl)
     df = tuple(fill(2,D)..., ones(Integer,l-1)...)
-    nch = prod(df) + 2
+    # nch = prod(df) + 2
+    nch = (fld(prod(df),2) + 1, fld(prod(df),2) + 1)
     ord = ntuple( d -> 2, Dl)
-    cnsolt = Cnsolt(df, nch, ord, dataType=dt)
 
-    # initialize parameter matrices
-    # cnsolt.symmetry .= Diagonal(exp.(1im*rand(nch)))
-    cnsolt.initMatrices[1] = Array{dt}(qr(rand(nch,nch), thin=false)[1])
-
-    for d = 1:Dl
-        map!(cnsolt.propMatrices[d], cnsolt.propMatrices[d]) do A
-            Array(qr(rand(dt,size(A)), thin=false)[1])
-        end
-
-        @. cnsolt.paramAngles[d] = rand(dt,size(cnsolt.paramAngles[d]))
-    end
-
+    # cnsolt = Cnsolt(df, nch, ord, dataType=dt)
+    cnsolt = Rnsolt(df, nch, ord, dataType=dt)
+    randomInit!(cnsolt; isSymmetry = false)
     mlcsc.dictionaries[l] = cnsolt
 end
 
 # nnzCoefs = fld(prod(szSubData), 32)
 nnzCoefs = 256
 
-nEpoch = 2
+nEpoch = 10
 for epoch = 1:nEpoch, k = 1:length(x)
     xk = x[k]
 
@@ -71,11 +65,7 @@ for epoch = 1:nEpoch, k = 1:length(x)
 
             gamma = Vector(submlcsc.nLayers)
             # gamma[submlcsc.nLayers+1] = hy
-            gamma[submlcsc.nLayers] = if l != 1
-                MDCDL.hardshrink(MDCDL.stepSynthesisBank(submlcsc.dictionaries[submlcsc.nLayers], hy, inputMode=:augumented), nzk)
-            else
-                MDCDL.stepSynthesisBank(submlcsc.dictionaries[submlcsc.nLayers], hy, inputMode=:augumented)
-            end
+            gamma[submlcsc.nLayers] = MDCDL.stepSynthesisBank( submlcsc.dictionaries[ submlcsc.nLayers ], hy, inputMode=:augumented)
             for lfun = submlcsc.nLayers-1:-1:1
                 dic = submlcsc.dictionaries[lfun]
                 gamma[lfun] = MDCDL.stepSynthesisBank(dic, gamma[lfun+1], inputMode=:augumented)

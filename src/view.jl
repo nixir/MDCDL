@@ -1,26 +1,42 @@
 using Images, ImageView, Gtk.ShortNames
 
-function atmimshow(cc::MDCDL.Cnsolt{2,S,T}; scale::Real = 1.0, offset::Real=0.5) where {S,T}
+function atmimshow(cc::MDCDL.Cnsolt{2,S,T}, clim = CLim(-0.5,0.5)) where {S,T}
     P = cc.nChannels
-    lowerBound=0.0
-    upperBound=1.0
-
 
     afs = MDCDL.getAnalysisFilters(cc)
 
-    afsViewRe, afsViewIm = map([real(afs), imag(afs)]) do afspart
-        afsScaled = scale .* afspart .+ offset
-
-        Array{Gray{N0f8}}[ max.(min.(f,upperBound),lowerBound) for f in afsScaled ]
-    end
-    # resImgAbs = Array{Gray{N0f8}}(min.(vecnorm.(resCplxImg),1.0))
+    afsRe, afsIm = reim(afs)
+    sigclim = ImageView.Signal(clim)
 
     grid, frames, canvases = canvasgrid((2, P))
     for p = 1:P
-        #TODO: imshow()の内部処理によって自動的にスケールが変更されてしまう．データの値をそのまま解釈して表示するように修正する
-        # imshow(canvases[1,p], afsViewRe[p])
-        # imshow(canvases[2,p], afsViewIm[p])
+        zrr, sdr = roi(afsRe[p], ImageView.default_axes(afsRe[p]))
+        zri, sdi = roi(afsIm[p], ImageView.default_axes(afsIm[p]))
+        imshow(frames[1,p], canvases[1,p], afsRe[p], sigclim, zrr, sdr)
+        imshow(frames[2,p], canvases[2,p], afsIm[p], sigclim, zri, sdi)
     end
     win = Window(grid)
     showall(win)
 end
+
+function atmimshow(cc::MDCDL.Rnsolt{2,S,T}, clim = CLim(-0.5,0.5)) where {S,T}
+    P = sum(cc.nChannels)
+
+    afs = MDCDL.getAnalysisFilters(cc)
+
+    sigclim = ImageView.Signal(clim)
+
+    grid, frames, canvases = canvasgrid((2, P))
+    for p = 1:P
+        zr, sd = roi(afs[p], ImageView.default_axes(afs[p]))
+        imshow(frames[1,p], canvases[1,p], afs[p], sigclim, zr, sd)
+    end
+    win = Window(grid)
+    showall(win)
+end
+
+# function atmimshow(mlcsc::MDCDL.MultiLayerCsc, args...)
+#     for l = mlcsc.nLayers
+#         atmimshow(mlcsc.dictionaries[l], args...)
+#     end
+# end

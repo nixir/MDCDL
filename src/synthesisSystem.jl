@@ -42,13 +42,13 @@ function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs
     stepSynthesisBank(fb,y,szRegion; kwargs...)
 end
 
-function multipleSynthesisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,T}, y::Matrix{Complex{T}}, nBlocks::NTuple{D}) where {T,D}
+function multipleSynthesisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, y::Matrix{TY}, nBlocks::NTuple{D}) where {TF,TY,D}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
 
     uy = concatenateAtoms(cc, cc.symmetry' * y, nBlocks)
 
-    py = [ eye(T,M) ; zeros(T,P-M,M) ]' * cc.initMatrices[1]' *  uy
+    py = [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]' * cc.initMatrices[1]' *  uy
 
     py = cc.matrixF' * py
 
@@ -59,7 +59,7 @@ end
 #     multipleSynthesisPolyphaseMat(cc, complex(x), nBlocks)
 # end
 
-function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,T}, py::Array{Complex{T},2}, nBlocks::NTuple{D}) where {T,D}
+function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,TF}, py::Array{TY,2}, nBlocks::NTuple{D}) where {TF,TY,D}
     const rngUpper = (1:fld(cc.nChannels,2),:)
     const rngLower = (fld(cc.nChannels,2)+1:cc.nChannels,:)
 
@@ -79,6 +79,48 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,T}, py::Array{Complex{T},2}, nBlo
             #     py[rngUpper...] = circshift(py[rngUpper...],(0, nShifts[d]))
             # end
             py = B * py
+        end
+        py = ipermutePolyphaseSignalDims(py, nBlocks[d])
+    end
+    return py
+end
+
+function multipleSynthesisPolyphaseMat(cc::MDCDL.Rnsolt{D,1,TF}, y::Matrix{TY}, nBlocks::NTuple{D}) where {TF,TY,D}
+    const M = prod(cc.decimationFactor)
+    const hM = fld(M,2)
+    const P = cc.nChannels
+
+    uy = concatenateAtoms(cc, y, nBlocks)
+
+    const W0 = cc.initMatrices[1] * vcat(eye(TF, hM), zeros(TF, P[1] - hM, hM))
+    const U0 = cc.initMatrices[2] * vcat(eye(TF, hM), zeros(TF, P[2] - hM, hM))
+    py = vcat(W0' * uy[1:P[1],:], U0' * uy[P[1]+1:end,:])
+    # py = [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]' * cc.initMatrices[1]' *  uy
+
+    py = cc.matrixC' * py
+
+    flipdim(py, 1)
+end
+
+function concatenateAtoms(cc::MDCDL.Rnsolt{D,1,TF}, py::Array{TY,2}, nBlocks::NTuple{D}) where {TF,TY,D}
+    const P = cc.nChannels[1]
+    # const rngUpper = (1:P,:)
+    const rngLower = ((1:P)+P,:)
+
+    const nShifts = [ -1 .* fld.(size(py,2),nBlocks)[d] for d in 1:D ]
+
+    for d = D:-1:1 # original order
+        for k = cc.polyphaseOrder[d]:-1:1
+            py[rngLower...] = cc.propMatrices[d][k]'   * py[rngLower...]
+
+            py = butterfly(py, P)
+            py[rngLower...] = circshift(py[rngLower...], (0, nShifts[d]))
+            # if k % 2 == 1
+            #     py[rngLower...] = circshift(py[rngLower...],(0, nShifts[d]))
+            # else
+            #     py[rngUpper...] = circshift(py[rngUpper...],(0, nShifts[d]))
+            # end
+            py = butterfly(py, P)
         end
         py = ipermutePolyphaseSignalDims(py, nBlocks[d])
     end
