@@ -16,7 +16,10 @@ isRandomizedParams = true
 orgImg = testimage("cameraman")[(1:256)+128,(1:256)+128]
 cplxImg = complex.(Array{Float64}(orgImg))
 sigma_awgn = 1e-2
-cplxImg += sigma_awgn*MDCDL.crandn(size(cplxImg))
+
+crandn = (args...) -> (randn(args...) + 1im*randn(args...))/2
+# cplxImg += sigma_awgn*randn(Complex{Float64},size(cplxImg)) # this code does not work in currently version (v0.6.3)
+cplxImg += sigma_awgn*crandn(Float64,size(cplxImg))
 
 cnsolt = Cnsolt(df,nch,ord)
 
@@ -24,18 +27,18 @@ if isRandomizedParams
     cnsolt.symmetry .= Diagonal(exp.(1im*rand(nch)))
     WW = eye(fld(nch,2))
     for d = 1:2
-        map!(cnsolt.PropMatrices[d], cnsolt.PropMatrices[d]) do A
+        map!(cnsolt.propMatrices[d], cnsolt.propMatrices[d]) do A
             Array(qr(rand(size(A)))[1])
         end
 
-        @. cnsolt.ParamAngles[d] = rand(size(cnsolt.ParamAngles[d]))
-        WW = foldl((x,y) -> y*x, cnsolt.PropMatrices[d]) * WW
+        @. cnsolt.paramAngles[d] = rand(size(cnsolt.paramAngles[d]))
+        WW = foldl((x,y) -> y*x, cnsolt.propMatrices[d]) * WW
     end
     V0 = eye(nch)
     V0[2:end,2:end] = qr(rand(nch-1,nch-1))[1]
     WT = eye(nch)
     WT[1:fld(nch,2),1:fld(nch,2)] = WW'
-    cnsolt.InitMatrices[1] = WT * V0
+    cnsolt.initMatrices[1] = WT * V0
 
 end
 

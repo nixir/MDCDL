@@ -36,7 +36,7 @@ for l = 1:nl
     mlcsc.dictionaries[l] = cnsolt
 end
 
-x = MDCDL.crand(dt,szx)
+x = rand(Complex{dt},szx)
 
 y = MDCDL.analyze(mlcsc, x)
 rx = MDCDL.synthesize(mlcsc, y)

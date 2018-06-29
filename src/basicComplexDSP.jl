@@ -69,12 +69,3 @@ function permdctmtx(sz::Integer...)
 
     vcat(evenMtx.', oddMtx.')
 end
-
-function crand(args...)
-    rand(args...) + 1im*rand(args...)
-end
-
-# complex circular-symmetric gaussian randam value
-function crandn(args...)
-    (randn(args...) + 1im*randn(args...)) / 2
-end
