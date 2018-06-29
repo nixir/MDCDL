@@ -121,7 +121,7 @@ include("basicComplexDSP.jl")
 include("convexOptimization.jl")
 
 include("blockproc.jl")
-include("OrthonormalMatrixSystem.jl")
+include("orthonormalMatrixSystem.jl")
 include("polyphaseMatrices.jl")
 
 include("analysisSystem.jl")
