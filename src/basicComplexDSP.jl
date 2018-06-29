@@ -27,7 +27,7 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
 end
 
 # multidimensional FIR filtering
-function mdfilter(A::Array{Complex{T},D}, h::Array{Complex{T},D}; boundary="circular", outputSize="same") where {T,D}
+function mdfilter(A::Array{Complex{T},D}, h::Array{Complex{T},D}; boundary=:circular, outputSize=:same) where {T,D}
     # center = cld.(size(h), 2)
     ker = complex(zeros(T,size(A)...))
     ker[colon.(1,size(h))...] = h

@@ -16,7 +16,7 @@ function analyze(fb::MDCDL.FilterBank{TF,D}, x::Array{TX,D}, level::Integer = 1)
     ( subanalyze(x,level), scales )
 end
 
-function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode="normal") where {TF,TX,D}
+function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:normal) where {TF,TX,D}
     const df = fb.decimationFactor
     const M = prod(df)
     const nBlocks = fld.(size(x), df)
@@ -26,9 +26,9 @@ function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMod
 
     ty = multipleAnalysisPolyphaseMat(fb, tx, nBlocks)
 
-    y = if outputMode == "normal"
+    y = if outputMode == :normal
         [ MDCDL.vecblocks2array(ty[p,:], nBlocks, tuple(ones(Integer,D)...)) for p in 1:sum(fb.nChannels) ]
-    elseif outputMode == "augumented"
+    elseif outputMode == :augumented
         szAugOut = tuple(nBlocks..., sum(fb.nChannels))
         szAugBlock = tuple(ones(Integer,D+1)...)
 
@@ -84,14 +84,7 @@ function extendAtoms(cc::MDCDL.Cnsolt{D,1,T}, px::Matrix{Complex{T}}, nBlocks::N
 end
 
 function permutePolyphaseSignalDims(x::Matrix, nBlocks::Integer)
-    const S = fld(size(x,2),nBlocks)
-
-    dst = copy(x)
-    # for idx = 0:nBlocks-1
-    foreach(0:nBlocks-1) do idx
-        dst[:, (1:S)+idx*S] = x[:, (1:nBlocks:end)+idx]
-    end
-    dst
+    hcat( [ x[:, (1:nBlocks:end) + idx] for idx in 0:nBlocks-1 ]... )
 end
 
 function stepAnalysisBank(pfs::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}) where {TF,TX,D}
@@ -100,57 +93,3 @@ function stepAnalysisBank(pfs::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}) where {TF
 
     [  circshift(MDCDL.downsample(MDCDL.mdfilter(x, f), df, offset), 0) for f in pfs.analysisFilters ]
 end
-
-################################################################################
-### Old systems ###
-#
-# function analyzeVec(cc::MDCDL.Cnsolt{D,S,T}, x::Array{Complex{T},D}, level::Integer = 1) where {D,S,T}
-#     function subanalyzeVec(sx::Array{Complex{T},D}, k::Integer)
-#         y = stepAnalysisBankVec(cc,sx)
-#         if k <= 1
-#             Array{Complex{T},2}[y]
-#         else
-#             szSubImg = fld.(size(sx), cc.decimationFactor)
-#             res = Array{Array{Complex{T},2}}(k)
-#             res[1] = y[2:end,:]
-#             res[2:end] =  subanalyzeVec(reshape(y[1,:],szSubImg...), k-1)
-#             return res
-#         end
-#     end
-#     scales = [ fld.(size(x), cc.decimationFactor.^l) for l in 0:level]
-#     (subanalyzeVec(x, level), scales )
-# end
-#
-# function stepAnalysisBankVec(cc::MDCDL.Cnsolt{D,S,T}, x::Array{Complex{T},D}) where {D,S,T}
-#     # 実装が面倒なので初期行列は単純なものにする
-#     df = cc.decimationFactor
-#     M = prod(df)
-#     P = sum(cc.nChannels)
-#     nBlocks = fld.(size(x), df)
-#
-#     # vectorize D-dimensional arrays per sub-blocks
-#     vblocks = MDCDL.blocks2vec(x, df)
-#
-#     #
-#     px = flipdim(reshape(vblocks, M, cld(length(x),M) ), 1)
-#
-#     px = cc.matrixF * px
-#
-#     V0 = cc.initMatrices[1] * [ eye(T,M) ; zeros(T,P-M,M) ]
-#     ux = V0 * px
-#
-#     cc.Symmetry * extendAtoms(cc, ux, nBlocks)
-# end
-#
-# function blocks2vec(x::Array{T,D}, scale::NTuple{D}) where {T,D}
-#     nBlocks = fld.(size(x),scale)
-#     primeBlock = ntuple(n -> 1:scale[n], D)
-#
-#     out = Array{Vector{T},D}(nBlocks...)
-#     # for cr in CartesianRange(nBlocks)
-#     foreach(CartesianRange(nBlocks)) do cr
-#         block = (cr.I .- 1) .* scale .+ primeBlock
-#         out[cr] = vec(x[block...])
-#     end
-#     vcat(out...)
-# end

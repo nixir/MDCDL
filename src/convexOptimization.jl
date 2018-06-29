@@ -51,8 +51,8 @@ end
 
 function mlista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
-    opD  = (l, v) -> stepSynthesisBank(mlcsc.dictionaries[l], v; inputMode="augumented")
-    opDt = (l, v) -> stepAnalysisBank(mlcsc.dictionaries[l], v; outputMode="augumented")
+    opD  = (l, v) -> stepSynthesisBank(mlcsc.dictionaries[l], v; inputMode=:augumented)
+    opDt = (l, v) -> stepAnalysisBank(mlcsc.dictionaries[l], v; outputMode=:augumented)
 
     gamma = Vector(L+1)
     gamma[1] = x
@@ -79,8 +79,8 @@ end
 
 function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
-    opD  = (l, v) -> stepSynthesisBank(mlcsc.dictionaries[l], v; inputMode="augumented")
-    opDt = (l, v) -> stepAnalysisBank(mlcsc.dictionaries[l], v; outputMode="augumented")
+    opD  = (l, v) -> stepSynthesisBank(mlcsc.dictionaries[l], v; inputMode=:augumented)
+    opDt = (l, v) -> stepAnalysisBank(mlcsc.dictionaries[l], v; outputMode=:augumented)
 
     gamma = Vector(L+1)
     gamma[1] = x
