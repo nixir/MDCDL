@@ -198,7 +198,7 @@ function permutedims(x::PolyphaseVector{T,D}) where {T,D}
 end
 
 function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
-    S = fld(size(x.data,2), x.nBlocks[1])
+    S = fld(size(x.data,2), x.nBlocks[end])
     data = hcat( [ x.data[:, (1:S:end) + idx] for idx in 0:S-1 ]... )
     nBlocks = tuple(circshift(collect(x.nBlocks),1)...)
 

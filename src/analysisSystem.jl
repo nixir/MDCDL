@@ -16,30 +16,6 @@ function analyze(fb::MDCDL.FilterBank{TF,D}, x::Array{TX,D}, level::Integer = 1)
     ( subanalyze(x,level), scales )
 end
 
-# function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:normal) where {TF,TX,D}
-#     const df = fb.decimationFactor
-#     const M = prod(df)
-#     const nBlocks = fld.(size(x), df)
-#
-#     blkx = MDCDL.array2vecblocks(x, df)
-#     tx = reshape(blkx, M, cld(length(blkx), M))
-#
-#     ty = multipleAnalysisPolyphaseMat(fb, tx, nBlocks)
-#
-#     y = if outputMode == :normal
-#         [ MDCDL.vecblocks2array(ty[p,:], nBlocks, tuple(ones(Integer,D)...)) for p in 1:sum(fb.nChannels) ]
-#     elseif outputMode == :augumented
-#         szAugOut = tuple(nBlocks..., sum(fb.nChannels))
-#         szAugBlock = tuple(ones(Integer,D+1)...)
-#
-#         MDCDL.vecblocks2array(vec(ty.'),szAugOut,szAugBlock)
-#     else
-#         error("outputMode=$outputMode: This option is not available.")
-#     end
-#
-#     return y
-# end
-
 function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:normal) where {TF,TX,D}
     const df = fb.decimationFactor
     const M = prod(df)
@@ -59,45 +35,45 @@ function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMod
     return y
 end
 
-function multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, x::PolyphaseVector{TX,D}) where {TF,TX,D}
+function multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
-    px = copy(x)
-    px .= cc.matrixF * flipdim(x.data, 1)
 
-    # px = PolyphaseVector{TX,D}(cc.matrixF * flipdim(x.data, 1), x.nBlocks)
+    x = pvx.data
+    tx = cc.matrixF * flipdim(x, 1)
 
     const V0 = cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]
-    ux = V0 * px
+    ux = V0 * tx
 
-    cc.symmetry * extendAtoms(cc, ux)
+    cc.symmetry * extendAtoms(cc, PolyphaseVector(ux,pvx.nBlocks))
 end
 
-function extendAtoms(cc::MDCDL.Cnsolt{D,1,TF}, px::PolyphaseVector{TX,D}) where {TF,TX,D}
+function extendAtoms(cc::MDCDL.Cnsolt{D,1,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D}
     const rngUpper = (1:fld(cc.nChannels,2),:)
     const rngLower = (fld(cc.nChannels,2)+1:cc.nChannels,:)
 
-    const nShifts = [ fld.(size(px.data,2), px.nBlocks)[d] for d in 1:D ]
+    const nShifts = [ fld.(size(pvx,2), pvx.nBlocks)[d] for d in 1:D ]
     for d = 1:D # original order
-        px = MDCDL.permutedims(px)
+        pvx = MDCDL.permutedims(pvx)
+        x = pvx.data
         for k = 1:cc.polyphaseOrder[d]
             B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
 
-            # px .= B' * px
-            px = ctranspose(B) * px
-            px[rngLower...] = circshift(px[rngLower...], (0, nShifts[d]))
+            x .= B' * x
+            x[rngLower...] = circshift(x[rngLower...], (0, nShifts[d]))
             # if k % 2 == 1
             #     px[rngLower...] = circshift(px[rngLower...],(0, nShifts[d]))
             # else
             #     px[rngUpper...] = circshift(px[rngUpper...],(0, -nShifts[d]))
             # end
-            px = B * px
+            x .= B * x
 
-            px[rngUpper...] = cc.propMatrices[d][2*k-1] * px[rngUpper...]
-            px[rngLower...] = cc.propMatrices[d][2*k]   * px[rngLower...]
+            x[rngUpper...] = cc.propMatrices[d][2*k-1] * x[rngUpper...]
+            x[rngLower...] = cc.propMatrices[d][2*k]   * x[rngLower...]
         end
+        pvx.data .= x
     end
-    return px
+    return pvx
 end
 
 function multipleAnalysisPolyphaseMat(cc::MDCDL.Rnsolt{D,1,TF}, x::PolyphaseVector{TX,D}) where {TF,TX,D}
@@ -112,7 +88,7 @@ function multipleAnalysisPolyphaseMat(cc::MDCDL.Rnsolt{D,1,TF}, x::PolyphaseVect
     const W0 = cc.initMatrices[1] * vcat(eye(TF, hM), zeros(TF, P[1] - hM, hM))
     const U0 = cc.initMatrices[2] * vcat(eye(TF, hM), zeros(TF, P[2] - hM, hM))
 
-    ux = PolyphaseVector{TX,D}(vcat(W0 * px[1:hM, :], U0 * px[hM+1:end, :]), px.nBlocks)
+    ux = PolyphaseVector(vcat(W0 * px[1:hM, :], U0 * px[hM+1:end, :]), px.nBlocks)
 
     extendAtoms(cc, ux)
 end

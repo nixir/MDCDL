@@ -6,7 +6,7 @@ include("randomInit.jl")
 
 # configurations
 D = 2
-nl = 3
+nl = 2
 szSubData = ntuple( d -> 64, D)
 nSubData = 16
 
@@ -17,7 +17,7 @@ cplxImg = complex.(Array{Float64}(orgImg))
 normalizedImg = cplxImg .- (sum(cplxImg) / length(cplxImg))
 x = [ normalizedImg[(colon.(1,szSubData) .+ rand.(colon.(0,size(cplxImg) .- szSubData)))...] for nsd in 1:nSubData]
 
-mlcsc = MultiLayerCsc{Float64,D}(nl)
+mlcsc = MultiLayerCsc{Complex{Float64},D}(nl)
 
 for l = 1:nl
     Dl = D + l - 1
@@ -25,7 +25,7 @@ for l = 1:nl
     df = tuple(fill(2,D)..., ones(Integer,l-1)...)
     nch = prod(df) + 2
     # nch = (fld(prod(df),2) + 1, fld(prod(df),2) + 1)
-    ord = ntuple( d -> 0, Dl)
+    ord = ntuple( d -> 2, Dl)
 
     # cnsolt = Cnsolt(df, nch, ord, dataType=dt)
     cnsolt = Cnsolt(df, nch, ord, dataType=dt)
