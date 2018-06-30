@@ -12,27 +12,48 @@ function synthesize(fb::MDCDL.FilterBank{T,D}, y::Array{Array{Array{TY,D},1},1},
     reshape(vx, scales[1]...)
 end
 
+# function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,D}, y::Array{TY}, szRegion::NTuple{D}; inputMode=:normal) where {TF,TY,D}
+#     const M = prod(fb.decimationFactor)
+#     const P = sum(fb.nChannels)
+#     const nBlocks = fld.(szRegion, fb.decimationFactor)
+#
+#     ty = if inputMode == :normal
+#         vcat([MDCDL.array2vecblocks(y[p], nBlocks).' for p in 1:P]...)
+#     elseif inputMode == :augumented
+#         const szAugBlock = tuple(nBlocks..., sum(fb.nChannels))
+#
+#         reshape(MDCDL.array2vecblocks(y, szAugBlock),fld(length(y),P),P).'
+#     else
+#         error("inputMode=$inputMode: This option is not available.")
+#     end
+#
+#     tx = multipleSynthesisPolyphaseMat(fb, ty, nBlocks)
+#
+#     blkx = reshape(tx, length(tx))
+#     vecblocks2array(blkx, szRegion, fb.decimationFactor)
+#
+# end
+
 function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,D}, y::Array{TY}, szRegion::NTuple{D}; inputMode=:normal) where {TF,TY,D}
     const M = prod(fb.decimationFactor)
     const P = sum(fb.nChannels)
     const nBlocks = fld.(szRegion, fb.decimationFactor)
 
-    ty = if inputMode == :normal
-        vcat([MDCDL.array2vecblocks(y[p], nBlocks).' for p in 1:P]...)
+    py = if inputMode == :normal
+        PolyphaseVector(vcat([MDCDL.array2vecblocks(y[p], nBlocks).' for p in 1:P]...), nBlocks)
     elseif inputMode == :augumented
-        const szAugBlock = tuple(nBlocks..., sum(fb.nChannels))
-
-        reshape(MDCDL.array2vecblocks(y, szAugBlock),fld(length(y),P),P).'
+        mdarray2polyphase(y)
     else
         error("inputMode=$inputMode: This option is not available.")
     end
 
-    tx = multipleSynthesisPolyphaseMat(fb, ty, nBlocks)
+    size(py.data)
 
-    blkx = reshape(tx, length(tx))
-    vecblocks2array(blkx, szRegion, fb.decimationFactor)
+    px = multipleSynthesisPolyphaseMat(fb, py)
+    polyphase2mdarray(px, fb.decimationFactor)
 
 end
+
 
 function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {TF,DF,TY,DY}
     if DY != DF + 1
@@ -42,36 +63,52 @@ function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs
     stepSynthesisBank(fb,y,szRegion; kwargs...)
 end
 
-function multipleSynthesisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, y::Matrix{TY}, nBlocks::NTuple{D}) where {TF,TY,D}
+# function multipleSynthesisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, y::Matrix{TY}, nBlocks::NTuple{D}) where {TF,TY,D}
+#     const M = prod(cc.decimationFactor)
+#     const P = cc.nChannels
+#
+#     uy = concatenateAtoms(cc, cc.symmetry' * y, nBlocks)
+#
+#     py = [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]' * cc.initMatrices[1]' *  uy
+#
+#     py = cc.matrixF' * py
+#
+#     flipdim(py, 1)
+# end
+
+function multipleSynthesisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, y::PolyphaseVector{TY,D}) where {TF,TY,D}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
 
-    uy = concatenateAtoms(cc, cc.symmetry' * y, nBlocks)
+    # 下記のコードはType cast がうまく行われない．おそらくバグ
+    # uy = concatenateAtoms(cc, cc.symmetry' * y)
+    uy = concatenateAtoms(cc, ctranspose(cc.symmetry) * y)
 
-    py = [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]' * cc.initMatrices[1]' *  uy
+    # py .= (cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ])' *  uy
+    py = ctranspose(cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]) * uy
 
-    py = cc.matrixF' * py
+    # py .= cc.matrixF' * py
+    py = ctranspose(cc.matrixF) * py
 
-    flipdim(py, 1)
+    PolyphaseVector(flipdim(py.data, 1), py.nBlocks)
 end
 
-# function multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt, x::Matrix{T}, nBlocks) where T<:Real
-#     multipleSynthesisPolyphaseMat(cc, complex(x), nBlocks)
-# end
-
-function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,TF}, py::Array{TY,2}, nBlocks::NTuple{D}) where {TF,TY,D}
+function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,TF}, py::PolyphaseVector{TY,D}) where {TF,TY,D}
     const rngUpper = (1:fld(cc.nChannels,2),:)
     const rngLower = (fld(cc.nChannels,2)+1:cc.nChannels,:)
 
-    const nShifts = [ -1 .* fld.(size(py,2),nBlocks)[d] for d in 1:D ]
+    const nShifts = [ -1 .* fld.(size(py,2),py.nBlocks)[d] for d in 1:D ]
 
     for d = D:-1:1 # original order
         for k = cc.polyphaseOrder[d]:-1:1
-            py[rngUpper...] = cc.propMatrices[d][2*k-1]' * py[rngUpper...]
-            py[rngLower...] = cc.propMatrices[d][2*k]'   * py[rngLower...]
+            # py[rngUpper...] = cc.propMatrices[d][2*k-1]' * py[rngUpper...]
+            # py[rngLower...] = cc.propMatrices[d][2*k]'   * py[rngLower...]
+            py[rngUpper...] = ctranspose(cc.propMatrices[d][2*k-1]) * py[rngUpper...]
+            py[rngLower...] = ctranspose(cc.propMatrices[d][2*k])   * py[rngLower...]
 
             B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
-            py = B' * py
+            # py .= B' * py
+            py = ctranspose(B) * py
             py[rngLower...] = circshift(py[rngLower...], (0, nShifts[d]))
             # if k % 2 == 1
             #     py[rngLower...] = circshift(py[rngLower...],(0, nShifts[d]))
@@ -80,56 +117,52 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,TF}, py::Array{TY,2}, nBlocks::NT
             # end
             py = B * py
         end
-        py = ipermutePolyphaseSignalDims(py, nBlocks[d])
+        py = MDCDL.ipermutedims(py)
     end
     return py
 end
 
-function multipleSynthesisPolyphaseMat(cc::MDCDL.Rnsolt{D,1,TF}, y::Matrix{TY}, nBlocks::NTuple{D}) where {TF,TY,D}
+function multipleSynthesisPolyphaseMat(cc::MDCDL.Rnsolt{D,1,TF}, y::PolyphaseVector{TY,D}) where {TF,TY,D}
     const M = prod(cc.decimationFactor)
     const hM = fld(M,2)
     const P = cc.nChannels
 
-    uy = concatenateAtoms(cc, y, nBlocks)
+    uy = concatenateAtoms(cc, y)
 
     const W0 = cc.initMatrices[1] * vcat(eye(TF, hM), zeros(TF, P[1] - hM, hM))
     const U0 = cc.initMatrices[2] * vcat(eye(TF, hM), zeros(TF, P[2] - hM, hM))
-    py = vcat(W0' * uy[1:P[1],:], U0' * uy[P[1]+1:end,:])
-    # py = [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]' * cc.initMatrices[1]' *  uy
+    py = PolyphaseVector(vcat(W0' * uy[1:P[1],:], U0' * uy[P[1]+1:end,:]), uy.nBlocks)
 
-    py = cc.matrixC' * py
+    # py = cc.matrixC' * py
+    py = ctranspose(cc.matrixC) * py
 
-    flipdim(py, 1)
+    PolyphaseVector(flipdim(py, 1), py.nBlocks)
 end
 
-function concatenateAtoms(cc::MDCDL.Rnsolt{D,1,TF}, py::Array{TY,2}, nBlocks::NTuple{D}) where {TF,TY,D}
+function concatenateAtoms(cc::MDCDL.Rnsolt{D,1,TF}, py::PolyphaseVector{TY,D}) where {TF,TY,D}
     const P = cc.nChannels[1]
     # const rngUpper = (1:P,:)
     const rngLower = ((1:P)+P,:)
 
-    const nShifts = [ -1 .* fld.(size(py,2),nBlocks)[d] for d in 1:D ]
+    const nShifts = [ -1 .* fld.(size(py,2),py.nBlocks)[d] for d in 1:D ]
 
     for d = D:-1:1 # original order
         for k = cc.polyphaseOrder[d]:-1:1
-            py[rngLower...] = cc.propMatrices[d][k]'   * py[rngLower...]
+            # py[rngLower...] = cc.propMatrices[d][k]'  * py[rngLower...]
+            py[rngLower...] = ctranspose(cc.propMatrices[d][k])  * py[rngLower...]
 
-            py = butterfly(py, P)
+            py .= butterfly(py.data, P)
             py[rngLower...] = circshift(py[rngLower...], (0, nShifts[d]))
             # if k % 2 == 1
             #     py[rngLower...] = circshift(py[rngLower...],(0, nShifts[d]))
             # else
             #     py[rngUpper...] = circshift(py[rngUpper...],(0, nShifts[d]))
             # end
-            py = butterfly(py, P)
+            py .= butterfly(py.data, P)
         end
-        py = ipermutePolyphaseSignalDims(py, nBlocks[d])
+        py = MDCDL.ipermutedims(py)
     end
     return py
-end
-
-function ipermutePolyphaseSignalDims(x::Matrix, nBlocks::Integer)
-    const S = fld(size(x,2),nBlocks)
-    hcat( [ x[:, (1:S:end) + idx] for idx in 0:S-1]... )
 end
 
 function stepSynthesisBank(pfb::MDCDL.ParallelFB{TF,D}, y::Vector{Array{TY,D}}, szRegion) where {TF,TY,D}

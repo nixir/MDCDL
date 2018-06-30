@@ -1,3 +1,9 @@
+import Base.convert
+import Base.*
+import Base.size
+import Base.getindex
+import Base.setindex!
+# import Base.=
 
 function getMatrixB(P::Integer, angs::Vector{T}) where T
     hP = fld(P,2)
@@ -133,10 +139,91 @@ function getSynthesisFilters(rc::MDCDL.Rnsolt)
     end
 end
 
-function getAnalysisFilters(pfb::MDCDL.ParallelFB)
-    pfb.analysisFilters
+# function convert(::Type{Array}, x::PolyphaseVector{T,D}) where {T,D}
+#     primeBlock = colon.(1, x.szBlock)
+#     output = Array{T,D}((x.szBlock .* x.nBlocks)...)
+#     foreach(1:prod(x.nBlocks)) do idx
+#         block = (ind2sub(x.nBlocks, idx) .- 1) .* x.szBlock .+ primeBlock
+#         output[block...] = reshape(x.data[:,idx], x.szBlock...)
+#     end
+#     output
+# end
+
+function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
+    nBlocks = fld.(size(x), szBlock)
+    if any(size(x) .% szBlock .!= 0)
+        error("size error. input data: $(size(x)), block size: $(szBlock).")
+    end
+    primeBlock = colon.(1, szBlock)
+
+    data = hcat([ vec( x[ ((ind2sub(nBlocks,idx) .- 1) .* szBlock .+ primeBlock)... ]) for idx in 1:prod(nBlocks) ]...)
+    PolyphaseVector(data, nBlocks)
 end
 
-function getSynthesisFilters(pfb::MDCDL.ParallelFB)
-    pfb.synthesisFilters
+function mdarray2polyphase(x::Array{T,D}) where {T,D}
+    data = vcat([ vec(x[fill(:,D-1)...,p]).' for p in 1:size(x,D) ]...)
+    nBlocks = size(x)[1:end-1]
+    PolyphaseVector(data, nBlocks)
 end
+
+function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
+    if size(x.data,1) != prod(szBlock)
+        error("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1)).")
+    end
+
+    # primeBlock = ntuple(n -> 1:szBlock[n], D)
+    primeBlock = colon.(1, szBlock)
+    out = Array{TX,D}((x.nBlocks .* szBlock)...)
+    foreach(1:prod(x.nBlocks)) do idx
+        out[((ind2sub(x.nBlocks,idx) .- 1) .* szBlock .+ primeBlock)...] = reshape(x.data[:,idx],szBlock...)
+    end
+    out
+end
+
+function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
+    const P = size(x.data,1)
+    output = Array{T,D+1}(x.nBlocks..., P)
+
+    foreach(1:P) do p
+        output[fill(:,D)...,p] = reshape(x.data[p,:], x.nBlocks)
+    end
+    output
+end
+
+function permutedims(x::PolyphaseVector{T,D}) where {T,D}
+    data = hcat( [ x.data[:, (1:x.nBlocks[1]:end) + idx] for idx in 0:x.nBlocks[1]-1 ]... )
+    nBlocks = tuple(circshift(collect(x.nBlocks),-1)...)
+
+    PolyphaseVector(data,nBlocks)
+end
+
+function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
+    S = fld(size(x.data,2), x.nBlocks[1])
+    data = hcat( [ x.data[:, (1:S:end) + idx] for idx in 0:S-1 ]... )
+    nBlocks = tuple(circshift(collect(x.nBlocks),1)...)
+
+    PolyphaseVector(data,nBlocks)
+end
+
+multiple(mtx::Matrix, pv::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector{T,D}(mtx*pv.data, pv.nBlocks)
+
+*(mtx::Matrix, pv::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(mtx*pv.data, pv.nBlocks)
+*(mtx::Diagonal, pv::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(mtx*pv.data, pv.nBlocks)
+
+size(A::PolyphaseVector) = size(A.data)
+
+getindex(A::PolyphaseVector, i::Int) = getindex(A.data, i)
+
+getindex(A::PolyphaseVector, I::Vararg{Int, 2}) = getindex(A.data, I...)
+
+function setindex!(A::PolyphaseVector, v, i::Int)
+    setindex!(A.data, v, i)
+    A
+end
+
+function setindex!(A::PolyphaseVector, v, I::Vararg{Int, 2})
+    setindex!(A.data, v, I...)
+    A
+end
+
+copy(A::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(A.data, A.nBlocks)

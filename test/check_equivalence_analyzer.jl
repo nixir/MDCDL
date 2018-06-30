@@ -2,13 +2,14 @@ using MDCDL
 
 include("randomInit.jl")
 
-D = 1
+D = 2
 # df = ntuple(v -> 2, D) # must be even
-df = (2,)
+df = (2,2)
 # df = (2,2)
 nch = prod(df) + 2
+# nch = (3,3)
 # ord = ntuple(v -> 4, D) # any element must be even number
-ord = (2,)
+ord = (2,2)
 
 # create a CNSOLT object
 cnsolt = Cnsolt(df, nch, ord)
@@ -21,6 +22,8 @@ szx = df .* (ord .+ 1) .* 4
 x = reshape(convert.(Complex{Float64},collect(1:prod(szx))),szx...)
 
 ya, sc = analyze(cnsolt,x)
+
+typeof(ya)
 
 afs = getAnalysisFilters(cnsolt)
 
@@ -40,7 +43,7 @@ rxa = synthesize(cnsolt, ya, sc)
 sfs = getSynthesisFilters(cnsolt)
 
 offsetu = df .* 0
-rxfm = sum([MDCDL.mdfilter( MDCDL.upsample(yf[p],df,offsetu),sfs[p]) for p in 1:nch ])
+rxfm = sum([MDCDL.mdfilter( MDCDL.upsample(yf[p],df,offsetu),sfs[p]) for p in 1:sum(nch) ])
 rxf = circshift(rxfm, -1 .* df .* ord)
 
 err_rx = vecnorm(rxf - x)

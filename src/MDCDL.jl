@@ -2,6 +2,7 @@ module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
 # A type of D-dimensional CNSOLT
 
+export PolyphaseVector
 export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export MultiLayerCsc
 export analyze, synthesize
@@ -14,6 +15,11 @@ export mdfilter
 export getAngleParameters, setAngleParameters!
 
 include("basicComplexDSP.jl")
+
+struct PolyphaseVector{T,D} <: AbstractArray{T,2}
+    data::Matrix{T}
+    nBlocks::NTuple{D, Int64}
+end
 
 abstract type FilterBank{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
