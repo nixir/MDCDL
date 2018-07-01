@@ -1,5 +1,5 @@
-function synthesize(fb::MDCDL.FilterBank{T,D}, y::Array{Array{Array{TY,D},1},1}, scales::Array, level::Integer = 1) where {T,TY,D}
-    function subsynthesize(sy::Array{Array{Array{TY,D},1},1}, k::Integer)
+function synthesize(fb::MDCDL.FilterBank{T,D}, y::Vector{Vector{Array{TY,D}}}, scales::Vector{NTuple{D,Int}}, level::Integer = 1) where {T,TY,D}
+    function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
         ya = if k <= 1
             sy[1]
         else

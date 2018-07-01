@@ -8,11 +8,12 @@ df = ntuple( d -> 2, D)
 # df = (2,8)
 nch = prod(df) + 2
 # nch = (cld(prod(df),2)+1,fld(prod(df),2)+1)
-ord = ntuple( d -> 4, D)
+ord = ntuple( d -> 2, D)
 # ord = (4,2)
-lv = 3
+lv = 1
 
-szx = (df .^ lv) .* (ord .+ 1)
+# szx = 3 .* ((df .^ lv) .* (ord .+ 1))
+szx = tuple(fill(32,D)...)
 
 dt = Float64
 
