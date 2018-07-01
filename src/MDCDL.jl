@@ -19,7 +19,7 @@ import Base.promote_rule
 
 struct PolyphaseVector{T,D} <: AbstractArray{T,2}
     data::Matrix{T}
-    nBlocks::NTuple{D, Int64}
+    nBlocks::NTuple{D, Int}
 end
 
 promote_rule(::Type{PolyphaseVector{TA,D}}, ::Type{PolyphaseVector{TB,D}}) where {TA,TB,D} = PolyphaseVector{promote_type(TA,TB), D}
@@ -28,18 +28,18 @@ abstract type FilterBank{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
 
 struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
-    decimationFactor::NTuple{D, Int64}
-    nChannels::Tuple{Int64,Int64}
-    polyphaseOrder::NTuple{D, Int64}
+    decimationFactor::NTuple{D, Int}
+    nChannels::Tuple{Int,Int}
+    polyphaseOrder::NTuple{D, Int}
 
-    nVanishingMoment::Int64
+    nVanishingMoment::Int
 
     initMatrices::Array{Matrix{T},1}
     propMatrices::Array{Array{Matrix{T},1},1}
 
     matrixC::Matrix{T}
 
-    function Rnsolt(df::NTuple{D,Int64}, nChs::Tuple{Int64, Int64}, ppo::NTuple{D,Int64}; vanishingMoment::Int64 = 0, dataType = Float64) where D
+    function Rnsolt(df::NTuple{D,Int}, nChs::Tuple{Int, Int}, ppo::NTuple{D,Int}; vanishingMoment::Int = 0, dataType = Float64) where D
         P = sum(nChs)
         structType = (nChs[1] == nChs[2]) ? 1 : 2
         if prod(df) > P
@@ -64,12 +64,12 @@ end
 promote_rule(::Type{Rnsolt{D,S,TA}}, ::Type{Rnsolt{D,S,TB}}) where {D,S,TA,TB} = Rnsolt{D,S,promote_type(TA,TB)}
 
 struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
-    decimationFactor::NTuple{D, Int64}
-    nChannels::Int64
-    polyphaseOrder::NTuple{D, Int64}
-    # directionPermutation::NTuple{D, Int64}
+    decimationFactor::NTuple{D, Int}
+    nChannels::Int
+    polyphaseOrder::NTuple{D, Int}
+    # directionPermutation::NTuple{D, Int}
 
-    nVanishingMoment::Int64 # reserved for furture works
+    nVanishingMoment::Int # reserved for furture works
 
     initMatrices::Array{Matrix{T},1}
     propMatrices::Array{Array{Matrix{T},1},1}
@@ -78,7 +78,7 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
     matrixF::Matrix{Complex{T}}
 
     # constructor
-    function Cnsolt(df::NTuple{D,Int64}, nChs::Int64, ppo::NTuple{D,Int64}; vanishingMoment::Int64 = 0, dataType = Float64) where D
+    function Cnsolt(df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; vanishingMoment::Int = 0, dataType = Float64) where D
         structType = (nChs % 2 == 0) ? 1 : 2
         if prod(df) > nChs
             error("The number of channels must be equal or greater than a product of the decimation factor.")
@@ -99,14 +99,14 @@ end
 promote_rule(::Type{Cnsolt{D,S,TA}}, ::Type{Cnsolt{D,S,TB}}) where {D,S,TA,TB} = Cnsolt{D,S,promote_type(TA,TB)}
 
 struct ParallelFB{T,D} <: FilterBank{T,D}
-    decimationFactor::NTuple{D, Int64}
-    nChannels::Int64
-    polyphaseOrder::NTuple{D, Int64}
+    decimationFactor::NTuple{D, Int}
+    nChannels::Int
+    polyphaseOrder::NTuple{D, Int}
 
     analysisFilters::Vector{Array{T,D}}
     synthesisFilters::Vector{Array{T,D}}
 
-    function ParallelFB(df::NTuple{D,Int64}, nChs::Int64, ppo::NTuple{D,Int64}; dataType = Float64) where D
+    function ParallelFB(df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; dataType = Float64) where D
         szFilters = df .* (ppo .+ 1)
         afs = [ Array{dataType, D}(szFilters...) for p in 1:nChs ]
         sfs = [ Array{dataType, D}(szFilters...) for p in 1:nChs ]
@@ -117,7 +117,7 @@ end
 promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
 
 struct MultiLayerCsc{T,D}
-    nLayers::Int64
+    nLayers::Int
 
     dictionaries::Vector
     # lambdas::Vector{T}
