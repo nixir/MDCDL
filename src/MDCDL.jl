@@ -15,15 +15,17 @@ export mdfilter
 export getAngleParameters, setAngleParameters!
 
 include("basicComplexDSP.jl")
+import Base.promote_rule
 
 struct PolyphaseVector{T,D} <: AbstractArray{T,2}
     data::Matrix{T}
     nBlocks::NTuple{D, Int64}
 end
 
+promote_rule(::Type{PolyphaseVector{TA,D}}, ::Type{PolyphaseVector{TB,D}}) where {TA,TB,D} = PolyphaseVector{promote_type(TA,TB), D}
+
 abstract type FilterBank{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
-# abstract type Nsolt{D,T} <: PolyphaseFB{T,D} end
 
 struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
     decimationFactor::NTuple{D, Int64}
@@ -59,6 +61,8 @@ struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
     end
 end
 
+promote_rule(::Type{Rnsolt{D,S,TA}}, ::Type{Rnsolt{D,S,TB}}) where {D,S,TA,TB} = Rnsolt{D,S,promote_type(TA,TB)}
+
 struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
     decimationFactor::NTuple{D, Int64}
     nChannels::Int64
@@ -92,6 +96,8 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
     end
 end
 
+promote_rule(::Type{Cnsolt{D,S,TA}}, ::Type{Cnsolt{D,S,TB}}) where {D,S,TA,TB} = Cnsolt{D,S,promote_type(TA,TB)}
+
 struct ParallelFB{T,D} <: FilterBank{T,D}
     decimationFactor::NTuple{D, Int64}
     nChannels::Int64
@@ -107,6 +113,8 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
         new{dataType, D}(df, nChs, ppo, afs, sfs)
     end
 end
+
+promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
 
 struct MultiLayerCsc{T,D}
     nLayers::Int64

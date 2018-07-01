@@ -6,8 +6,8 @@ include("randomInit.jl")
 D = 2
 df = ntuple( d -> 2, D)
 # df = (2,8)
-nch = prod(df) + 2
-# nch = (cld(prod(df),2)+1,fld(prod(df),2)+1)
+# nch = prod(df) + 2
+nch = (cld(prod(df),2)+1,fld(prod(df),2)+1)
 ord = ntuple( d -> 4, D)
 # ord = (4,2)
 lv = 1
@@ -26,7 +26,6 @@ println("CNSOLT Configurations: #Dimensions=$D, Decimation factor=$df, #Channels
 
 x = rand(Complex{dt},szx)
 
-
 y, sc = MDCDL.analyze(cnsolt, x, lv)
 rx = MDCDL.synthesize(cnsolt, y, sc, lv)
 
@@ -38,7 +37,7 @@ afs = getAnalysisFilters(cnsolt)
 sfs = getSynthesisFilters(cnsolt)
 
 sztx = df .* (ord .+ 1)
-tx = rand(Complex{dt}, sztx)
+tx = rand(dt, sztx)
 
 offsetd = df .- 1
 offsetu = df .* 0

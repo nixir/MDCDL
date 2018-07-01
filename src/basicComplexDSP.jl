@@ -1,7 +1,14 @@
 # circular convolution
-function cconv(x::Array{TX,D}, h::Array{TY,D}) where {TX,TY,D}
+
+function cconv(x::Array{Complex{T},D}, h::Array{Complex{T},D}) where {T,D}
     ifft( fft(x) .* fft(h))
 end
+
+function cconv(x::Array{T,D}, h::Array{T,D}) where {T<:Real,D}
+    real(ifft( fft(x) .* fft(h)))
+end
+
+cconv(x::Array{TX,D}, h::Array{TY,D}) where {TX,TY,D} = cconv(promote(x,h)...)
 
 # upsampler
 function upsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
@@ -27,13 +34,16 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
 end
 
 # multidimensional FIR filtering
-function mdfilter(A::Array{TA,D}, h::Array{TX,D}; boundary=:circular, outputSize=:same) where {TA,TX,D}
+function mdfilter(A::Array{T,D}, h::Array{T,D}; boundary=:circular, outputSize=:same) where {T,D}
     # center = cld.(size(h), 2)
-    ker = zeros(TX,size(A)...)
+    
+    ker = zeros(T,size(A)...)
     ker[colon.(1,size(h))...] = h
 
     cconv(A,ker) # boundary="circular", outputsize="same", convOrCorr="conv"
 end
+
+mdfilter(A::Array{TA,D}, h::Array{TX,D}; kwargs...) where {TA,TX,D} = mdfilter(promote(A,h)...; kwargs...)
 
 # matrix-formed CDFT operator for D-dimensional signal
 function cdftmtx(sz::Integer...)
