@@ -6,25 +6,25 @@ include("randomInit.jl")
 D = 2
 df = ntuple( d -> 2, D)
 # df = (2,8)
-# nch = prod(df) + 2
-nch = (cld(prod(df),2)+1,fld(prod(df),2)+1)
+nch = prod(df) + 2
+# nch = (cld(prod(df),2)+1,fld(prod(df),2)+1)
 ord = ntuple( d -> 4, D)
 # ord = (4,2)
-lv = 1
+lv = 3
 
-szx = df .* (ord .+ 1)
+szx = (df .^ lv) .* (ord .+ 1)
 
 dt = Float64
 
 # create a CNSOLT object
-cnsolt = Rnsolt(df, nch, ord, dataType=dt)
+cnsolt = Cnsolt(df, nch, ord, dataType=dt)
 randomInit!(cnsolt)
 
 println("CNSOLT Configurations: #Dimensions=$D, Decimation factor=$df, #Channels=$nch, Polyphase order=$ord, Tree levels=$lv")
 # show atomic images
 # atmimshow(cnsolt)
 
-x = rand(Complex{dt},szx)
+x = rand(dt,szx)
 
 y, sc = MDCDL.analyze(cnsolt, x, lv)
 rx = MDCDL.synthesize(cnsolt, y, sc, lv)

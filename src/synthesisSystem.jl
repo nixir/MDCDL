@@ -1,10 +1,9 @@
-
 function synthesize(fb::MDCDL.FilterBank{T,D}, y::Array{Array{Array{TY,D},1},1}, scales::Array, level::Integer = 1) where {T,TY,D}
     function subsynthesize(sy::Array{Array{Array{TY,D},1},1}, k::Integer)
         ya = if k <= 1
             sy[1]
         else
-            vcat(subsynthesize(sy[2:end],k-1),sy[1])
+            [ subsynthesize(sy[2:end],k-1), sy[1]... ]
         end
         stepSynthesisBank(fb, ya, scales[level-k+1])
     end

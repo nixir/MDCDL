@@ -1,4 +1,3 @@
-
 function analyze(fb::MDCDL.FilterBank{TF,D}, x::Array{TX,D}, level::Integer = 1) where {TF,TX,D}
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
         sy = stepAnalysisBank(fb, sx)
@@ -34,8 +33,6 @@ function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMod
 
     return y
 end
-
-# multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt{D,S,TF}, pvx::PolyphaseVector{TX,D}) where {D,S,TF,TX} = multipleAnalysisPolyphaseMat(cc, PolyphaseVector\\)
 
 function multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt{D,1,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D}
     const M = prod(cc.decimationFactor)

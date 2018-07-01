@@ -6,7 +6,7 @@ include("randomInit.jl")
 
 # configurations
 D = 2
-nl = 3``
+nl = 3
 szSubData = ntuple( d -> 64, D)
 nSubData = 16
 
