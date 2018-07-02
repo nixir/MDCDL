@@ -4,48 +4,46 @@ include("randomInit.jl")
 
 # configurations
 D = 2
-df = ntuple( d -> 2, D)
-# df = (2,8)
-nch = prod(df) + 2
-# nch = (cld(prod(df),2)+1,fld(prod(df),2)+1)
-ord = ntuple( d -> 2, D)
-# ord = (4,2)
-lv = 1
+# df = tuple(rand(1:4,D)...)
+df = tuple(fill(3,D)...)
+nch = (cld(prod(df),2), fld(prod(df),2)) .+ (1, 2)
+# nch = prod(df) + 2 + (prod(df) % 2)
+# nch = (cld(prod(df),2)+1,cld(prod(df),2)+1)
+# ord = tuple(rand(0:2:4,D)...)
+ord = (0,0)
+lv = 2
 
-# szx = 3 .* ((df .^ lv) .* (ord .+ 1))
-szx = tuple(fill(32,D)...)
+szx = 4 .* ((df .^ lv) .* (ord .+ 1))
 
 dt = Float64
 
-# create a CNSOLT object
-cnsolt = Cnsolt(df, nch, ord, dataType=dt)
-randomInit!(cnsolt)
+# create a nsolt object
+nsolt = Rnsolt(df, nch, ord, dataType=dt)
+# randomInit!(nsolt)
 
-println("CNSOLT Configurations: #Dimensions=$D, Decimation factor=$df, #Channels=$nch, Polyphase order=$ord, Tree levels=$lv")
+println("nsolt Configurations: #Dimensions=$D, Decimation factor=$df, #Channels=$nch, Polyphase order=$ord, Tree levels=$lv")
 # show atomic images
-# atmimshow(cnsolt)
+# atmimshow(nsolt)
 
-x = rand(dt,szx)
+# x = rand(dt,szx)
+x = reshape(collect(1:prod(szx)),szx...)
 
-y, sc = MDCDL.analyze(cnsolt, x, lv)
-rx = MDCDL.synthesize(cnsolt, y, sc, lv)
+y, sc = MDCDL.analyze(nsolt, x, lv)
+rx = MDCDL.synthesize(nsolt, y, sc, lv)
 
 errx = vecnorm(rx - x)
 
 println("error = $errx")
 
-afs = getAnalysisFilters(cnsolt)
-sfs = getSynthesisFilters(cnsolt)
-
-sztx = df .* (ord .+ 1)
-tx = rand(dt, sztx)
+afs = getAnalysisFilters(nsolt)
+sfs = getSynthesisFilters(nsolt)
 
 offsetd = df .- 1
-offsetu = df .* 0
+nShifts = -1 .* ord .* df
 
-ys = [ MDCDL.downsample(MDCDL.cconv( afs[p],tx), df, offsetd) for p in 1:sum(nch)]
+ys = [ MDCDL.downsample(MDCDL.mdfilter(x, afs[p]; boundary=:circular, operation=:conv), df, offsetd) for p in 1:sum(nch) ]
 
-rtx = circshift(sum( MDCDL.cconv.(sfs,[ MDCDL.upsample(yyy, df, offsetu) for yyy in ys])), df)
+rtx = circshift(sum( MDCDL.mdfilter.([ MDCDL.upsample(yyy, df) for yyy in ys], sfs; boundary=:circular, operation=:conv)), nShifts)
 
-recerrf = vecnorm(rtx - tx)
+recerrf = vecnorm(rtx - x)
 println("Reconstruction error by filtering: $recerrf")

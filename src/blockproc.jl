@@ -53,5 +53,5 @@ function vecblocks2array(v::Vector{T}, szOut::NTuple{D}, szBlock::NTuple{D}) whe
 end
 
 function butterfly(x::Matrix, p::Integer)
-    vcat(x[1:p,:] + x[end-(p-1):end,:], x[1:p,:] - x[end-(p-1):end,:]) / sqrt(2)
+    vcat((x[1:p,:] + x[end-(p-1):end,:])/sqrt(2), x[p+1:end-p,:] ,(x[1:p,:] - x[end-(p-1):end,:])/sqrt(2))
 end

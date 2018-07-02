@@ -1,21 +1,21 @@
 module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
-# A type of D-dimensional CNSOLT
+import Base.promote_rule
+
+include("basicComplexDSP.jl")
 
 export PolyphaseVector
 export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export MultiLayerCsc
 export analyze, synthesize
 # export cconv
-# export upsample, downsample
+export upsample, downsample
 export atmimshow
 # export getAnalysisBank
 export getAnalysisFilters, getSynthesisFilters
 export mdfilter
 export getAngleParameters, setAngleParameters!
 
-include("basicComplexDSP.jl")
-import Base.promote_rule
 
 struct PolyphaseVector{T,D} <: AbstractArray{T,2}
     data::Matrix{T}
@@ -40,24 +40,33 @@ struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
     matrixC::Matrix{T}
 
     function Rnsolt(df::NTuple{D,Int}, nChs::Tuple{Int, Int}, ppo::NTuple{D,Int}; vanishingMoment::Int = 0, dataType = Float64) where D
+        T = dataType
         P = sum(nChs)
-        structType = (nChs[1] == nChs[2]) ? 1 : 2
-        if prod(df) > P
-            error("The number of channels must be equal or greater than a product of the decimation factor.")
+        M = prod(df)
+        if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
+            throw(ArgumentError("Invalid number of channels. "))
         end
         if vanishingMoment != 0 && vanishingMoment != 1
-            error("The number of vanishing moments must be 0 or 1.")
+            throw(ArgumentError("The number of vanishing moments must be 0 or 1."))
         end
-        if structType == 2
-            error("Sorry, the Type-II RNSOLT hasn't implemented yet. Use Type-I.")
+
+        if nChs[1] == nChs[2]
+            S = 1
+            initMts = Array[ eye(T, p) for p in nChs ]
+            propMts = Array[ Array[ (n % 2 == 0 ? 1 : -1) * eye(T, nChs[1]) for n in 1:ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
+        else
+            S = 2
+            initMts = Array[ eye(T, p) for p in nChs ]
+            propMts = if nChs[1] > nChs[2]
+                [ vcat(fill(Array[ -eye(T,nChs[2]), eye(T,nChs[1]) ], ppo[pd])...) for pd in 1:D]
+            else
+                [ vcat(fill(Array[ eye(T,nChs[1]), -eye(T,nChs[2]) ], ppo[pd])...) for pd in 1:D]
+            end
         end
-        # dirPerm = ntuple(d -> d, D)
-        initMts = Array[ eye(dataType, p) for p in nChs ]
-        propMts = Array[ Array[ (n % 2 == 0 ? 1 : -1) * eye(dataType,nChs[1]) for n in 1:ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
 
         mtxc = flipdim(MDCDL.permdctmtx(df...),2)
 
-        new{D,structType,dataType}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxc)
+        new{D,S,T}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxc)
     end
 end
 
@@ -69,30 +78,38 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
     polyphaseOrder::NTuple{D, Int}
     # directionPermutation::NTuple{D, Int}
 
-    nVanishingMoment::Int # reserved for furture works
-
-    initMatrices::Array{Matrix{T},1}
-    propMatrices::Array{Array{Matrix{T},1},1}
-    paramAngles::Array{Array{Vector{T},1},1}
+    initMatrices::Vector{Matrix{T}}
+    propMatrices::Vector{Vector{Matrix{T}}}
+    paramAngles::Vector{Vector{Vector{T}}}
     symmetry::Diagonal{Complex{T}}
     matrixF::Matrix{Complex{T}}
 
     # constructor
     function Cnsolt(df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; vanishingMoment::Int = 0, dataType = Float64) where D
-        structType = (nChs % 2 == 0) ? 1 : 2
+        T = dataType
         if prod(df) > nChs
-            error("The number of channels must be equal or greater than a product of the decimation factor.")
+            throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
-        if vanishingMoment != 0 && vanishingMoment != 1
-            error("The number of vanishing moments must be 0 or 1.")
+
+        if nChs % 2 == 0
+            S = 1
+            initMts = Array[ eye(T,nChs) ]
+            propMts = Array[ Array[ (n % 2 == 0 ? -1 : 1) * eye(T,fld(nChs,2)) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I CNSOLT
+        else
+            if any(ppo .% 2 .!= 0)
+                throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
+            end
+            cch = cld(nChs, 2)
+            fch = fld(nChs, 2)
+            S = 2
+            initMts = Array[ eye(T, nChs) ]
+            propMts = [ vcat(fill(Array[ eye(T,fch), -eye(T,fch), eye(T,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1))) ], ppo[pd])...) for pd in 1:D]
         end
-        initMts = Array[ eye(dataType,nChs) ]
-        propMts = Array[ Array[ (n % 2 == 0 ? -1 : 1) * eye(dataType,fld(nChs,2)) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I CNSOLT
-        paramAngs = Array[ Array[ zeros(dataType,fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
-        sym = Diagonal{Complex{dataType}}(ones(nChs))
+        paramAngs = Array[ Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
+        sym = Diagonal{Complex{T}}(ones(nChs))
         mtxf = flipdim(MDCDL.cdftmtx(df...),2)
 
-        new{D,structType,dataType}(df, nChs, ppo, vanishingMoment, initMts, propMts, paramAngs, sym, mtxf)
+        new{D,S,T}(df, nChs, ppo, initMts, propMts, paramAngs, sym, mtxf)
     end
 end
 

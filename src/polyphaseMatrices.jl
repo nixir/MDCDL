@@ -5,15 +5,15 @@ import Base.getindex
 import Base.setindex!
 
 function getMatrixB(P::Integer, angs::Vector{T}) where T
-    hP = fld(P,2)
-    psangs = (2 .* angs .+ pi) ./ 4
-    cs = cos.(psangs)
-    ss = sin.(psangs)
+    const hP = fld(P,2)
+    const psangs = (2 .* angs .+ pi) ./ 4
+    const cs = cos.(psangs)
+    const ss = sin.(psangs)
 
     subMatFcn = (x) -> sparse([1,1,2,2], [1,2,1,2], x)
 
-    LC = [ subMatFcn([ -1im*cs[n], -1im*ss[n], cs[n], -ss[n] ]) for n in 1:fld(hP,2) ]
-    LS = [ subMatFcn([ ss[n], cs[n], 1im*ss[n], -1im*cs[n] ]) for n in 1:fld(hP,2) ]
+    const LC = [ subMatFcn([ -1im*cs[n], -1im*ss[n], cs[n], -ss[n] ]) for n in 1:fld(hP,2) ]
+    const LS = [ subMatFcn([ ss[n], cs[n], 1im*ss[n], -1im*cs[n] ]) for n in 1:fld(hP,2) ]
 
     C, S = if hP % 2 == 0
         (Array(blkdiag(LC...)), Array(blkdiag(LS...)))
@@ -25,13 +25,13 @@ function getMatrixB(P::Integer, angs::Vector{T}) where T
 end
 
 function getAnalysisBank(cc::MDCDL.Cnsolt{D,1,T}) where {D,T}
-    df = cc.decimationFactor
-    P = cc.nChannels
-    M = prod(df)
-    ord = cc.polyphaseOrder
+    const df = cc.decimationFactor
+    const P = cc.nChannels
+    const M = prod(df)
+    const ord = cc.polyphaseOrder
 
-    rngUpper = (1:fld(P,2), :)
-    rngLower = (fld(P,2)+1:P, :)
+    const rngUpper = (1:fld(P,2), :)
+    const rngLower = (fld(P,2)+1:P, :)
 
     # output
     ppm = zeros(Complex{T},P, prod(df .* (ord .+ 1)))
@@ -62,12 +62,69 @@ function getAnalysisBank(cc::MDCDL.Cnsolt{D,1,T}) where {D,T}
     cc.symmetry * ppm
 end
 
+function getAnalysisBank(cc::MDCDL.Cnsolt{D,2,T}) where {D,T}
+    const df = cc.decimationFactor
+    const P = cc.nChannels
+    const M = prod(df)
+    const ord = cc.polyphaseOrder
+    const nStages = fld.(ord,2)
+    const chEven = 1:P-1
+
+    # output
+    ppm = zeros(Complex{T},P, prod(df .* (ord .+ 1)))
+    ppm[1:M,1:M] = cc.matrixF
+
+    # Initial matrix process
+    ppm = cc.initMatrices[1] * ppm
+
+    nStride = M
+    for d = 1:D
+        angs = cc.paramAngles[d]
+        propMats = cc.propMatrices[d]
+        for k = 1:nStages[d]
+            # first step
+            chUpper = 1:fld(P,2)
+            chLower = fld(P,2)+1:P-1
+            B = MDCDL.getMatrixB(P, angs[2*k-1])
+            W = propMats[4*k-3]
+            U = propMats[4*k-2]
+
+            # B Λ(z_d) B'
+            ppm[chEven,:] = B' * ppm[chEven,:]
+            ppm[chLower,:] = circshift(ppm[chLower,:],(0, nStride))
+            ppm[chEven,:] = B * ppm[chEven,:]
+
+            ppm[chUpper,:] = W * ppm[chUpper,:]
+            ppm[chLower,:] = U * ppm[chLower,:]
+
+            # second step
+            chUpper = 1:cld(P,2)
+            chLower = cld(P,2):P
+
+            B = MDCDL.getMatrixB(P, angs[2*k])
+            hW = propMats[4*k-1]
+            hU = propMats[4*k]
+
+            # B Λ(z_d) B'
+            ppm[chEven,:] = B' * ppm[chEven,:]
+            ppm[chLower,:] = circshift(ppm[chLower,:],(0, nStride))
+            ppm[chEven,:] = B * ppm[chEven,:]
+
+            ppm[chLower,:] = hU * ppm[chLower,:]
+            ppm[chUpper,:] = hW * ppm[chUpper,:]
+        end
+        nStride *= ord[d] + 1
+    end
+    cc.symmetry * ppm
+end
+
+
 function getAnalysisBank(rc::MDCDL.Rnsolt{D,1,T}) where {D,T}
-    df = rc.decimationFactor
-    nch = rc.nChannels
-    P = sum(nch)
-    M = prod(df)
-    ord = rc.polyphaseOrder
+    const df = rc.decimationFactor
+    const nch = rc.nChannels
+    const P = sum(nch)
+    const M = prod(df)
+    const ord = rc.polyphaseOrder
 
     rngUpper = (1:nch[1], :)
     rngLower = (nch[1]+1:P, :)
@@ -94,6 +151,59 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{D,1,T}) where {D,T}
             ppm = MDCDL.butterfly(ppm, nch[1])
 
             ppm[rngLower...] = U * ppm[rngLower...]
+        end
+        nStride *= ord[d] + 1
+    end
+    ppm
+end
+
+function getAnalysisBank(rc::MDCDL.Rnsolt{D,2,T}) where {D,T}
+    const df = rc.decimationFactor
+    const M = prod(df)
+    const ord = rc.polyphaseOrder
+    const nStages = fld.(rc.polyphaseOrder,2)
+    const nch = rc.nChannels
+    const P = sum(nch)
+    const maxP, minP, chMajor, chMinor = if rc.nChannels[1] > rc.nChannels[2]
+        (rc.nChannels[1], rc.nChannels[2], 1:rc.nChannels[1], (rc.nChannels[1]+1):P)
+    else
+        (rc.nChannels[2], rc.nChannels[1], (rc.nChannels[1]+1):P, 1:rc.nChannels[1])
+    end
+
+    # output
+    ppm = zeros(T, P, prod(df .* (ord .+ 1)))
+    # ppm[1:M,1:M] = rc.matrixF
+    ppm[1:cld(M,2), 1:M] = rc.matrixC[1:cld(M,2),:]
+    ppm[nch[1]+(1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
+
+    # Initial matrix process
+    ppm[1:nch[1],:] = rc.initMatrices[1] * ppm[1:nch[1],:]
+    ppm[(nch[1]+1):end,:] = rc.initMatrices[2] * ppm[(nch[1]+1):end,:]
+
+    nStride = M
+    for d = 1:D
+        propMats = rc.propMatrices[d]
+        for k = 1:nStages[d]
+            # first step
+
+            U = propMats[2*k-1]
+
+            # B Λ(z_d) B'
+            ppm = butterfly(ppm, minP)
+            ppm[minP+1:end,:] = circshift(ppm[minP+1:end,:],(0, nStride))
+            ppm = butterfly(ppm, minP)
+
+            ppm[chMinor,:] = U * ppm[chMinor,:]
+
+            # second step
+            W = propMats[2*k]
+
+            # B Λ(z_d) B'
+            ppm = butterfly(ppm, minP)
+            ppm[maxP+1:end,:] = circshift(ppm[maxP+1:end,:],(0, nStride))
+            ppm = butterfly(ppm, minP)
+
+            ppm[chMajor,:] = W * ppm[chMajor,:]
         end
         nStride *= ord[d] + 1
     end
@@ -167,7 +277,7 @@ end
 
 function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
     if size(x.data,1) != prod(szBlock)
-        error("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1)).")
+        throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
     end
 
     # primeBlock = ntuple(n -> 1:szBlock[n], D)
@@ -204,10 +314,8 @@ function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
     PolyphaseVector(data,nBlocks)
 end
 
-multiple(mtx::Matrix, pv::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector{T,D}(mtx*pv.data, pv.nBlocks)
-
-*(mtx::Matrix, pv::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(mtx*pv.data, pv.nBlocks)
-*(mtx::Diagonal, pv::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(mtx*pv.data, pv.nBlocks)
+# *(mtx::AbstractMatrix, pv::PolyphaseVector) = PolyphaseVector(mtx*pv.data, pv.nBlocks)
+# *(pv::PolyphaseVector, mtx::AbstractMatrix) = PolyphaseVector(pv.data*mtx, pv.nBlocks)
 
 size(A::PolyphaseVector) = size(A.data)
 

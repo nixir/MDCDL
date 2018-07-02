@@ -1,4 +1,4 @@
-function randomInit!(cnsolt::MDCDL.Cnsolt{D,1,T}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T}
+function randomInit!(cnsolt::MDCDL.Cnsolt{D,S,T}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T}
     P = sum(cnsolt.nChannels)
 
     if isSymmetry
@@ -21,13 +21,13 @@ function randomInit!(cnsolt::MDCDL.Cnsolt{D,1,T}; isInitMat=true, isPropMat=true
     end
 end
 
-function randomInit!(rnsolt::MDCDL.Rnsolt{D,1,T}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T} # "isPropAng" and "isSymmetry" are not used.
+function randomInit!(rnsolt::MDCDL.Rnsolt{D,S,T}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T} # "isPropAng" and "isSymmetry" are not used.
     P = sum(rnsolt.nChannels)
     hP = fld(P,2)
 
     if isInitMat
-        rnsolt.initMatrices[1] = Array{T}(qr(rand(hP,hP), thin=false)[1])
-        rnsolt.initMatrices[2] = Array{T}(qr(rand(hP,hP), thin=false)[1])
+        rnsolt.initMatrices[1] = Array{T}(qr(rand(size(rnsolt.initMatrices[1])...), thin=false)[1])
+        rnsolt.initMatrices[2] = Array{T}(qr(rand(size(rnsolt.initMatrices[2])...), thin=false)[1])
     end
 
     for d = 1:D
