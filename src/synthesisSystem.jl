@@ -1,47 +1,74 @@
-function synthesize(fb::MDCDL.FilterBank{T,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer = 1) where {T,TY,D}
-    nBlocks = size(y[level][1])
-    df = fb.decimationFactor
-    function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
-        ya = if k <= 1
-            sy[1]
-        else
-            [ subsynthesize(sy[2:end],k-1), sy[1]... ]
-        end
-        stepSynthesisBank(fb, ya, nBlocks .* df .^ (k-1))
-    end
-    vx = subsynthesize(y, level)
-    reshape(vx, (nBlocks .* df .^ level)...)
-end
+###############################################
+#TODO: 下記のコードを実装する
 
-function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,D}, y::Array{TY}, nBlocks::NTuple{D}; inputMode=:normal) where {TF,TY,D}
-    const M = prod(fb.decimationFactor)
-    const P = sum(fb.nChannels)
+# function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer = 1; kwargs...) where {TF,TY,D}
+#     pvy = map(y) do yp
+#
+#     end
+#     synthesize(fb, pvy, level; kwargs...)
+# end
 
-    py = if inputMode == :normal
-        PolyphaseVector(vcat([MDCDL.array2vecblocks(y[p], nBlocks).' for p in 1:P]...), nBlocks)
-    elseif inputMode == :augumented
-        mdarray2polyphase(y)
-    else
-        throw(ArgumentError("inputMode=$inputMode: This option is not available."))
-    end
+# function synthesize(fb::MDCDL.FilterBank{TF,D}, y::Vector{PolyphaseVector{TY,D}}, level::Integer = 1) where {TF,TY,D}
+#     nBlocks = size(y[level][1])
+#     df = fb.decimationFactor
+#     function subsynthesize(sy::Vector{PolyphaseVector{TY,D}}, k::Integer)
+#         ya = if k <= 1
+#             sy[1]
+#         else
+#             [ subsynthesize(sy[2:end],k-1), sy[1]... ]
+#         end
+#         multipleSynthesisBank(fb, ya)
+#     end
+#     vx = subsynthesize(y, level)
+#     reshape(vx, (nBlocks .* df .^ level)...)
+# end
 
-    size(py.data)
+###############################################
 
-    px = multipleSynthesisPolyphaseMat(fb, py)
-    polyphase2mdarray(px, fb.decimationFactor)
+# function synthesize(fb::MDCDL.FilterBank{T,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer = 1) where {T,TY,D}
+#     nBlocks = size(y[level][1])
+#     df = fb.decimationFactor
+#     function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
+#         ya = if k <= 1
+#             sy[1]
+#         else
+#             [ subsynthesize(sy[2:end],k-1), sy[1]... ]
+#         end
+#         stepSynthesisBank(fb, ya, nBlocks .* df .^ (k-1))
+#     end
+#     vx = subsynthesize(y, level)
+#     reshape(vx, (nBlocks .* df .^ level)...)
+# end
 
-end
-
-
-function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {TF,DF,TY,DY}
-    if DY != DF + 1
-        throw(DimensionMismatch("Dimension mismatch. Dim. of the filter bank = $DF, Dim. of the input = $DY."))
-    end
-    szRegion = size(y)[1:DY-1] .* fb.decimationFactor
-    stepSynthesisBank(fb,y,szRegion; kwargs...)
-end
+# function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,D}, y::Array{TY}, nBlocks::NTuple{D}; inputMode=:normal) where {TF,TY,D}
+#     const M = prod(fb.decimationFactor)
+#     const P = sum(fb.nChannels)
+#
+#     py = if inputMode == :normal
+#         PolyphaseVector(vcat([MDCDL.array2vecblocks(y[p], nBlocks).' for p in 1:P]...), nBlocks)
+#     elseif inputMode == :augumented
+#         mdarray2polyphase(y)
+#     else
+#         throw(ArgumentError("inputMode=$inputMode: This option is not available."))
+#     end
+#
+#     size(py.data)
+#
+#     px = multipleSynthesisPolyphaseMat(fb, py)
+#     polyphase2mdarray(px, fb.decimationFactor)
+#
+# end
+#
+# function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {TF,DF,TY,DY}
+#     if DY != DF + 1
+#         throw(DimensionMismatch("Dimension mismatch. Dim. of the filter bank = $DF, Dim. of the input = $DY."))
+#     end
+#     szRegion = size(y)[1:DY-1] .* fb.decimationFactor
+#     stepSynthesisBank(fb,y,szRegion; kwargs...)
+# end
 
 function multipleSynthesisPolyphaseMat(cc::MDCDL.Cnsolt{D,S,TF}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
+# function multipleSynthesisBank(cc::MDCDL.Cnsolt{D,S,TF}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
 
@@ -133,6 +160,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{D,2,TF}, pvy::PolyphaseVector{TY,D}; 
 end
 
 function multipleSynthesisPolyphaseMat(cc::MDCDL.Rnsolt{D,S,TF}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
+# function multipleSynthesisBank(cc::MDCDL.Rnsolt{D,S,TF}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
     const M = prod(cc.decimationFactor)
     const cM = cld(M,2)
     const fM = fld(M,2)

@@ -15,6 +15,7 @@ export atmimshow
 export getAnalysisFilters, getSynthesisFilters
 export mdfilter
 export getAngleParameters, setAngleParameters!
+export mdarray2polyphase, polyphase2mdarray
 
 
 struct PolyphaseVector{T,D} <: AbstractArray{T,2}

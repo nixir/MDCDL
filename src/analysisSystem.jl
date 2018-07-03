@@ -1,39 +1,36 @@
-function analyze(fb::MDCDL.FilterBank{TF,D}, x::Array{TX,D}, level::Integer = 1) where {TF,TX,D}
-    function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        sy = stepAnalysisBank(fb, sx)
+function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, level::Integer; kwargs...) where {TF,TX,D}
+    analyze(fb, mdarray2polyphase(x, fb.decimationFactor), level; kwargs...)
+end
+
+function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer = 1; outputMode=:spacial) where {TF,TX,D}
+    function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
+        sy = multipleAnalysisBank(fb, sx)
         if k <= 1
             return [ sy ]
         else
-            res = Vector{Vector{Array{TF,D}}}(k)
-            res[1] = sy[2:end]
-            res[2:end] = subanalyze(sy[1], k-1)
+            res = Vector{PolyphaseVector{TF,D}}(k)
+            res[1] = PolyphaseVector{TF,D}(sy.data[2:end,:], sy.nBlocks)
+
+            # reshape Low-pass MD filter
+            dcCoefs = PolyphaseVector{TF,D}(sy.data[1:1,:], sy.nBlocks)
+            dcData = polyphase2mdarray(dcCoefs, tuple(fill(1,D)...))
+            nsx = mdarray2polyphase(dcData, fb.decimationFactor)
+
+            res[2:end] = subanalyze(nsx, k-1)
             return res
         end
     end
 
-    subanalyze(x,level)
-end
+    y = subanalyze(x,level)
 
-function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:normal) where {TF,TX,D}
-    const df = fb.decimationFactor
-    const M = prod(df)
-
-    px = MDCDL.mdarray2polyphase(x, df)
-
-    py = multipleAnalysisPolyphaseMat(fb, px)
-
-    y = if outputMode == :normal
-        [ MDCDL.vecblocks2array(py.data[p,:], py.nBlocks, tuple(ones(Integer,D)...)) for p in 1:sum(fb.nChannels) ]
-    elseif outputMode == :augumented
-        polyphase2mdarray(py)
-    else
-        throw(ArgumentError("outputMode=$outputMode: This option is not available."))
+    if outputMode == :polyphase
+        y
+    elseif outputMode == :spacial
+        [ [ MDCDL.vecblocks2array(py.data[p,:], py.nBlocks, tuple(ones(Integer,D)...)) for p in 1:size(py.data,1) ] for py in y]
     end
-
-    return y
 end
 
-function multipleAnalysisPolyphaseMat(cc::MDCDL.Cnsolt{D,S,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function multipleAnalysisBank(cc::MDCDL.Cnsolt{D,S,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
 
@@ -120,7 +117,7 @@ function extendAtoms(cc::MDCDL.Cnsolt{D,2,TF}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function multipleAnalysisPolyphaseMat(cc::MDCDL.Rnsolt{D,S,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function multipleAnalysisBank(cc::MDCDL.Rnsolt{D,S,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     const M = prod(cc.decimationFactor)
     const cM = cld(M,2)
     const fM = fld(M,2)
@@ -202,10 +199,21 @@ function extendAtoms(cc::MDCDL.Rnsolt{D,2,TF}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-
-function stepAnalysisBank(pfs::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}) where {TF,TX,D}
-    const df = pfs.decimationFactor
+function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer = 1) where {TF,TX,D}
+    const df = pfb.decimationFactor
     const offset = df .- 1
 
-    [  circshift(MDCDL.downsample(MDCDL.mdfilter(x, f; operation=:conv), df, offset), 0) for f in pfs.analysisFilters ]
+    function subanalyze(sx::Array{TS,D}, k::Integer) where TS
+        sy = [  circshift(MDCDL.downsample(MDCDL.mdfilter(sx, f; operation=:conv), df, offset), 0) for f in pfb.analysisFilters ]
+        if k <= 1
+            return [ sy ]
+        else
+            res = Vector{Vector{Array{TF,D}}}(k)
+            res[1] = sy[2:end]
+            res[2:end] = subanalyze(sy[1], k-1)
+            return res
+        end
+    end
+
+    subanalyze(x,level)
 end
