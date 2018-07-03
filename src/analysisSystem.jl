@@ -11,8 +11,7 @@ function analyze(fb::MDCDL.FilterBank{TF,D}, x::Array{TX,D}, level::Integer = 1)
         end
     end
 
-    scales = [ fld.(size(x), fb.decimationFactor.^l) for l in 0:level]
-    ( subanalyze(x,level), scales )
+    subanalyze(x,level)
 end
 
 function stepAnalysisBank(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:normal) where {TF,TX,D}

@@ -1,20 +1,21 @@
-function synthesize(fb::MDCDL.FilterBank{T,D}, y::Vector{Vector{Array{TY,D}}}, scales::Vector{NTuple{D,Int}}, level::Integer = 1) where {T,TY,D}
+function synthesize(fb::MDCDL.FilterBank{T,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer = 1) where {T,TY,D}
+    nBlocks = size(y[level][1])
+    df = fb.decimationFactor
     function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
         ya = if k <= 1
             sy[1]
         else
             [ subsynthesize(sy[2:end],k-1), sy[1]... ]
         end
-        stepSynthesisBank(fb, ya, scales[level-k+1])
+        stepSynthesisBank(fb, ya, nBlocks .* df .^ (k-1))
     end
     vx = subsynthesize(y, level)
-    reshape(vx, scales[1]...)
+    reshape(vx, (nBlocks .* df .^ level)...)
 end
 
-function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,D}, y::Array{TY}, szRegion::NTuple{D}; inputMode=:normal) where {TF,TY,D}
+function stepSynthesisBank(fb::MDCDL.PolyphaseFB{TF,D}, y::Array{TY}, nBlocks::NTuple{D}; inputMode=:normal) where {TF,TY,D}
     const M = prod(fb.decimationFactor)
     const P = sum(fb.nChannels)
-    const nBlocks = fld.(szRegion, fb.decimationFactor)
 
     py = if inputMode == :normal
         PolyphaseVector(vcat([MDCDL.array2vecblocks(y[p], nBlocks).' for p in 1:P]...), nBlocks)

@@ -90,8 +90,8 @@ using MDCDL
 
             x = rand(Complex{Float64}, szx...)
 
-            y, sc = analyze(nsolt, x, lv)
-            rx = synthesize(nsolt, y, sc, lv)
+            y = analyze(nsolt, x, lv)
+            rx = synthesize(nsolt, y, lv)
 
             @test size(x) == size(rx)
             @test rx ≈ x
@@ -106,7 +106,7 @@ using MDCDL
             nsolt = Cnsolt(df, nch, ord)
             randomInit!(nsolt)
 
-            ya, sc = analyze(nsolt, x, lv)
+            ya = analyze(nsolt, x, lv)
 
             afs = getAnalysisFilters(nsolt)
             myfilter = (A, h) -> MDCDL.mdfilter(A, h; boundary=:circular, operation=:conv)
@@ -132,9 +132,8 @@ using MDCDL
             randomInit!(nsolt)
 
             y = [ [ rand(Complex{Float64},((ord.+1) .* df.^(lv-l))...) for p in 1:(l==lv ? sum(nch) : sum(nch)-1) ] for l in 1:lv]
-            sc = [ (ord .+ 1) .* (df .^ l) for l in lv:-1:0]
 
-            x = synthesize(nsolt, y, sc, lv)
+            x = synthesize(nsolt, y, lv)
 
             sfs = getSynthesisFilters(nsolt)
             myfilter = (A, h) -> MDCDL.mdfilter(A, h; boundary=:circular, operation=:conv)
