@@ -46,6 +46,9 @@ struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
         if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
             throw(ArgumentError("Invalid number of channels. "))
         end
+        if nChs[1] != nChs[2] && any(isodd.(ppo))
+            throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet. received values: decimationFactor=$df, nChannels=$nChs, polyphaseOrder = $ppo"))
+        end
         if vanishingMoment != 0 && vanishingMoment != 1
             throw(ArgumentError("The number of vanishing moments must be 0 or 1."))
         end
@@ -53,7 +56,7 @@ struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
         if nChs[1] == nChs[2]
             S = 1
             initMts = Array[ eye(T, p) for p in nChs ]
-            propMts = Array[ Array[ (n % 2 == 0 ? 1 : -1) * eye(T, nChs[1]) for n in 1:ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
+            propMts = Array[ Array[ (iseven(n) ? 1 : -1) * eye(T, nChs[1]) for n in 1:ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
         else
             S = 2
             initMts = Array[ eye(T, p) for p in nChs ]
@@ -91,12 +94,12 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
 
-        if nChs % 2 == 0
+        if iseven(nChs)
             S = 1
             initMts = Array[ eye(T,nChs) ]
-            propMts = Array[ Array[ (n % 2 == 0 ? -1 : 1) * eye(T,fld(nChs,2)) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I CNSOLT
+            propMts = Array[ Array[ (iseven(n) ? -1 : 1) * eye(T,fld(nChs,2)) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I CNSOLT
         else
-            if any(ppo .% 2 .!= 0)
+            if any(isodd.(ppo))
                 throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
             end
             cch = cld(nChs, 2)
