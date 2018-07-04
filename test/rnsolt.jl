@@ -16,7 +16,7 @@ using MDCDL
     @testset "Constructor" begin
 
         maxDims = 3
-        maxdfs = [ 4, 4, 4 ]
+        maxdfs = [ 3, 3, 3 ]
         maxchs = [ 5, 5, 5 ]
         maxpos = [ 2, 2, 2 ]
         defaultType = Float64
@@ -82,7 +82,13 @@ using MDCDL
 
             x = rand(Float64, szx...)
 
-            y = analyze(nsolt, x, lv)
+            y = analyze(nsolt, x, lv; outputMode = :polyphase)
+            rx = synthesize(nsolt, y, lv)
+
+            @test size(x) == size(rx)
+            @test rx ≈ x
+
+            y = analyze(nsolt, x, lv; outputMode = :reshaped)
             rx = synthesize(nsolt, y, lv)
 
             @test size(x) == size(rx)
@@ -98,7 +104,7 @@ using MDCDL
             nsolt = Rnsolt(df, nch, ord)
             randomInit!(nsolt)
 
-            ya = analyze(nsolt, x, lv)
+            ya = analyze(nsolt, x, lv; outputMode = :reshaped)
 
             afs = getAnalysisFilters(nsolt)
             myfilter = (A, h) -> MDCDL.mdfilter(A, h; boundary=:circular, operation=:conv)

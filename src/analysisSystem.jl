@@ -1,8 +1,8 @@
-function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, level::Integer; kwargs...) where {TF,TX,D}
+function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, level::Integer = 1; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), level; kwargs...)
 end
 
-function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer = 1; outputMode=:spacial) where {TF,TX,D}
+function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer = 1; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
         sy = multipleAnalysisBank(fb, sx)
         if k <= 1
@@ -25,7 +25,7 @@ function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::I
 
     if outputMode == :polyphase
         y
-    elseif outputMode == :spacial
+    elseif outputMode == :reshaped
         [ [ MDCDL.vecblocks2array(py.data[p,:], py.nBlocks, tuple(ones(Integer,D)...)) for p in 1:size(py.data,1) ] for py in y]
     end
 end
