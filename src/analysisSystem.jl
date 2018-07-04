@@ -32,7 +32,7 @@ function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::I
     end
 end
 
-function multipleAnalysisBank(cc::MDCDL.Cnsolt{D,S,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function multipleAnalysisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
 
@@ -46,7 +46,7 @@ function multipleAnalysisBank(cc::MDCDL.Cnsolt{D,S,TF}, pvx::PolyphaseVector{TX,
     PolyphaseVector(cc.symmetry*extx.data, extx.nBlocks)
 end
 
-function extendAtoms(cc::MDCDL.Cnsolt{D,1,TF}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     const chUpper = 1:fld(cc.nChannels,2)
     const chLower = fld(cc.nChannels,2)+1:cc.nChannels
 
@@ -74,7 +74,7 @@ function extendAtoms(cc::MDCDL.Cnsolt{D,1,TF}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function extendAtoms(cc::MDCDL.Cnsolt{D,2,TF}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     const nStages = fld.(cc.polyphaseOrder,2)
     const P = cc.nChannels
     const chEven = 1:P-1
@@ -119,7 +119,7 @@ function extendAtoms(cc::MDCDL.Cnsolt{D,2,TF}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function multipleAnalysisBank(cc::MDCDL.Rnsolt{D,S,TF}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function multipleAnalysisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     const M = prod(cc.decimationFactor)
     const cM = cld(M,2)
     const fM = fld(M,2)
@@ -137,7 +137,7 @@ function multipleAnalysisBank(cc::MDCDL.Rnsolt{D,S,TF}, pvx::PolyphaseVector{TX,
     extendAtoms(cc, ux)
 end
 
-function extendAtoms(cc::MDCDL.Rnsolt{D,1,TF}, px::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, px::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
     const hP = cc.nChannels[1]
     # const chUpper = 1:P
     const chLower = (1:hP)+hP
@@ -163,7 +163,7 @@ function extendAtoms(cc::MDCDL.Rnsolt{D,1,TF}, px::PolyphaseVector{TX,D}, bounda
     return px
 end
 
-function extendAtoms(cc::MDCDL.Rnsolt{D,2,TF}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     const nStages = fld.(cc.polyphaseOrder,2)
     const P = sum(cc.nChannels)
     const maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]

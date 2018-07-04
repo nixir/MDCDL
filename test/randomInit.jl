@@ -1,4 +1,4 @@
-function randomInit!(cnsolt::MDCDL.Cnsolt{D,S,T}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T}
+function randomInit!(cnsolt::MDCDL.Cnsolt{T,D,S}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T}
     P = sum(cnsolt.nChannels)
 
     if isSymmetry
@@ -21,7 +21,7 @@ function randomInit!(cnsolt::MDCDL.Cnsolt{D,S,T}; isInitMat=true, isPropMat=true
     end
 end
 
-function randomInit!(rnsolt::MDCDL.Rnsolt{D,S,T}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T} # "isPropAng" and "isSymmetry" are not used.
+function randomInit!(rnsolt::MDCDL.Rnsolt{T,D,S}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T} # "isPropAng" and "isSymmetry" are not used.
     P = sum(rnsolt.nChannels)
     hP = fld(P,2)
 

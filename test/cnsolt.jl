@@ -53,9 +53,9 @@ using MDCDL
             nsolt = Cnsolt(df, nch, ord)
 
             if iseven(sum(nch))
-                @test isa(nsolt, Cnsolt{d,1,defaultType})
+                @test isa(nsolt, Cnsolt{defaultType,d,:TypeI})
             else
-                @test isa(nsolt, Cnsolt{d,2,defaultType})
+                @test isa(nsolt, Cnsolt{defaultType,d,:TypeII})
             end
 
         end

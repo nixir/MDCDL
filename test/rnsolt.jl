@@ -45,9 +45,9 @@ using MDCDL
             nsolt = Rnsolt(df, nch, ord)
 
             if nch[1] == nch[2]
-                @test isa(nsolt, Rnsolt{d,1,defaultType})
+                @test isa(nsolt, Rnsolt{defaultType,d,:TypeI})
             else
-                @test isa(nsolt, Rnsolt{d,2,defaultType})
+                @test isa(nsolt, Rnsolt{defaultType,d,:TypeII})
             end
 
         end

@@ -1,6 +1,6 @@
 import ImageView, Gtk
 
-function atmimshow(cc::MDCDL.Cnsolt{2,S,T}, clim = ImageView.CLim(-0.5,0.5)) where {S,T}
+function atmimshow(cc::MDCDL.Cnsolt{T,2,S}, clim = ImageView.CLim(-0.5,0.5)) where {S,T}
     P = cc.nChannels
 
     afs = MDCDL.getAnalysisFilters(cc)
@@ -19,7 +19,7 @@ function atmimshow(cc::MDCDL.Cnsolt{2,S,T}, clim = ImageView.CLim(-0.5,0.5)) whe
     ImageView.showall(win)
 end
 
-function atmimshow(cc::MDCDL.Rnsolt{2,S,T}, clim = ImageView.CLim(-0.5,0.5)) where {S,T}
+function atmimshow(cc::MDCDL.Rnsolt{T,2,S}, clim = ImageView.CLim(-0.5,0.5)) where {S,T}
     P = sum(cc.nChannels)
 
     afs = MDCDL.getAnalysisFilters(cc)

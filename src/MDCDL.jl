@@ -28,7 +28,7 @@ promote_rule(::Type{PolyphaseVector{TA,D}}, ::Type{PolyphaseVector{TB,D}}) where
 abstract type FilterBank{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
 
-struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
+struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
     decimationFactor::NTuple{D, Int}
     nChannels::Tuple{Int,Int}
     polyphaseOrder::NTuple{D, Int}
@@ -55,11 +55,11 @@ struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
         end
 
         if nChs[1] == nChs[2]
-            S = 1
+            S = :TypeI
             initMts = Array[ eye(T, p) for p in nChs ]
             propMts = Array[ Array[ (iseven(n) ? 1 : -1) * eye(T, nChs[1]) for n in 1:ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
         else
-            S = 2
+            S = :TypeII
             initMts = Array[ eye(T, p) for p in nChs ]
             propMts = if nChs[1] > nChs[2]
                 [ vcat(fill(Array[ -eye(T,nChs[2]), eye(T,nChs[1]) ], ppo[pd])...) for pd in 1:D]
@@ -70,13 +70,13 @@ struct Rnsolt{D,S,T} <: PolyphaseFB{T,D}
 
         mtxc = flipdim(MDCDL.permdctmtx(df...),2)
 
-        new{D,S,T}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxc)
+        new{T,D,S}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxc)
     end
 end
 
-promote_rule(::Type{Rnsolt{D,S,TA}}, ::Type{Rnsolt{D,S,TB}}) where {D,S,TA,TB} = Rnsolt{D,S,promote_type(TA,TB)}
+promote_rule(::Type{Rnsolt{TA,D,S}}, ::Type{Rnsolt{TB,D,S}}) where {D,S,TA,TB} = Rnsolt{promote_type(TA,TB),D,S}
 
-struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
+struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
     decimationFactor::NTuple{D, Int}
     nChannels::Int
     polyphaseOrder::NTuple{D, Int}
@@ -96,7 +96,7 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
         end
 
         if iseven(nChs)
-            S = 1
+            S = :TypeI
             initMts = Array[ eye(T,nChs) ]
             propMts = Array[ Array[ (iseven(n) ? -1 : 1) * eye(T,fld(nChs,2)) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I CNSOLT
         else
@@ -105,7 +105,7 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
             end
             cch = cld(nChs, 2)
             fch = fld(nChs, 2)
-            S = 2
+            S = :TypeII
             initMts = Array[ eye(T, nChs) ]
             propMts = [ vcat(fill(Array[ eye(T,fch), -eye(T,fch), eye(T,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1))) ], ppo[pd])...) for pd in 1:D]
         end
@@ -113,11 +113,11 @@ struct Cnsolt{D,S,T} <: PolyphaseFB{Complex{T},D}
         sym = Diagonal{Complex{T}}(ones(nChs))
         mtxf = flipdim(MDCDL.cdftmtx(df...),2)
 
-        new{D,S,T}(df, nChs, ppo, initMts, propMts, paramAngs, sym, mtxf)
+        new{T,D,S}(df, nChs, ppo, initMts, propMts, paramAngs, sym, mtxf)
     end
 end
 
-promote_rule(::Type{Cnsolt{D,S,TA}}, ::Type{Cnsolt{D,S,TB}}) where {D,S,TA,TB} = Cnsolt{D,S,promote_type(TA,TB)}
+promote_rule(::Type{Cnsolt{TA,D,S}}, ::Type{Cnsolt{TB,D,S}}) where {D,S,TA,TB} = Cnsolt{promote_type(TA,TB),D,S}
 
 struct ParallelFB{T,D} <: FilterBank{T,D}
     decimationFactor::NTuple{D, Int}

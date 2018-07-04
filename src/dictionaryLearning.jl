@@ -1,7 +1,7 @@
 
 #TODO: 角度パラメータのベクトル化手法の仕様をどこかに記述する．
 #TODO: コードが汚いのでリファクタリングする
-function getAngleParameters(cc::MDCDL.Cnsolt{D,1,T}) where {D,T}
+function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -40,7 +40,7 @@ function getAngleParameters(cc::MDCDL.Cnsolt{D,1,T}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(cc::MDCDL.Cnsolt{D,1,T}, angs::Vector{T}, mus) where {D,T}
+function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeI}, angs::Vector{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -89,7 +89,7 @@ function setAngleParameters!(cc::MDCDL.Cnsolt{D,1,T}, angs::Vector{T}, mus) wher
     return cc
 end
 
-function getAngleParameters(cc::MDCDL.Rnsolt{D,1,T}) where {D,T}
+function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
     P = sum(cc.nChannels)
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -130,7 +130,7 @@ function getAngleParameters(cc::MDCDL.Rnsolt{D,1,T}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(cc::MDCDL.Rnsolt{D,1,T}, angs::Vector{T}, mus) where {D,T}
+function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::Vector{T}, mus) where {D,T}
     # Initialization
     P = sum(cc.nChannels)
     df = cc.decimationFactor

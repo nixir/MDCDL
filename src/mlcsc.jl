@@ -17,17 +17,17 @@ function analyze(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}; isAllCoefs::B
 end
 
 function synthesize(mlcsc::MDCDL.MultiLayerCsc, y::Array; isAllCoefs::Bool=false)
-    gamma = Vector(mlcsc.nLayers+1)
-    gamma[mlcsc.nLayers+1] = y
+    γ = Vector(mlcsc.nLayers+1)
+    γ[mlcsc.nLayers+1] = y
     for l = mlcsc.nLayers:-1:1
         dic = mlcsc.dictionaries[l]
-        gamma[l] = synthesize(dic, [gamma[l+1]])
+        γ[l] = synthesize(dic, [γ[l+1]])
     end
 
     if isAllCoefs
-        gamma
+        γ
     else
-        gamma[1]
+        γ[1]
     end
 end
 

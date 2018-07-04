@@ -34,7 +34,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, lev
     polyphase2mdarray(vx, df)
 end
 
-function multipleSynthesisBank(cc::MDCDL.Cnsolt{D,S,TF}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
+function multipleSynthesisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
     const M = prod(cc.decimationFactor)
     const P = cc.nChannels
 
@@ -49,7 +49,7 @@ function multipleSynthesisBank(cc::MDCDL.Cnsolt{D,S,TF}, pvy::PolyphaseVector{TY
     PolyphaseVector(flipdim(py, 1), pvy.nBlocks)
 end
 
-function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,TF}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     const chUpper = 1:fld(cc.nChannels,2)
     const chLower = fld(cc.nChannels,2)+1:cc.nChannels
 
@@ -78,7 +78,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{D,1,TF}, pvy::PolyphaseVector{TY,D}; 
 end
 
 
-function concatenateAtoms(cc::MDCDL.Cnsolt{D,2,TF}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     const nStages = fld.(cc.polyphaseOrder,2)
     const P = cc.nChannels
     const chEven = 1:P-1
@@ -125,7 +125,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{D,2,TF}, pvy::PolyphaseVector{TY,D}; 
     return pvy
 end
 
-function multipleSynthesisBank(cc::MDCDL.Rnsolt{D,S,TF}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
+function multipleSynthesisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
     const M = prod(cc.decimationFactor)
     const cM = cld(M,2)
     const fM = fld(M,2)
@@ -143,7 +143,7 @@ function multipleSynthesisBank(cc::MDCDL.Rnsolt{D,S,TF}, pvy::PolyphaseVector{TY
     PolyphaseVector(flipdim(ty, 1), uy.nBlocks)
 end
 
-function concatenateAtoms(cc::MDCDL.Rnsolt{D,1,TF}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D}
+function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D}
     const P = cc.nChannels[1]
     # const chUpper = 1:P
     const chLower = (1:P)+P
@@ -169,7 +169,7 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{D,1,TF}, pvy::PolyphaseVector{TY,D}) 
     return pvy
 end
 
-function concatenateAtoms(cc::MDCDL.Rnsolt{D,2,TF}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     const nStages = fld.(cc.polyphaseOrder,2)
     const P = sum(cc.nChannels)
     const maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
