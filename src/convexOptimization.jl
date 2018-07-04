@@ -49,67 +49,6 @@ function fista(gradOfLossFcn::Function, prox::Function, x0; maxIterations::Integ
     (x, errx)
 end
 
-function mlista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
-    const L = mlcsc.nLayers
-    opD  = (l, v) -> stepSynthesisBank(mlcsc.dictionaries[l], v; inputMode=:augumented)
-    opDt = (l, v) -> stepAnalysisBank(mlcsc.dictionaries[l], v; outputMode=:augumented)
-
-    gamma = Vector(L+1)
-    gamma[1] = x
-    for l = 2:L+1
-        gamma[l] = opDt(l-1, gamma[l-1])
-    end
-
-
-    for k = 1:maxIterations
-        hgamma = Vector(L+1)
-        hgamma[L+1] = gamma[L+1]
-        for l = L:-1:2
-            hgamma[l] = opD(l, gamma[l+1])
-        end
-        hgamma[1] = x
-
-        for l = 1:L
-            gamma[l+1] = softshrink(hgamma[l+1] - opDt(l, opD(l,hgamma[l+1]) - gamma[l]),lambdas[l])
-            println("$k, $l")
-        end
-    end
-    gamma[2:end]
-end
-
-function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
-    const L = mlcsc.nLayers
-    opD  = (l, v) -> stepSynthesisBank(mlcsc.dictionaries[l], v; inputMode=:augumented)
-    opDt = (l, v) -> stepAnalysisBank(mlcsc.dictionaries[l], v; outputMode=:augumented)
-
-    gamma = Vector(L+1)
-    gamma[1] = x
-    for l = 2:L+1
-        gamma[l] = opDt(l-1, gamma[l-1])
-    end
-
-    tk = 1.0
-    z = gamma[L+1]
-    for k = 1:maxIterations
-        hgamma = Vector(L+1)
-        hgamma[L+1] = z
-        for l = L:-1:2
-            hgamma[l] = opD(l, gamma[l+1])
-        end
-        hgamma[1] = x
-
-        glp = gamma[L+1]
-        for l = 1:L
-            gamma[l+1] = softshrink(hgamma[l+1] - opDt(l, opD(l,hgamma[l+1]) - gamma[l]),lambdas[l])
-            println("$k, $l")
-        end
-        tkprev = tk
-        tk = (1 + sqrt(1+4*tkprev)) / 2
-
-        z = gamma[L+1] + (tkprev - 1)/tk * (gamma[L+1] - glp)
-    end
-    gamma[2:end]
-end
 
 # FB-based primal-dual splitting algorithm
 # N. Komodakis and J. Pesquet, "Playing with Duality," IEEE Signal Processing Magazine, vol. 32, no. 6, pp. 31--54, 2015.

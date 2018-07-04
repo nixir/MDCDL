@@ -9,7 +9,15 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level
     synthesize(fb, pvy, level; kwargs...)
 end
 
-function synthesize(fb::MDCDL.FilterBank{TF,D}, y::Vector{PolyphaseVector{TY,D}}, level::Integer = 1) where {TF,TY,D}
+function synthesize(fb::PolyphaseFB{TF,DF}, y::Vector{Array{TY,DY}}, level::Integer = 1; kwargs...) where {TF,TY,DF,DY}
+    if DF != DY-1
+        throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
+    end
+
+    synthesize(fb, mdarray2polyphase.(y), level; kwargs...)
+end
+
+function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, level::Integer = 1) where {TF,TY,D}
     df = fb.decimationFactor
     function subsynthesize(sy::Vector{PolyphaseVector{TY,D}}, k::Integer)
         ya = if k <= 1

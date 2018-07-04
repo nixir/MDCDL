@@ -4,13 +4,18 @@ using Images, ImageView, TestImages
 
 include("randomInit.jl")
 
-# configurations
+##### configurations #####
 D = 2
 nl = 3
 szSubData = ntuple( d -> 64, D)
 nSubData = 16
-
+nEpoch = 10
 dt = Float64
+
+# nnzCoefs = fld(prod(szSubData), 32)
+nnzCoefs = 256
+##########################
+
 
 orgImg = testimage("cameraman")
 cplxImg = complex.(Array{Float64}(orgImg))
@@ -33,10 +38,6 @@ for l = 1:nl
     mlcsc.dictionaries[l] = cnsolt
 end
 
-# nnzCoefs = fld(prod(szSubData), 32)
-nnzCoefs = 256
-
-nEpoch = 10
 for epoch = 1:nEpoch, k = 1:length(x)
     xk = x[k]
 
@@ -61,16 +62,16 @@ for epoch = 1:nEpoch, k = 1:length(x)
 
             setAngleParameters!(submlcsc.dictionaries[l], angs, mus0)
 
-            gamma = Vector(submlcsc.nLayers)
-            # gamma[submlcsc.nLayers+1] = hy
-            gamma[submlcsc.nLayers] = MDCDL.stepSynthesisBank( submlcsc.dictionaries[ submlcsc.nLayers ], hy, inputMode=:augumented)
+            γ = Vector(submlcsc.nLayers)
+            # γ[submlcsc.nLayers+1] = hy
+            γ[submlcsc.nLayers] = MDCDL.synthesize( submlcsc.dictionaries[ submlcsc.nLayers ], [hy])
             for lfun = submlcsc.nLayers-1:-1:1
                 dic = submlcsc.dictionaries[lfun]
-                gamma[lfun] = MDCDL.stepSynthesisBank(dic, gamma[lfun+1], inputMode=:augumented)
+                γ[lfun] = MDCDL.synthesize(dic, [γ[lfun+1]])
             end
 
             # diffx = xk - MDCDL.synthesize(submlcsc, hy)
-            diffx = xk - gamma[1]
+            diffx = xk - γ[1]
 
             cst = vecnorm(diffx)^2
             println("f_$(count): cost=$(cst)")
@@ -89,14 +90,15 @@ for epoch = 1:nEpoch, k = 1:length(x)
 
         MDCDL.setAngleParameters!(mlcsc.dictionaries[l], minx, mus0)
 
-        hy = MDCDL.stepSynthesisBank(submlcsc.dictionaries[l], hy; inputMode=:augumented)
+        hy = MDCDL.synthesize(submlcsc.dictionaries[l], [hy])
     end
 end
 
-gs = MDCDL.mlfista(mlcsc, x[1], [1e-8, 1e-6, 1e-3])
-recx = MDCDL.synthesize(mlcsc, gs[nl])
+# gs = MDCDL.mlfista(mlcsc, x[1], [1e-8, 1e-6, 1e-3])
+# recx = MDCDL.synthesize(mlcsc, gs[nl])
+#
+# errx = vecnorm(recx - x[1])
 
-errx = vecnorm(recx - x[1])
 # rx = MDCDL.synthesize(mlcsc, hy)
 # errx = vecnorm(rx - x)
 #
