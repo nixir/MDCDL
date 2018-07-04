@@ -20,39 +20,39 @@ using MDCDL
     #     end
     # end
 
-    @testset "Constructor" begin
-
-        maxDims = 3
-        maxdfs = [ 3, 3, 3 ]
-        maxchs = [ 10, 10, 10 ]
-        maxpos = [ 2, 2, 2 ]
-        defaultType = Float64
-
-        for d in 1:maxDims, crdf in CartesianRange(tuple(fill(maxdfs[d],d)...)), nch in 2:maxchs[d], crord in CartesianRange(tuple(fill(maxpos[d] .+ 1,d)...))
-            df = crdf.I
-            ord = crord.I .- 1
-            szx = df .* (ord .+ 1)
-
-            if prod(df) > sum(nch)
-                @test_throws ArgumentError Cnsolt(df, nch, ord)
-                continue
-            end
-
-            if isodd(sum(nch)) && any(isodd.(ord))
-                @test_throws ArgumentError Cnsolt(df, nch, ord)
-                continue
-            end
-
-            nsolt = Cnsolt(df, nch, ord)
-
-            if iseven(sum(nch))
-                @test isa(nsolt, Cnsolt{d,1,defaultType})
-            else
-                @test isa(nsolt, Cnsolt{d,2,defaultType})
-            end
-
-        end
-    end
+    # @testset "Constructor" begin
+    #
+    #     maxDims = 3
+    #     maxdfs = [ 3, 3, 3 ]
+    #     maxchs = [ 10, 10, 10 ]
+    #     maxpos = [ 2, 2, 2 ]
+    #     defaultType = Float64
+    #
+    #     for d in 1:maxDims, crdf in CartesianRange(tuple(fill(maxdfs[d],d)...)), nch in 2:maxchs[d], crord in CartesianRange(tuple(fill(maxpos[d] .+ 1,d)...))
+    #         df = crdf.I
+    #         ord = crord.I .- 1
+    #         szx = df .* (ord .+ 1)
+    #
+    #         if prod(df) > sum(nch)
+    #             @test_throws ArgumentError Cnsolt(df, nch, ord)
+    #             continue
+    #         end
+    #
+    #         if isodd(sum(nch)) && any(isodd.(ord))
+    #             @test_throws ArgumentError Cnsolt(df, nch, ord)
+    #             continue
+    #         end
+    #
+    #         nsolt = Cnsolt(df, nch, ord)
+    #
+    #         if iseven(sum(nch))
+    #             @test isa(nsolt, Cnsolt{d,1,defaultType})
+    #         else
+    #             @test isa(nsolt, Cnsolt{d,2,defaultType})
+    #         end
+    #
+    #     end
+    # end
 
     @testset "MultiscaleAnalysisSynthesis" begin
         maxDims = 2

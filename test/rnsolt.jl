@@ -5,9 +5,9 @@ using MDCDL
     include("testsetGenerator.jl")
     include("randomInit.jl")
 
-    rcsd1D = rnsoltConfigSet1D()
-    rcsd2D = rnsoltConfigSet2D()
-    rcsd3D = rnsoltConfigSet3D()
+    rcsd1D = rnsoltValidConfigSet1D()
+    rcsd2D = rnsoltValidConfigSet2D()
+    rcsd3D = rnsoltValidConfigSet3D()
 
     rcsd = [ rcsd1D, rcsd2D, rcsd3D ]
 
@@ -16,40 +16,38 @@ using MDCDL
     @testset "Constructor" begin
 
         maxDims = 3
-        maxdfs = [ 3, 3, 3 ]
-        maxchs = [ 5, 5, 5 ]
-        maxpos = [ 2, 2, 2 ]
         defaultType = Float64
 
-        for d in 1:maxDims, crdf in CartesianRange(tuple(fill(maxdfs[d],d)...)), crnch in CartesianRange(tuple(fill(maxchs[d],2)...)), crord in CartesianRange(tuple(fill(maxpos[d] .+ 1,d)...))
-            df = crdf.I
-            nch = crnch.I
-            ord = crord.I .- 1
-            szx = df .* (ord .+ 1)
+        for d in 1:maxDims
+            allcfgset = [ (crdf.I, crnch.I, crord.I .- 1) for crdf in CartesianRange(tuple(fill(4,d)...)), crnch in CartesianRange(tuple(fill(10,2)...)), crord in CartesianRange(tuple(fill(6+1,d)...)) ]
+            cfgsetTypeI  = filter(c -> c[2][1] == c[2][2], allcfgset)
+            cfgsetTypeII = filter(c -> c[2][1] != c[2][2], allcfgset)
+            cfgset = vcat(randsubseq(cfgsetTypeI, 50 / length(cfgsetTypeI))..., randsubseq(cfgsetTypeII, 50 / length(cfgsetTypeII))...)
 
-            if prod(df) > sum(nch)
-                @test_throws ArgumentError Rnsolt(df, nch, ord)
-                continue
+            for (df, nch, ord) in cfgset
+                if prod(df) > sum(nch)
+                    @test_throws ArgumentError Rnsolt(df, nch, ord)
+                    continue
+                end
+
+                if !(cld(prod(df),2) <= nch[1] <= sum(nch) - fld(prod(df),2)) || !(fld(prod(df),2) <= nch[2] <= sum(nch) - cld(prod(df),2))
+                    @test_throws ArgumentError Rnsolt(df, nch, ord)
+                    continue
+                end
+
+                if nch[1] != nch[2] && any(isodd.(ord))
+                    @test_throws ArgumentError Rnsolt(df, nch, ord)
+                    continue
+                end
+
+                nsolt = Rnsolt(df, nch, ord)
+
+                if nch[1] == nch[2]
+                    @test isa(nsolt, Rnsolt{defaultType,d,:TypeI})
+                else
+                    @test isa(nsolt, Rnsolt{defaultType,d,:TypeII})
+                end
             end
-
-            if !(cld(prod(df),2) <= nch[1] <= sum(nch) - fld(prod(df),2)) || !(fld(prod(df),2) <= nch[2] <= sum(nch) - cld(prod(df),2))
-                @test_throws ArgumentError Rnsolt(df, nch, ord)
-                continue
-            end
-
-            if nch[1] != nch[2] && any(isodd.(ord))
-                @test_throws ArgumentError Rnsolt(df, nch, ord)
-                continue
-            end
-
-            nsolt = Rnsolt(df, nch, ord)
-
-            if nch[1] == nch[2]
-                @test isa(nsolt, Rnsolt{defaultType,d,:TypeI})
-            else
-                @test isa(nsolt, Rnsolt{defaultType,d,:TypeII})
-            end
-
         end
     end
 
@@ -148,6 +146,25 @@ using MDCDL
                 end
             end
 
+        end
+    end
+
+    @testset "Factorization" begin
+        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d]
+            src = Rnsolt(df, nch, ord)
+            dst = Rnsolt(df, nch, ord)
+            randomInit!(src)
+
+            if isa(src, Rnsolt{Float64,d,:TypeII})
+                continue
+            end
+            (angs, mus) = getAngleParameters(src)
+            setAngleParameters!(dst, angs, mus)
+
+            @test all(src.initMatrices .≈ dst.initMatrices)
+            foreach(src.propMatrices, dst.propMatrices) do propSrc, propDst
+                @test all(propSrc .≈ propDst)
+            end
         end
     end
 

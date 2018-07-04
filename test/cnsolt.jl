@@ -5,9 +5,9 @@ using MDCDL
     include("testsetGenerator.jl")
     include("randomInit.jl")
 
-    ccsd1D = cnsoltConfigSet1D()
-    ccsd2D = cnsoltConfigSet2D()
-    ccsd3D = cnsoltConfigSet3D()
+    ccsd1D = cnsoltValidConfigSet1D()
+    ccsd2D = cnsoltValidConfigSet2D()
+    ccsd3D = cnsoltValidConfigSet3D()
 
     ccsd = [ ccsd1D, ccsd2D, ccsd3D ]
 
@@ -30,34 +30,33 @@ using MDCDL
     @testset "Constructor" begin
 
         maxDims = 3
-        maxdfs = [ 3, 3, 3 ]
-        maxchs = [ 10, 10, 10 ]
-        maxpos = [ 2, 2, 2 ]
         defaultType = Float64
 
-        for d in 1:maxDims, crdf in CartesianRange(tuple(fill(maxdfs[d],d)...)), nch in 2:maxchs[d], crord in CartesianRange(tuple(fill(maxpos[d] .+ 1,d)...))
-            df = crdf.I
-            ord = crord.I .- 1
-            szx = df .* (ord .+ 1)
+        # cfgset = [ (crdf.I, nch, crord.I .- 1) for crdf in CartesianRange(tuple(fill(4,d)...)), nch in 2:20, crord in CartesianRange(tuple(fill(6,d)...)) ]
 
-            if prod(df) > sum(nch)
-                @test_throws ArgumentError Cnsolt(df, nch, ord)
-                continue
+        for d in 1:maxDims
+            allcfgset = [ (crdf.I, nch, crord.I .- 1) for crdf in CartesianRange(tuple(fill(4,d)...)), nch in 2:20, crord in CartesianRange(tuple(fill(6+1,d)...)) ]
+            cfgset = randsubseq(vec(allcfgset), 100 / length(allcfgset))
+
+            for (df, nch, ord) in cfgset
+                if prod(df) > sum(nch)
+                    @test_throws ArgumentError Cnsolt(df, nch, ord)
+                    continue
+                end
+
+                if isodd(sum(nch)) && any(isodd.(ord))
+                    @test_throws ArgumentError Cnsolt(df, nch, ord)
+                    continue
+                end
+
+                nsolt = Cnsolt(df, nch, ord)
+
+                if iseven(sum(nch))
+                    @test isa(nsolt, Cnsolt{defaultType,d,:TypeI})
+                else
+                    @test isa(nsolt, Cnsolt{defaultType,d,:TypeII})
+                end
             end
-
-            if isodd(sum(nch)) && any(isodd.(ord))
-                @test_throws ArgumentError Cnsolt(df, nch, ord)
-                continue
-            end
-
-            nsolt = Cnsolt(df, nch, ord)
-
-            if iseven(sum(nch))
-                @test isa(nsolt, Cnsolt{defaultType,d,:TypeI})
-            else
-                @test isa(nsolt, Cnsolt{defaultType,d,:TypeII})
-            end
-
         end
     end
 
@@ -158,7 +157,28 @@ using MDCDL
 
         end
     end
-end
 
+    @testset "Factorization" begin
+        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d]
+            src = Cnsolt(df, nch, ord)
+            dst = Cnsolt(df, nch, ord)
+            randomInit!(src)
+
+            if isa(src, Cnsolt{Float64,d,:TypeII})
+                continue
+            end
+            (angs, mus) = getAngleParameters(src)
+            setAngleParameters!(dst, angs, mus)
+
+            @test all(src.initMatrices .≈ dst.initMatrices)
+            foreach(src.propMatrices, dst.propMatrices) do propSrc, propDst
+                @test all(propSrc .≈ propDst)
+            end
+            foreach(src.paramAngles, dst.paramAngles) do angsSrc, angsDst
+                @test all(angsSrc .≈ angsDst)
+            end
+        end
+    end
+end
 
 nothing

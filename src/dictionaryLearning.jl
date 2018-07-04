@@ -154,7 +154,7 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::Vector{T}, mus)
     dimAngsRanges = [ colon(delimitersAngs[d]+1, delimitersAngs[d+1]) + nParamsInit for d in 1:D]
 
     delimitersMus = cumsum([ 0, (ord .* fld(P,2))... ])
-    dimMusRanges = [ colon(delimitersMus[d]+1, delimitersMus[d+1]) + fld(P,2) for d in 1:D]
+    dimMusRanges = [ colon(delimitersMus[d]+1, delimitersMus[d+1]) + P for d in 1:D]
 
 
     nAngsu = fld(P*(P-2),8)
