@@ -40,8 +40,7 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
 
     matrixC::Matrix{T}
 
-    function Rnsolt(df::NTuple{D,Int}, nChs::Tuple{Int, Int}, ppo::NTuple{D,Int}; vanishingMoment::Int = 0, dataType = Float64) where D
-        T = dataType
+    function Rnsolt(::Type{T}, df::NTuple{D,Int}, nChs::Tuple{Int, Int}, ppo::NTuple{D,Int}; vanishingMoment::Int = 0) where {T,D}
         P = sum(nChs)
         M = prod(df)
         if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
@@ -89,8 +88,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
     matrixF::Matrix{Complex{T}}
 
     # constructor
-    function Cnsolt(df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; vanishingMoment::Int = 0, dataType = Float64) where D
-        T = dataType
+    function Cnsolt(::Type{T}, df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; vanishingMoment::Int = 0) where {T,D}
         if prod(df) > nChs
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
@@ -127,11 +125,11 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
     analysisFilters::Vector{Array{T,D}}
     synthesisFilters::Vector{Array{T,D}}
 
-    function ParallelFB(df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; dataType = Float64) where D
+    function ParallelFB(::Type{T}, df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}) where {T,D}
         szFilters = df .* (ppo .+ 1)
         afs = [ Array{dataType, D}(szFilters...) for p in 1:nChs ]
         sfs = [ Array{dataType, D}(szFilters...) for p in 1:nChs ]
-        new{dataType, D}(df, nChs, ppo, afs, sfs)
+        new{T, D}(df, nChs, ppo, afs, sfs)
     end
 end
 

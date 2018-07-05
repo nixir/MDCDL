@@ -56,14 +56,13 @@ using MDCDL
 
     @testset "MultiscaleAnalysisSynthesis" begin
         maxDims = 2
-        for d in 1:maxDims#, dt in [ Float64, Complex{Float64} ]
+        for d in 1:maxDims, dt in [ Float64, Complex{Float64} ]
             cfgs = vec([ (crdf.I, nch, crord.I .- 1, lv) for crdf in CartesianRange(tuple(fill(4,d)...)), nch in 2:10, crord in CartesianRange(tuple(fill(2,d)...)), lv in 1:4 ])
 
             subcfgs = randsubseq(cfgs, 30 / length(cfgs))
 
             for (df, nch, ord, lv) in subcfgs
-                const dt = Complex{Float64}
-                pfb = ParallelFB(df, nch, ord; dataType=dt)
+                pfb = ParallelFB(dt, df, nch, ord)
 
                 const szFilter = df .* (ord .+ 1)
                 const afs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
