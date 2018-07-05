@@ -71,6 +71,7 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
 
         new{T,D,S}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxc)
     end
+    Rnsolt(df::NTuple{D,Int}, nChs::Tuple{Int,Int}, ppo::NTuple{D,Int}; kwargs...) where {D} = Rnsolt(Float64, df, nChs, ppo; kwargs...)
 end
 
 promote_rule(::Type{Rnsolt{TA,D,S}}, ::Type{Rnsolt{TB,D,S}}) where {D,S,TA,TB} = Rnsolt{promote_type(TA,TB),D,S}
@@ -113,6 +114,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
 
         new{T,D,S}(df, nChs, ppo, initMts, propMts, paramAngs, sym, mtxf)
     end
+    Cnsolt(df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; kwargs...) where {D} = Cnsolt(Float64, df, nChs, ppo; kwargs...)
 end
 
 promote_rule(::Type{Cnsolt{TA,D,S}}, ::Type{Cnsolt{TB,D,S}}) where {D,S,TA,TB} = Cnsolt{promote_type(TA,TB),D,S}
@@ -127,8 +129,8 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
 
     function ParallelFB(::Type{T}, df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}) where {T,D}
         szFilters = df .* (ppo .+ 1)
-        afs = [ Array{dataType, D}(szFilters...) for p in 1:nChs ]
-        sfs = [ Array{dataType, D}(szFilters...) for p in 1:nChs ]
+        afs = [ Array{T, D}(szFilters...) for p in 1:nChs ]
+        sfs = [ Array{T, D}(szFilters...) for p in 1:nChs ]
         new{T, D}(df, nChs, ppo, afs, sfs)
     end
 end
