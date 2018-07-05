@@ -155,9 +155,6 @@ using MDCDL
             dst = Rnsolt(df, nch, ord)
             randomInit!(src)
 
-            if isa(src, Rnsolt{Float64,d,:TypeII})
-                continue
-            end
             (angs, mus) = getAngleParameters(src)
             setAngleParameters!(dst, angs, mus)
 

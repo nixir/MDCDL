@@ -62,9 +62,9 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
             S = :TypeII
             initMts = Array[ eye(T, p) for p in nChs ]
             propMts = if nChs[1] > nChs[2]
-                [ vcat(fill(Array[ -eye(T,nChs[2]), eye(T,nChs[1]) ], ppo[pd])...) for pd in 1:D]
+                [ vcat(fill(Array[ -eye(T,nChs[2]), eye(T,nChs[1]) ], fld(ppo[pd],2))...) for pd in 1:D]
             else
-                [ vcat(fill(Array[ eye(T,nChs[1]), -eye(T,nChs[2]) ], ppo[pd])...) for pd in 1:D]
+                [ vcat(fill(Array[ eye(T,nChs[1]), -eye(T,nChs[2]) ], fld(ppo[pd],2))...) for pd in 1:D]
             end
         end
 
@@ -107,7 +107,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
             fch = fld(nChs, 2)
             S = :TypeII
             initMts = Array[ eye(T, nChs) ]
-            propMts = [ vcat(fill(Array[ eye(T,fch), -eye(T,fch), eye(T,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1))) ], ppo[pd])...) for pd in 1:D]
+            propMts = [ vcat(fill(Array[ eye(T,fch), -eye(T,fch), eye(T,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1))) ], fld(ppo[pd],2))...) for pd in 1:D]
         end
         paramAngs = Array[ Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
         sym = Diagonal{Complex{T}}(ones(nChs))

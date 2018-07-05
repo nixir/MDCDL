@@ -164,9 +164,6 @@ using MDCDL
             dst = Cnsolt(df, nch, ord)
             randomInit!(src)
 
-            if isa(src, Cnsolt{Float64,d,:TypeII})
-                continue
-            end
             (angs, mus) = getAngleParameters(src)
             setAngleParameters!(dst, angs, mus)
 
