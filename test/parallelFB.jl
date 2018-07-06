@@ -81,7 +81,7 @@ using MDCDL
                 # check analyzer
                 subx = x
                 for idx = 1:lv-1
-                    sys = [ downsample(myfilter(subx, af), df, offset) for af in afs ]
+                    sys = [ circshift(downsample(myfilter(subx, af), df, offset), (-1 .* fld.(ord,2))) for af in afs ]
                     if idx < lv
                         @test all(y[idx] .≈ sys[2:end])
                         subx = sys[1]
@@ -96,7 +96,7 @@ using MDCDL
                 suby = y[lv]
                 for idx = lv:-1:1
                     subrxs = sum([ myfilter( MDCDL.upsample(suby[p], df), sfs[p] ) for p in 1:sum(nch) ])
-                    subrx = circshift(subrxs, -1 .* df .* ord)
+                    subrx = circshift(subrxs, -1 .* df .* cld.(ord,2))
                     if idx > 1
                         suby = [subrx, y[idx-1]... ]
                     else

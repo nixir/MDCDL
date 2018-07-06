@@ -62,13 +62,13 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
 
             B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
             y .= B' * y
-            y[chLower,:] = circshift(y[chLower,:], (0, nShift))
+            # y[chLower,:] = circshift(y[chLower,:], (0, nShift))
 
-            # if k % 2 == 1
-            #     y[chLower,:] = circshift(y[chLower,:],(0, nShift))
-            # else
-            #     y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
-            # end
+            if k % 2 == 1
+                y[chLower,:] = circshift(y[chLower,:],(0, nShift))
+            else
+                y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
+            end
             y .= B * y
         end
         pvy.data .= y
@@ -94,21 +94,15 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
             y[chUpper,:] = cc.propMatrices[d][4*k-1]' * y[chUpper,:]
             y[chLower,:] = cc.propMatrices[d][4*k]'   * y[chLower,:]
 
+            chUpper = 1:fld(P,2)
+            chLower = (fld(P,2)+1):(P-1)
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k])
             y[chEven,:] .= B' * y[chEven,:]
-            y[chLower,:] = circshift(y[chLower,:], (0, nShift))
-
-            # if k % 2 == 1
-            #     y[chLower,:] = circshift(y[chLower,:],(0, nShift))
-            # else
-            #     y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
-            # end
+            # y[chLower,:] = circshift(y[chLower,:], (0, nShift))
+            y[chUpper,:] = circshift(y[chUpper,:], (0, -nShift))
             y[chEven,:] .= B * y[chEven,:]
 
             # first step
-
-            chUpper = 1:fld(P,2)
-            chLower = (fld(P,2)+1):(P-1)
 
             y[chUpper,:] = cc.propMatrices[d][4*k-3]' * y[chUpper,:]
             y[chLower,:] = cc.propMatrices[d][4*k-2]' * y[chLower,:]
@@ -116,7 +110,6 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k-1])
             y[chEven,:] .= B' * y[chEven,:]
             y[chLower,:] = circshift(y[chLower,:], (0, nShift))
-
             y[chEven,:] .= B * y[chEven,:]
         end
         pvy.data .= y
@@ -144,9 +137,9 @@ function multipleSynthesisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY
 end
 
 function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D}
-    const P = cc.nChannels[1]
-    # const chUpper = 1:P
-    const chLower = (1:P)+P
+    const hP = cc.nChannels[1]
+    const chUpper = 1:hP
+    const chLower = (1:hP)+hP
 
     for d = D:-1:1 # original order
         const nShift = -fld(size(pvy,2), pvy.nBlocks[end])
@@ -154,14 +147,14 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
         for k = cc.polyphaseOrder[d]:-1:1
             y[chLower,:] = cc.propMatrices[d][k]' * y[chLower,:]
 
-            y .= butterfly(y, P)
-            y[chLower,:] = circshift(y[chLower,:], (0, nShift))
-            # if k % 2 == 1
-            #     py[rngLower...] = circshift(py[rngLower...],(0, nShifts[d]))
-            # else
-            #     py[rngUpper...] = circshift(py[rngUpper...],(0, nShifts[d]))
-            # end
-            y .= butterfly(y, P)
+            y .= butterfly(y, hP)
+            # y[chLower,:] = circshift(y[chLower,:], (0, nShift))
+            if isodd(k)
+                y[chLower,:] = circshift(y[chLower,:],(0, nShift))
+            else
+                y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
+            end
+            y .= butterfly(y, hP)
         end
         pvy.data .= y
         pvy = MDCDL.ipermutedims(pvy)
@@ -185,13 +178,8 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
             # second step
             y[chMajor,:] = cc.propMatrices[d][2*k]' * y[chMajor,:]
             y = butterfly(y, minP)
-            y[maxP+1:end,:] = circshift(y[maxP+1:end,:], (0, nShift))
-
-            # if k % 2 == 1
-            #     y[chLower,:] = circshift(y[chLower,:],(0, nShift))
-            # else
-            #     y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
-            # end
+            # y[maxP+1:end,:] = circshift(y[maxP+1:end,:], (0, nShift))
+            y[1:maxP,:] = circshift(y[1:maxP,:], (0, -nShift))
             y = butterfly(y, minP)
 
             # first step
@@ -218,7 +206,8 @@ function synthesize(pfb::MDCDL.ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}},
         sxs = map(ya, pfb.synthesisFilters) do yp, sfp
             MDCDL.mdfilter(MDCDL.upsample(yp, df), sfp; operation=:conv)
         end
-        circshift(sum(sxs), -1 .* df .* pfb.polyphaseOrder)
+        circshift(sum(sxs), -1 .* df .* cld.(pfb.polyphaseOrder,2))
+        # sum(sxs)
     end
     vx = subsynthesize(y, level)
 end

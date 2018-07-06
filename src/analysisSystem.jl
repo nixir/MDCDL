@@ -58,12 +58,12 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; 
             B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
 
             x .= B' * x
-            x[chLower,:] = circshift(x[chLower,:], (0, nShift))
-            # if k % 2 == 1
-            #     x[chLower,:] = circshift(x[chLower,:],(0, nShift))
-            # else
-            #     x[chUpper,:] = circshift(x[chUpper,:],(0, -nShift))
-            # end
+            # x[chLower,:] = circshift(x[chLower,:], (0, nShift))
+            if isodd(k)
+                x[chLower,:] = circshift(x[chLower,:],(0, nShift))
+            else
+                x[chUpper,:] = circshift(x[chUpper,:],(0, -nShift))
+            end
             x .= B * x
 
             x[chUpper,:] = cc.propMatrices[d][2*k-1] * x[chUpper,:]
@@ -89,27 +89,26 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
             chLower = (fld(P,2)+1):(P-1)
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k-1])
 
-            x[chEven,:]= B' * x[chEven,:]
-            x[chLower,:] = circshift(x[chLower,:], (0, nShift))
-            # if k % 2 == 1
-            #     x[chLower,:] = circshift(x[chLower,:],(0, nShift))
-            # else
-            #     x[chUpper,:] = circshift(x[chUpper,:],(0, -nShift))
-            # end
-            x[chEven,:] .= B * x[chEven,:]
+            x[chEven,:]  .= B' * x[chEven,:]
+            x[chLower,:] .= circshift(x[chLower,:], (0, nShift))
+            x[chEven,:]  .= B * x[chEven,:]
 
-            x[chUpper,:] = cc.propMatrices[d][4*k-3] * x[chUpper,:]
-            x[chLower,:] = cc.propMatrices[d][4*k-2] * x[chLower,:]
+            x[chUpper,:] .= cc.propMatrices[d][4*k-3] * x[chUpper,:]
+            x[chLower,:] .= cc.propMatrices[d][4*k-2] * x[chLower,:]
 
             # second step
-            chUpper = 1:cld(P,2)
-            chLower = cld(P,2):P
+            # chUpper = 1:cld(P,2)
+            # chLower = cld(P,2):P
 
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k])
 
-            x[chEven,:] .= B' * x[chEven,:]
-            x[chLower,:] = circshift(x[chLower,:], (0, nShift))
-            x[chEven,:] .= B * x[chEven,:]
+            x[chEven,:]  .= B' * x[chEven,:]
+            # x[chLower,:] .= circshift(x[chLower,:], (0, nShift))
+            x[chUpper,:] .= circshift(x[chUpper,:], (0, -nShift))
+            x[chEven,:]  .= B * x[chEven,:]
+
+            chUpper = 1:cld(P,2)
+            chLower = cld(P,2):P
 
             x[chLower,:] = cc.propMatrices[d][4*k]   * x[chLower,:]
             x[chUpper,:] = cc.propMatrices[d][4*k-1] * x[chUpper,:]
@@ -139,7 +138,7 @@ end
 
 function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, px::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
     const hP = cc.nChannels[1]
-    # const chUpper = 1:P
+    const chUpper = 1:hP
     const chLower = (1:hP)+hP
 
     for d = 1:D # original order
@@ -149,12 +148,12 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, px::PolyphaseVector{TX,D}, b
 
             px .= butterfly(px.data, hP)
 
-            px[chLower,:] = circshift(px[chLower,:], (0, nShift))
-            # if k % 2 == 1
-            #     px[rngLower...] = circshift(px[rngLower...],(0, nShifts[d]))
-            # else
-            #     px[rngUpper...] = circshift(px[rngUpper...],(0, -nShifts[d]))
-            # end
+            # px[chLower,:] = circshift(px[chLower,:], (0, nShift))
+            if isodd(k)
+                px[chLower,:] = circshift(px[chLower,:],(0, nShift))
+            else
+                px[chUpper,:] = circshift(px[chUpper,:],(0, -nShift))
+            end
             px .= butterfly(px.data, hP)
 
             px[chLower,:] = cc.propMatrices[d][k] * px[chLower,:]
@@ -180,18 +179,14 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
             # first step
             x = butterfly(x, minP)
             x[minP+1:end,:] = circshift(x[minP+1:end,:], (0, nShift))
-            # if k % 2 == 1
-            #     x[chLower,:] = circshift(x[chLower,:],(0, nShift))
-            # else
-            #     x[chUpper,:] = circshift(x[chUpper,:],(0, -nShift))
-            # end
             x = butterfly(x, minP)
 
             x[chMinor,:] = cc.propMatrices[d][2*k-1] * x[chMinor,:]
 
             # second step
             x = butterfly(x, minP)
-            x[maxP+1:end,:] = circshift(x[maxP+1:end,:], (0, nShift))
+            # x[maxP+1:end,:] = circshift(x[maxP+1:end,:], (0, nShift))
+            x[1:maxP,:] = circshift(x[1:maxP,:] , (0, -nShift))
             x = butterfly(x, minP)
 
             x[chMajor,:] = cc.propMatrices[d][2*k]   * x[chMajor,:]
@@ -206,7 +201,7 @@ function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer = 1
     const offset = df .- 1
 
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        sy = [  circshift(MDCDL.downsample(MDCDL.mdfilter(sx, f; operation=:conv), df, offset), 0) for f in pfb.analysisFilters ]
+        sy = [  circshift(MDCDL.downsample(MDCDL.mdfilter(sx, f; operation=:conv), df, offset), (-1 .* fld.(pfb.polyphaseOrder,2))) for f in pfb.analysisFilters ]
         if k <= 1
             return [ sy ]
         else
