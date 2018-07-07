@@ -130,7 +130,7 @@ function iht(cb::MDCDL.CodeBook, x, y0, K::Integer; maxIterations::Integer=20, a
     for itr = 1:maxIterations
         yprev = y
         y = hardshrink(y + adjoint_synthesize(cb, x - recx), K)
-        recx = synthesize(mlcsc, y)
+        recx = synthesize(cb, y)
 
         errx = vecnorm(x - recx)^2/len
         erry = vecnorm(y - yprev)^2
