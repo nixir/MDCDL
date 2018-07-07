@@ -1,6 +1,12 @@
+# Finit-dimensional lienar operator
+analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
+adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
+
+# Filter bank with polyphase representation
 function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, level::Integer = 1; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), level; kwargs...)
 end
+adjoint_synthesize(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
 function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer = 1; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
@@ -31,6 +37,7 @@ function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::I
         polyphase2mdarray.(y)
     end
 end
+adjoint_synthesize(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
 function multipleAnalysisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     const M = prod(cc.decimationFactor)
@@ -214,3 +221,4 @@ function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer = 1
 
     subanalyze(x,level)
 end
+adjoint_synthesize(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pdf, x, args...; kwargs...)

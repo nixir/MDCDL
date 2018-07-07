@@ -25,7 +25,8 @@ end
 
 promote_rule(::Type{PolyphaseVector{TA,D}}, ::Type{PolyphaseVector{TB,D}}) where {TA,TB,D} = PolyphaseVector{promote_type(TA,TB), D}
 
-abstract type FilterBank{T,D} end
+abstract type CodeBook{T,D} end
+abstract type FilterBank{T,D} <: CodeBook{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
 
 struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
@@ -137,7 +138,7 @@ end
 
 promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
 
-struct MultiLayerCsc{T,D}
+struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int
 
     dictionaries::Vector

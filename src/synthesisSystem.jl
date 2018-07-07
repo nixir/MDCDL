@@ -1,4 +1,7 @@
+# Finit-dimensional linear operator
+synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
+# Filter bank with polyphase representation
 function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer = 1; kwargs...) where {TF,TY,D}
     #TODO: リファクタリングする
     #TODO: array2vecblocks を mdarray2polyphaseに置き換える

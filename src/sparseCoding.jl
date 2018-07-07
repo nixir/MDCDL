@@ -73,37 +73,63 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
 end
 
 # TODO:勾配の計算を関数の内部で完結させる
-function iht(gradOfLossFcn::Function, x0, K::Integer; maxIterations::Integer=20, absTol::Real=1e-10,viewStatus::Bool=false)
-    x = x0
-    errx = Inf
-    len = length(x0)
-    for nItr = 1:maxIterations
-        xprev = x
-        x = hardshrink(x - gradOfLossFcn(x), K)
+# function iht(gradOfLossFcn::Function, x0, K::Integer; maxIterations::Integer=20, absTol::Real=1e-10,viewStatus::Bool=false)
+#     x = x0
+#     errx = Inf
+#     len = length(x0)
+#     for nItr = 1:maxIterations
+#         xprev = x
+#         x = hardshrink(x - gradOfLossFcn(x), K)
+#
+#         errx = vecnorm(x-xprev)^2/len
+#
+#         if viewStatus
+#             println("\#Iterations $nItr: err = $errx ")
+#         end
+#
+#         if errx <= absTol
+#             break
+#         end
+#     end
+#     (x, errx)
+# end
 
-        errx = vecnorm(x-xprev)^2/len
+# function iht(mlcsc::MDCDL.MultiLayerCsc, x, y0, K::Integer; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false)
+#     const len = length(y0)
+#     y = y0
+#     errx = Inf
+#     erry = Inf
+#
+#     recx = synthesize(mlcsc, y)
+#     for itr = 1:maxIterations
+#         yprev = y
+#         y = hardshrink(y + analyze(mlcsc, x - recx), K)
+#         recx = synthesize(mlcsc, y)
+#
+#         errx = vecnorm(x - recx)^2/len
+#         erry = vecnorm(y - yprev)^2
+#
+#         if viewStatus
+#             println("\#Iterations $itr: err = $errx ")
+#         end
+#
+#         if errx <= absTol
+#             break
+#         end
+#     end
+#     y
+# end
 
-        if viewStatus
-            println("\#Iterations $nItr: err = $errx ")
-        end
-
-        if errx <= absTol
-            break
-        end
-    end
-    (x, errx)
-end
-
-function iht(mlcsc::MDCDL.MultiLayerCsc, x, y0, K::Integer; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false)
+function iht(cb::MDCDL.CodeBook, x, y0, K::Integer; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false)
     const len = length(y0)
     y = y0
     errx = Inf
     erry = Inf
 
-    recx = synthesize(mlcsc, y)
+    recx = synthesize(cb, y)
     for itr = 1:maxIterations
         yprev = y
-        y = hardshrink(y + analyze(mlcsc, x - recx), K)
+        y = hardshrink(y + adjoint_synthesize(cb, x - recx), K)
         recx = synthesize(mlcsc, y)
 
         errx = vecnorm(x - recx)^2/len

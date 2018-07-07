@@ -16,6 +16,24 @@ function analyze(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}; isAllCoefs::B
     end
 end
 
+function adjoint_synthesize(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}; isAllCoefs::Bool=false) where {TC,TX,D}
+    γ = Vector(mlcsc.nLayers+1)
+    γ[1] = x
+    for l = 1:mlcsc.nLayers
+        dic = mlcsc.dictionaries[l]
+
+        γt = adjoint_synthesize(dic, γ[l]; outputMode=:augumented)
+        γ[l+1] = γt[1]
+        # γ[l+1] = analyze(dic, γ[l]; outputMode=:augmented)[1]
+    end
+
+    if isAllCoefs
+        γ
+    else
+        γ[mlcsc.nLayers+1]
+    end
+end
+
 function synthesize(mlcsc::MDCDL.MultiLayerCsc, y::Array; isAllCoefs::Bool=false)
     γ = Vector(mlcsc.nLayers+1)
     γ[mlcsc.nLayers+1] = y
@@ -34,7 +52,7 @@ end
 function mlista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], [v])
-    opDt = (l, v) -> analyze(mlcsc.dictionaries[l], v; outputMode=:augumented)[1]
+    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)[1]
 
     γ = Vector(L+1)
     γ[1] = x
@@ -61,7 +79,7 @@ end
 function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], [v])
-    opDt = (l, v) -> analyze(mlcsc.dictionaries[l], v; outputMode=:augumented)[1]
+    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)[1]
 
     γ = Vector(L+1)
     γ[1] = x
