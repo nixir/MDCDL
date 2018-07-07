@@ -154,7 +154,7 @@ struct MultiLayerCsc{T,D}
     end
 end
 
-include("convexOptimization.jl")
+include("sparseCoding.jl")
 
 include("blockproc.jl")
 include("orthonormalMatrixSystem.jl")
