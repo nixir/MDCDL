@@ -94,10 +94,13 @@ for epoch = 1:nEpoch, k = 1:length(x)
     end
 end
 
-# gs = MDCDL.mlfista(mlcsc, x[1], [1e-8, 1e-6, 1e-3])
-# recx = MDCDL.synthesize(mlcsc, gs[nl])
-#
-# errx = vecnorm(recx - x[1])
+gs = MDCDL.mlfista(mlcsc, x[1], fill(1e-6,nl))
+recx = MDCDL.synthesize(mlcsc, gs[nl])
+
+errx = vecnorm(recx - x[1])
+println(errx)
+
+ 
 
 # rx = MDCDL.synthesize(mlcsc, hy)
 # errx = vecnorm(rx - x)

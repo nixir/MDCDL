@@ -51,8 +51,8 @@ end
 
 function mlista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
-    opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], [v])
-    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)[1]
+    opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
+    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionariess[l], v; outputMode=:augumented)
 
     γ = Vector(L+1)
     γ[1] = x
@@ -78,8 +78,8 @@ end
 
 function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
-    opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], [v])
-    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)[1]
+    opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
+    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)
 
     γ = Vector(L+1)
     γ[1] = x
