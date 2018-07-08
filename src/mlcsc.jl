@@ -49,7 +49,7 @@ function synthesize(mlcsc::MDCDL.MultiLayerCsc, y::Array; isAllCoefs::Bool=false
     end
 end
 
-function mlista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
+function mlista(mlcsc::MDCDL.MultiLayerCsc, x, λs::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
     opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionariess[l], v; outputMode=:augumented)
@@ -70,13 +70,13 @@ function mlista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations
         hγ[1] = x
 
         for l = 1:L
-            γ[l+1] = softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]),lambdas[l])
+            γ[l+1] = softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]), λs[l])
         end
     end
     γ[2:end]
 end
 
-function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
+function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, λs::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     const L = mlcsc.nLayers
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
     opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)
@@ -99,7 +99,7 @@ function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, lambdas::Vector{T}; maxIteration
 
         glp = γ[L+1]
         for l = 1:L
-            γ[l+1] = softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]),lambdas[l])
+            γ[l+1] = softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]), λs[l])
         end
         tkprev = tk
         tk = (1 + sqrt(1+4*tkprev)) / 2

@@ -164,7 +164,7 @@ include("polyphaseMatrices.jl")
 include("analysisSystem.jl")
 include("synthesisSystem.jl")
 
-include("dictionaryLearning.jl")
+include("parameterizeFilterBanks.jl")
 
 include("view.jl")
 
