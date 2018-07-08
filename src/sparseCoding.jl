@@ -181,11 +181,15 @@ function l2ballProj(x::T, radius::Real, centerVec::T) where T
     end
 end
 
-function hardshrink(x::AbstractArray, k::Integer)
+function hardshrink(x::AbstractArray{T,D}, k::Integer) where {T<:Number,D}
     nzids = sortperm(abs.(vec(x)), rev=true)[1:k]
     output = zeros(x)
     foreach(nzids) do idx
         output[idx] = x[idx]
     end
     output
+end
+
+function hardshrink(x::AbstractArray{AbstractArray}, ks::AbstractArray)
+    hardshrink.(x, k)
 end
