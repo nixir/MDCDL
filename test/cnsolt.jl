@@ -81,29 +81,58 @@ using MDCDL
     end
 
     @testset "AnalysisSynthesis" begin
-        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d], lv in 1:3
-            szx = (df.^lv) .* (ord .+ 1)
-
+        # output mode options for analyzer
+        oms = [ :polyphase, :reshaped, :augumented ]
+        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d]
+            szx = df .* (ord .+ 1)
             nsolt = Cnsolt(df, nch, ord)
             randomInit!(nsolt)
 
             x = rand(Complex{Float64}, szx...)
 
-            y = analyze(nsolt, x, lv; outputMode = :polyphase)
-            rx = synthesize(nsolt, y, lv)
+            y = analyze(nsolt, x)
+            rx = synthesize(nsolt, y)
 
             @test size(x) == size(rx)
             @test rx ≈ x
 
-            y = analyze(nsolt, x, lv; outputMode = :reshaped)
-            rx = synthesize(nsolt, y, lv)
+            foreach(oms) do om
+                y = analyze(nsolt, x; outputMode = om)
+                rx = synthesize(nsolt, y)
 
-            @test size(x) == size(rx)
-            @test rx ≈ x
+                @test size(x) == size(rx)
+                @test rx ≈ x
+            end
         end
     end
 
-    @testset "MultiscaleAnalyzer" begin
+    @testset "AnalysisSynthesisMultiscale" begin
+        # output mode options for analyzer
+        oms = [ :polyphase, :reshaped, :augumented ]
+        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d], lv in 1:3
+            szx = (df.^lv) .* (ord .+ 1)
+            nsolt = Cnsolt(df, nch, ord)
+            randomInit!(nsolt)
+
+            x = rand(Complex{Float64}, szx...)
+
+            y = analyze(nsolt, x, lv)
+            rx = synthesize(nsolt, y, lv)
+
+            @test size(x) == size(rx)
+            @test rx ≈ x
+
+            foreach(oms) do om
+                y = analyze(nsolt, x, lv; outputMode = om)
+                rx = synthesize(nsolt, y, lv)
+
+                @test size(x) == size(rx)
+                @test rx ≈ x
+            end
+        end
+    end
+
+    @testset "AnalyzerKernel" begin
         for d in 1:length(ccsd), (df, nch, ord) in ccsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             x = rand(Complex{Float64}, szx)
@@ -130,7 +159,7 @@ using MDCDL
         end
     end
 
-    @testset "MultiscaleSynthesizer" begin
+    @testset "SynthesizerKernel" begin
         for d in 1:length(ccsd), (df, nch, ord) in ccsd[d], lv in 1:3
 
             nsolt = Cnsolt(df, nch, ord)

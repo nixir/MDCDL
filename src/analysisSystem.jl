@@ -3,12 +3,14 @@ analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
 # Filter bank with polyphase representation
-function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, level::Integer = 1; kwargs...) where {TF,TX,D}
-    analyze(fb, mdarray2polyphase(x, fb.decimationFactor), level; kwargs...)
+function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D}
+    analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 end
 adjoint_synthesize(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer = 1; outputMode=:reshaped) where {TF,TX,D}
+analyze(fb::MDCDL.PolyphaseFB, x, args...; kwargs...) = analyze(fb, x, 1, args...; kwargs...)[1]
+
+function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
         sy = multipleAnalysisBank(fb, sx)
         if k <= 1

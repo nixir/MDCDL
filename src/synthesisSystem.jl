@@ -2,7 +2,9 @@
 synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
 # Filter bank with polyphase representation
-function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer = 1; kwargs...) where {TF,TY,D}
+synthesize(fb::PolyphaseFB, y, args...; kwargs...) = synthesize(fb, [y], 1, args...; kwargs...)
+
+function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer; kwargs...) where {TF,TY,D}
     #TODO: リファクタリングする
     #TODO: array2vecblocks を mdarray2polyphaseに置き換える
     nBlocks = [ size(y[l][1]) for l in 1:level ]
@@ -12,7 +14,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level
     synthesize(fb, pvy, level; kwargs...)
 end
 
-function synthesize(fb::PolyphaseFB{TF,DF}, y::Vector{Array{TY,DY}}, level::Integer = 1; kwargs...) where {TF,TY,DF,DY}
+function synthesize(fb::PolyphaseFB{TF,DF}, y::Vector{Array{TY,DY}}, level::Integer; kwargs...) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
     end
@@ -20,7 +22,7 @@ function synthesize(fb::PolyphaseFB{TF,DF}, y::Vector{Array{TY,DY}}, level::Inte
     synthesize(fb, mdarray2polyphase.(y), level; kwargs...)
 end
 
-function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, level::Integer = 1) where {TF,TY,D}
+function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, level::Integer) where {TF,TY,D}
     df = fb.decimationFactor
     function subsynthesize(sy::Vector{PolyphaseVector{TY,D}}, k::Integer)
         ya = if k <= 1

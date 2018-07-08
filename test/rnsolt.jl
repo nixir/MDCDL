@@ -71,7 +71,58 @@ using MDCDL
         end
     end
 
+    # @testset "AnalysisSynthesis" begin
+    #     for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
+    #         szx = (df.^lv) .* (ord .+ 1)
+    #
+    #         nsolt = Rnsolt(df, nch, ord)
+    #         randomInit!(nsolt)
+    #
+    #         x = rand(Float64, szx...)
+    #
+    #         y = analyze(nsolt, x, lv; outputMode = :polyphase)
+    #         rx = synthesize(nsolt, y, lv)
+    #
+    #         @test size(x) == size(rx)
+    #         @test rx ≈ x
+    #
+    #         y = analyze(nsolt, x, lv; outputMode = :reshaped)
+    #         rx = synthesize(nsolt, y, lv)
+    #
+    #         @test size(x) == size(rx)
+    #         @test rx ≈ x
+    #     end
+    # end
+
     @testset "AnalysisSynthesis" begin
+        # output mode options for analyzer
+        oms = [ :polyphase, :reshaped, :augumented ]
+        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d]
+            szx = df .* (ord .+ 1)
+            nsolt = Rnsolt(df, nch, ord)
+            randomInit!(nsolt)
+
+            x = rand(Float64, szx...)
+
+            y = analyze(nsolt, x)
+            rx = synthesize(nsolt, y)
+
+            @test size(x) == size(rx)
+            @test rx ≈ x
+
+            foreach(oms) do om
+                y = analyze(nsolt, x; outputMode = om)
+                rx = synthesize(nsolt, y)
+
+                @test size(x) == size(rx)
+                @test rx ≈ x
+            end
+        end
+    end
+
+    @testset "AnalysisSynthesisMultiscale" begin
+        # output mode options for analyzer
+        oms = [ :polyphase, :reshaped, :augumented ]
         for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
 
@@ -80,21 +131,23 @@ using MDCDL
 
             x = rand(Float64, szx...)
 
-            y = analyze(nsolt, x, lv; outputMode = :polyphase)
+            y = analyze(nsolt, x, lv)
             rx = synthesize(nsolt, y, lv)
 
             @test size(x) == size(rx)
             @test rx ≈ x
 
-            y = analyze(nsolt, x, lv; outputMode = :reshaped)
-            rx = synthesize(nsolt, y, lv)
+            foreach(oms) do om
+                y = analyze(nsolt, x, lv; outputMode = om)
+                rx = synthesize(nsolt, y, lv)
 
-            @test size(x) == size(rx)
-            @test rx ≈ x
+                @test size(x) == size(rx)
+                @test rx ≈ x
+            end
         end
     end
 
-    @testset "MultiscaleAnalyzer" begin
+    @testset "AnalyzerKernel" begin
         for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             x = rand(Float64, szx)
@@ -121,7 +174,7 @@ using MDCDL
         end
     end
 
-    @testset "MultiscaleSynthesizer" begin
+    @testset "SynthesizerKernel" begin
         for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
 
             nsolt = Rnsolt(df, nch, ord)
