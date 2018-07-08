@@ -26,8 +26,8 @@ end
 xraw = testimage("cameraman")[((1:128,1:128) .+ (64,168))...]
 x = complex(Array{Float64}(xraw))
 
-y0 = analyze(cnsolt, x, lv; outputMode = :polyphase)
-sparsity = fld.(length.(y0),8)
+y0 = analyze(cnsolt, x, lv; outputMode = :augumented)
+sparsity = fld.(length.(y0),4)
 
 angs0, mus0 = getAngleParameters(cnsolt)
 
@@ -37,7 +37,7 @@ opt = Opt(:LN_COBYLA, length(angs0))
 lower_bounds!(opt, -1*pi*ones(size(angs0)))
 upper_bounds!(opt,  1*pi*ones(size(angs0)))
 xtol_rel!(opt,1e-4)
-maxeval!(opt,20)
+maxeval!(opt,200)
 
 # inequality_constraint!(opt, (x,g) -> myconstraint(x,g,2,0), 1e-8)
 # inequality_constraint!(opt, (x,g) -> myconstraint(x,g,-1,1), 1e-8)
@@ -46,7 +46,8 @@ maxeval!(opt,20)
 y = y0
 for idx = 1:nIters
     # hy = map((ys, sp) -> MDCDL.iht(cnsolt, x, ys, sp), y, sparsity)
-    hy = y
+    # hy = y
+    hy = MDCDL.iht((ty)->synthesize(cnsolt, ty, lv), (tx)->adjoint_synthesize(cnsolt, tx, lv; outputMode=:augumented), x, y, sparsity)
     count = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
         global count
@@ -80,7 +81,7 @@ for idx = 1:nIters
     (minf, minx, ret) = optimize(opt, angs0)
 
     setAngleParameters!(cnsolt, minx, mus0)
-    y = analyze(cnsolt, x, lv; outputMode=:polyphase)
+    y = analyze(cnsolt, x, lv; outputMode=:augumented)
     println("Iterations $idx finished.")
 end
 

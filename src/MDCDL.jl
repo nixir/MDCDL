@@ -7,7 +7,7 @@ include("basicComplexDSP.jl")
 export PolyphaseVector
 export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export MultiLayerCsc
-export analyze, synthesize
+export analyze, synthesize, adjoint_synthesize
 # export cconv
 export upsample, downsample
 export atmimshow
@@ -16,6 +16,7 @@ export getAnalysisFilters, getSynthesisFilters
 export mdfilter
 export getAngleParameters, setAngleParameters!
 export mdarray2polyphase, polyphase2mdarray
+export iht
 
 
 struct PolyphaseVector{T,D} <: AbstractArray{T,2}
