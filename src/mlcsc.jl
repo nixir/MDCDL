@@ -4,8 +4,8 @@ function analyze(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}; isAllCoefs::B
     for l = 1:mlcsc.nLayers
         dic = mlcsc.dictionaries[l]
 
-        γt = analyze(dic, γ[l]; outputMode=:augumented)
-        γ[l+1] = γt[1]
+        γ[l+1] = analyze(dic, γ[l]; outputMode=:augumented)
+        # γ[l+1] = γt[1]
         # γ[l+1] = analyze(dic, γ[l]; outputMode=:augmented)[1]
     end
 
@@ -22,8 +22,8 @@ function adjoint_synthesize(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}; is
     for l = 1:mlcsc.nLayers
         dic = mlcsc.dictionaries[l]
 
-        γt = adjoint_synthesize(dic, γ[l]; outputMode=:augumented)
-        γ[l+1] = γt[1]
+        γ[l+1] = adjoint_synthesize(dic, γ[l]; outputMode=:augumented)
+        # γ[l+1] = γt[1]
         # γ[l+1] = analyze(dic, γ[l]; outputMode=:augmented)[1]
     end
 
@@ -39,7 +39,7 @@ function synthesize(mlcsc::MDCDL.MultiLayerCsc, y::Array; isAllCoefs::Bool=false
     γ[mlcsc.nLayers+1] = y
     for l = mlcsc.nLayers:-1:1
         dic = mlcsc.dictionaries[l]
-        γ[l] = synthesize(dic, [γ[l+1]])
+        γ[l] = synthesize(dic, γ[l+1])
     end
 
     if isAllCoefs

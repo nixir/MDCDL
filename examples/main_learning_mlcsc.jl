@@ -64,10 +64,10 @@ for epoch = 1:nEpoch, k = 1:length(x)
 
             γ = Vector(submlcsc.nLayers)
             # γ[submlcsc.nLayers+1] = hy
-            γ[submlcsc.nLayers] = MDCDL.synthesize( submlcsc.dictionaries[ submlcsc.nLayers ], [hy])
+            γ[submlcsc.nLayers] = MDCDL.synthesize( submlcsc.dictionaries[ submlcsc.nLayers ], hy)
             for lfun = submlcsc.nLayers-1:-1:1
                 dic = submlcsc.dictionaries[lfun]
-                γ[lfun] = MDCDL.synthesize(dic, [γ[lfun+1]])
+                γ[lfun] = MDCDL.synthesize(dic, γ[lfun+1])
             end
 
             # diffx = xk - MDCDL.synthesize(submlcsc, hy)
@@ -90,7 +90,7 @@ for epoch = 1:nEpoch, k = 1:length(x)
 
         MDCDL.setAngleParameters!(mlcsc.dictionaries[l], minx, mus0)
 
-        hy = MDCDL.synthesize(submlcsc.dictionaries[l], [hy])
+        hy = MDCDL.synthesize(submlcsc.dictionaries[l], hy)
     end
 end
 
