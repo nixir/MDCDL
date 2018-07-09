@@ -101,7 +101,11 @@ recx = MDCDL.synthesize(mlcsc, gs[nl])
 errx = vecnorm(recx - x[1])
 println(errx)
 
-
+# dirname = string(now())
+# mkdir(dirname)
+# for l = 1:nl
+#   MDCDL.save(joinpath(dirname,string("Layer",l)), mlcsc.dictionaries[l])
+# end
 
 # rx = MDCDL.synthesize(mlcsc, hy)
 # errx = vecnorm(rx - x)
