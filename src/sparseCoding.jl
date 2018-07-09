@@ -113,10 +113,10 @@ function groupshrink(x, lambda::Real)
 end
 
 # prox. of l1-norm
-function softshrink(x::Number, lambda::Real)
+softshrink(x::AbstractArray{T}, lambda::Real) where T = softshrink.(x, lambda)
+function softshrink(x, lambda::Real)
     max(1.0 - lambda / abs(x),0) * x
 end
-softshrink(x::AbstractArray{T}, lambda::Real) where T = softshrink.(x, lambda)
 
 # prox. of nuclear norm.
 function shrinkSingularValue(A::Matrix, lambda::Real)
@@ -138,7 +138,8 @@ function l2ballProj(x::T, radius::Real, centerVec::T) where T
     end
 end
 
-function hardshrink(x::AbstractArray{T,D}, k::Integer) where {T<:Number,D}
+hardshrink(x::AbstractArray{T}, ks::AbstractArray) where {T<:AbstractArray} = hardshrink.(x, ks)
+function hardshrink(x::AbstractArray{T,D}, k::Integer) where {T,D}
     nzids = sortperm(abs.(vec(x)), rev=true)[1:k]
     output = zeros(x)
     foreach(nzids) do idx
@@ -146,5 +147,3 @@ function hardshrink(x::AbstractArray{T,D}, k::Integer) where {T<:Number,D}
     end
     output
 end
-
-hardshrink(x::AbstractArray{T}, ks::AbstractArray) where {T<:AbstractArray} = hardshrink.(x, ks)

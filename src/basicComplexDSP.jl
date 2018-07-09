@@ -82,8 +82,8 @@ function permdctmtx(sz::Integer...)
     end
     mtx = hcat(imps...)
 
-    evenIds = find(x -> sum(ind2sub(sz,x) .- 1) % 2 == 0, 1:len)
-    oddIds = find(x -> sum(ind2sub(sz,x) .- 1) % 2 != 0, 1:len)
+    evenIds = find(x -> iseven(sum(ind2sub(sz,x) .- 1)), 1:len)
+    oddIds = find(x -> isodd(sum(ind2sub(sz,x) .- 1)), 1:len)
 
     evenMtx = hcat([ mtx[idx,:] for idx in evenIds]...)
     oddMtx = hcat([ mtx[idx,:] for idx in oddIds]...)
