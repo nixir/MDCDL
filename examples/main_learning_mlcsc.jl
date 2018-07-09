@@ -9,12 +9,13 @@ srand(23485729)
 D = 2
 nl = 3
 szSubData = ntuple( d -> 64, D)
-nSubData = 10
-nEpoch = 10
+nSubData = 64
+nEpoch = 20
+nIterIht = 100
 dt = Float64
 
 # nnzCoefs = fld(prod(szSubData), 32)
-nnzCoefs = 256
+nnzCoefs = 128
 ##########################
 
 
@@ -45,7 +46,7 @@ for epoch = 1:nEpoch, k = 1:length(x)
     # sparse coding
     println("*** Sparse Coding Stage ***")
     y = MDCDL.analyze(mlcsc, xk)
-    hy = MDCDL.iht(mlcsc, xk, zeros(size(y)), nnzCoefs; viewStatus = true, maxIterations = 30)
+    hy = MDCDL.iht(mlcsc, xk, zeros(size(y)), nnzCoefs; viewStatus = true, maxIterations = nIterIht)
 
     println("*** Dictionary Learning Stage ***")
     # dictionary learning
