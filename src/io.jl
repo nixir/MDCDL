@@ -4,14 +4,26 @@ function save(filename::AbstractString, cc::MDCDL.Cnsolt{T,D,S}) where {T,D,S}
     configs = JSON.json(cc)
     outstr = string("{\"CNSOLT\":{\"DataType\":\"", string(T), "\",\"Dimensions\":", D, ",\"Configurations\":", configs ,"}}")
 
-    open(io->println(io,outstr), filename, "w")
+    ext = if splitext(filename)[2] == ""
+        ".json"
+    else
+        ""
+    end
+
+    open(io->print(io,outstr), string(filename,ext), "w")
 end
 
 function save(filename::AbstractString, cc::MDCDL.Rnsolt{T,D,S}) where {T,D,S}
     configs = JSON.json(cc)
     outstr = string("{\"RNSOLT\":{\"DataType\":\"", string(T), "\",\"Dimensions\":", D, ",\"Configurations\":", configs ,"}}")
 
-    open(io->println(io,outstr), filename, "w")
+    ext = if splitext(filename)[2] == ""
+        ".json"
+    else
+        ""
+    end
+
+    open(io->print(io,outstr), string(filename,ext), "w")
 end
 
 function load(filename::AbstractString)
