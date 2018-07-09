@@ -2,13 +2,14 @@
 analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
+#
+analyze(fb::MDCDL.FilterBank, x; kwargs...) = analyze(fb, x, 1; kwargs...)[1]
+
 # Filter bank with polyphase representation
 function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 end
 adjoint_synthesize(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
-
-analyze(fb::MDCDL.PolyphaseFB, x, args...; kwargs...) = analyze(fb, x, 1, args...; kwargs...)[1]
 
 function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
@@ -205,7 +206,7 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
     return pvx
 end
 
-function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer = 1) where {TF,TX,D}
+function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {TF,TX,D}
     const df = pfb.decimationFactor
     const offset = df .- 1
 

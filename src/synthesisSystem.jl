@@ -1,9 +1,10 @@
 # Finit-dimensional linear operator
 synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
-# Filter bank with polyphase representation
-synthesize(fb::PolyphaseFB, y, args...; kwargs...) = synthesize(fb, [y], 1, args...; kwargs...)
+# General Filter banks
+synthesize(fb::FilterBank, y; kwargs...) = synthesize(fb, [y], 1; kwargs...)
 
+# Filter bank with polyphase representation
 function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer; kwargs...) where {TF,TY,D}
     #TODO: リファクタリングする
     #TODO: array2vecblocks を mdarray2polyphaseに置き換える
@@ -200,7 +201,7 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
     return pvy
 end
 
-function synthesize(pfb::MDCDL.ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer = 1) where {TF,TY,D}
+function synthesize(pfb::MDCDL.ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer) where {TF,TY,D}
     df = pfb.decimationFactor
     function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
         ya = if k <= 1
