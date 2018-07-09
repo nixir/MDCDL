@@ -12,8 +12,16 @@ function getMatrixB(P::Integer, angs::Vector{T}) where T
 
     subMatFcn = (x) -> sparse([1,1,2,2], [1,2,1,2], x)
 
-    const LC = [ subMatFcn([ -1im*cs[n], -1im*ss[n], cs[n], -ss[n] ]) for n in 1:fld(hP,2) ]
-    const LS = [ subMatFcn([ ss[n], cs[n], 1im*ss[n], -1im*cs[n] ]) for n in 1:fld(hP,2) ]
+    const LC = [
+        subMatFcn(
+            [ -1im*cs[n], -1im*ss[n], cs[n], -ss[n] ]
+        )
+    for n in 1:fld(hP,2) ]
+    const LS = [
+        subMatFcn(
+            [ ss[n], cs[n], 1im*ss[n], -1im*cs[n] ]
+        )
+    for n in 1:fld(hP,2) ]
 
     C, S = if hP % 2 == 0
         (Array(blkdiag(LC...)), Array(blkdiag(LS...)))
@@ -215,10 +223,8 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
     P = sum(pfb.nChannels)
 
     afb = MDCDL.getAnalysisBank(pfb)
-    # primeBlock = ntuple(d -> 1:df[d], D)
     primeBlock = colon.(1,df)
     ordm = pfb.polyphaseOrder .+ 1
-    vecfs = [ afb[p,:] for p in 1:P ]
 
     return map(1:P) do p
         out = Array{T}(df .* ordm )
@@ -226,7 +232,7 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
         foreach(1:prod(ordm)) do idx
             sub = ind2sub(ordm, idx)
             subaf = primeBlock .+ (sub .- 1) .* df
-            subfb = (1:prod(df)) + (idx-1) .* prod(df)
+            subfb = (1:prod(df)) + (idx-1) * prod(df)
 
             out[subaf...] = reshape(afb[ p, subfb ], df...)
         end
@@ -235,14 +241,14 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
 end
 
 function getSynthesisFilters(cc::MDCDL.Cnsolt)
-    map(MDCDL.getAnalysisFilters(cc)) do af
+    map(getAnalysisFilters(cc)) do af
         sz = size(af)
         reshape(flipdim(vec(conj.(af)),1),sz)
     end
 end
 
 function getSynthesisFilters(rc::MDCDL.Rnsolt)
-    map(MDCDL.getAnalysisFilters(rc)) do af
+    map(getAnalysisFilters(rc)) do af
         sz = size(af)
         reshape(flipdim(vec(af),1),sz)
     end
@@ -265,12 +271,22 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
     end
     primeBlock = colon.(1, szBlock)
 
-    data = hcat([ vec( x[ ((ind2sub(nBlocks,idx) .- 1) .* szBlock .+ primeBlock)... ]) for idx in 1:prod(nBlocks) ]...)
+    data = hcat(
+        [
+            vec(
+                x[ ((ind2sub(nBlocks,idx) .- 1) .* szBlock .+ primeBlock)... ]
+            )
+        for idx in 1:prod(nBlocks) ]...
+    )
     PolyphaseVector(data, nBlocks)
 end
 
 function mdarray2polyphase(x::Array{T,D}) where {T,D}
-    data = vcat([ vec(x[fill(:,D-1)...,p]).' for p in 1:size(x,D) ]...)
+    data = vcat(
+        [
+            vec( x[fill(:,D-1)..., p] ).'
+        for p in 1:size(x,D) ]...
+    )
     nBlocks = size(x)[1:end-1]
     PolyphaseVector(data, nBlocks)
 end
@@ -282,9 +298,10 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
 
     # primeBlock = ntuple(n -> 1:szBlock[n], D)
     primeBlock = colon.(1, szBlock)
-    out = Array{TX,D}((x.nBlocks .* szBlock)...)
+    out = similar(x.data, (x.nBlocks .* szBlock)...)
     foreach(1:prod(x.nBlocks)) do idx
-        out[((ind2sub(x.nBlocks,idx) .- 1) .* szBlock .+ primeBlock)...] = reshape(x.data[:,idx],szBlock...)
+        subOut = (ind2sub(x.nBlocks,idx) .- 1) .* szBlock .+ primeBlock
+        out[subOut...] = reshape(x.data[:,idx], szBlock...)
     end
     out
 end

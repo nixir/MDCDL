@@ -10,7 +10,9 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level
     #TODO: array2vecblocks を mdarray2polyphaseに置き換える
     nBlocks = [ size(y[l][1]) for l in 1:level ]
     pvy = map(y,nBlocks) do yp, nb
-        PolyphaseVector(vcat([MDCDL.array2vecblocks(ypa, nb).' for ypa in yp]...), nb)
+        PolyphaseVector( vcat(
+            [ array2vecblocks(ypa, nb).' for ypa in yp ]...
+        ), nb)
     end
     synthesize(fb, pvy, level; kwargs...)
 end

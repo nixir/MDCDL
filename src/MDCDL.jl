@@ -58,14 +58,26 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
         if nChs[1] == nChs[2]
             S = :TypeI
             initMts = Array[ eye(T, p) for p in nChs ]
-            propMts = Array[ Array[ (iseven(n) ? 1 : -1) * eye(T, nChs[1]) for n in 1:ppo[pd] ] for pd in 1:D ] # Consider only Type-I NSOLT
+            propMts = Array[
+                Array[
+                    (iseven(n) ? 1 : -1) * eye(T, nChs[1])
+                for n in 1:ppo[pd] ]
+            for pd in 1:D ]
         else
             S = :TypeII
             initMts = Array[ eye(T, p) for p in nChs ]
             propMts = if nChs[1] > nChs[2]
-                [ vcat(fill(Array[ -eye(T,nChs[2]), eye(T,nChs[1]) ], fld(ppo[pd],2))...) for pd in 1:D]
+                [
+                    vcat(
+                        fill(Array[-eye(T,nChs[2]), eye(T,nChs[1]) ], fld(ppo[pd],2))...
+                    )
+                for pd in 1:D]
             else
-                [ vcat(fill(Array[ eye(T,nChs[1]), -eye(T,nChs[2]) ], fld(ppo[pd],2))...) for pd in 1:D]
+                [
+                    vcat(
+                        fill(Array[ eye(T,nChs[1]), -eye(T,nChs[2]) ], fld(ppo[pd],2))...
+                    )
+                for pd in 1:D]
             end
         end
 
@@ -99,7 +111,11 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
         if iseven(nChs)
             S = :TypeI
             initMts = Array[ eye(T,nChs) ]
-            propMts = Array[ Array[ (iseven(n) ? -1 : 1) * eye(T,fld(nChs,2)) for n in 1:2*ppo[pd] ] for pd in 1:D ] # Consider only Type-I CNSOLT
+            propMts = Array[
+                Array[
+                    (iseven(n) ? -1 : 1) * eye(T,fld(nChs,2))
+                for n in 1:2*ppo[pd] ]
+            for pd in 1:D ]
         else
             if any(isodd.(ppo))
                 throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
@@ -108,9 +124,15 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
             fch = fld(nChs, 2)
             S = :TypeII
             initMts = Array[ eye(T, nChs) ]
-            propMts = [ vcat(fill(Array[ eye(T,fch), -eye(T,fch), eye(T,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1))) ], fld(ppo[pd],2))...) for pd in 1:D]
+            propMts = [
+                vcat(fill(Array[
+                    eye(T,fch), -eye(T,fch), eye(T,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1)))
+                ], fld(ppo[pd],2))...)
+            for pd in 1:D]
         end
-        paramAngs = Array[ Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
+        paramAngs = Array[
+            Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ]
+        for pd in 1:D ]
         sym = Diagonal{Complex{T}}(ones(nChs))
         mtxf = flipdim(MDCDL.cdftmtx(df...),2)
 
