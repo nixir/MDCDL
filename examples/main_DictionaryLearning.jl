@@ -7,7 +7,7 @@ count = 0
 D = 2
 df = (2,2)
 nch = 6
-ord = (4,4)
+ord = (2,2)
 lv = 3
 nIters = 20
 
@@ -47,7 +47,11 @@ y = y0
 for idx = 1:nIters
     # hy = map((ys, sp) -> MDCDL.iht(cnsolt, x, ys, sp), y, sparsity)
     # hy = y
-    hy = MDCDL.iht((ty)->synthesize(cnsolt, ty, lv), (tx)->adjoint_synthesize(cnsolt, tx, lv; outputMode=:augumented), x, y, sparsity)
+    hy = MDCDL.iht(
+        (ty)->synthesize(cnsolt, ty, lv),
+        (tx)->adjoint_synthesize(cnsolt, tx, lv; outputMode=:augumented),
+        x, y, sparsity; viewStatus=true
+    )
     count = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
         global count
