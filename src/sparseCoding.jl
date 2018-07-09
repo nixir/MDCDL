@@ -113,9 +113,10 @@ function groupshrink(x, lambda::Real)
 end
 
 # prox. of l1-norm
-function softshrink(x, lambda::Real)
-    @. max(1.0 - lambda / abs(x),0) * x
+function softshrink(x::Number, lambda::Real)
+    max(1.0 - lambda / abs(x),0) * x
 end
+softshrink(x::AbstractArray{T}, lambda::Real) where T = softshrink.(x, lambda)
 
 # prox. of nuclear norm.
 function shrinkSingularValue(A::Matrix, lambda::Real)
