@@ -41,6 +41,7 @@ for l = 1:nl
 end
 
 for epoch = 1:nEpoch, k = 1:length(x)
+    println("epoch = $epoch, #dataset = $k.")
     xk = x[k]
 
     # sparse coding
@@ -51,7 +52,7 @@ for epoch = 1:nEpoch, k = 1:length(x)
     println("*** Dictionary Learning Stage ***")
     # dictionary learning
     for l = nl:-1:1
-        println("epoch = $epoch, #dataset = $k, layer = $l.")
+        println("layer = $l.")
         submlcsc = MDCDL.MultiLayerCsc{Float64,D}(l)
         submlcsc.dictionaries .= mlcsc.dictionaries[1:l]
 
