@@ -46,7 +46,7 @@ for epoch = 1:nEpoch, k = 1:length(x)
     # sparse coding
     println("*** Sparse Coding Stage ***")
     y = MDCDL.analyze(mlcsc, xk)
-    hy = MDCDL.iht(mlcsc, xk, zeros(size(y)), nnzCoefs; viewStatus = true, maxIterations = nIterIht)
+    hy = MDCDL.iht(mlcsc, xk, y, nnzCoefs; viewStatus = true, maxIterations = nIterIht)
 
     println("*** Dictionary Learning Stage ***")
     # dictionary learning

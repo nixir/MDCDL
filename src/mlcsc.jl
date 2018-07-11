@@ -101,6 +101,9 @@ function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, λs::Vector{T}; maxIterations::I
         tk = (1 + sqrt(1+4*tkprev)) / 2
 
         z = γ[L+1] + (tkprev - 1)/tk * (γ[L+1] - glp)
+        if viewStatuså
+            println("Iteration $k finished.")
+        end
     end
     γ[2:end]
 end
