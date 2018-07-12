@@ -1,5 +1,9 @@
 module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
+@static if VERSION >= v"0.7.0"
+    using LinearAlgebra
+end
+
 import Base.promote_rule
 
 include("basicComplexDSP.jl")

@@ -47,13 +47,13 @@ end
 adjoint_synthesize(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
 function multipleAnalysisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
-    const M = prod(cc.decimationFactor)
-    const P = cc.nChannels
+    M = prod(cc.decimationFactor)
+    P = cc.nChannels
 
     x = pvx.data
     tx = cc.matrixF * flipdim(x, 1)
 
-    const V0 = cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]
+    V0 = cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]
     ux = V0 * tx
 
     extx = extendAtoms(cc, PolyphaseVector(ux,pvx.nBlocks))
@@ -61,11 +61,11 @@ function multipleAnalysisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,
 end
 
 function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
-    const chUpper = 1:fld(cc.nChannels,2)
-    const chLower = fld(cc.nChannels,2)+1:cc.nChannels
+    chUpper = 1:fld(cc.nChannels,2)
+    chLower = fld(cc.nChannels,2)+1:cc.nChannels
 
     for d = 1:D # original order
-        const nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = MDCDL.permutedims(pvx)
         x = pvx.data
         for k = 1:cc.polyphaseOrder[d]
@@ -89,12 +89,12 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; 
 end
 
 function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
-    const nStages = fld.(cc.polyphaseOrder,2)
-    const P = cc.nChannels
-    const chEven = 1:P-1
+    nStages = fld.(cc.polyphaseOrder,2)
+    P = cc.nChannels
+    chEven = 1:P-1
 
     for d = 1:D # original order
-        const nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = MDCDL.permutedims(pvx)
         x = pvx.data
         for k = 1:nStages[d]
@@ -133,17 +133,17 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
 end
 
 function multipleAnalysisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
-    const M = prod(cc.decimationFactor)
-    const cM = cld(M,2)
-    const fM = fld(M,2)
-    const P = cc.nChannels
+    M = prod(cc.decimationFactor)
+    cM = cld(M,2)
+    fM = fld(M,2)
+    P = cc.nChannels
     x = pvx.data
 
     tx = cc.matrixC * flipdim(x, 1)
 
-    # const V0 = cc.initMatrices[1] * [ eye(T,M) ; zeros(T,P-M,M) ]
-    const W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
-    const U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
+    # V0 = cc.initMatrices[1] * [ eye(T,M) ; zeros(T,P-M,M) ]
+    W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
+    U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
 
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
 
@@ -151,12 +151,12 @@ function multipleAnalysisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,
 end
 
 function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, px::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
-    const hP = cc.nChannels[1]
-    const chUpper = 1:hP
-    const chLower = (1:hP)+hP
+    hP = cc.nChannels[1]
+    chUpper = 1:hP
+    chLower = (1:hP)+hP
 
     for d = 1:D # original order
-        const nShift = fld(size(px,2), px.nBlocks[1])
+        nShift = fld(size(px,2), px.nBlocks[1])
         px = MDCDL.permutedims(px)
         for k = 1:cc.polyphaseOrder[d]
 
@@ -177,16 +177,16 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, px::PolyphaseVector{TX,D}, b
 end
 
 function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
-    const nStages = fld.(cc.polyphaseOrder,2)
-    const P = sum(cc.nChannels)
-    const maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
+    nStages = fld.(cc.polyphaseOrder,2)
+    P = sum(cc.nChannels)
+    maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
         (cc.nChannels[1], cc.nChannels[2], 1:cc.nChannels[1], (cc.nChannels[1]+1):P)
     else
         (cc.nChannels[2], cc.nChannels[1], (cc.nChannels[1]+1):P, 1:cc.nChannels[1])
     end
 
     for d = 1:D # original order
-        const nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = MDCDL.permutedims(pvx)
         x = pvx.data
         for k = 1:nStages[d]
@@ -211,8 +211,8 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
 end
 
 function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {TF,TX,D}
-    const df = pfb.decimationFactor
-    const offset = df .- 1
+    df = pfb.decimationFactor
+    offset = df .- 1
 
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
         sy = [  circshift(MDCDL.downsample(MDCDL.mdfilter(sx, f; operation=:conv), df, offset), (-1 .* fld.(pfb.polyphaseOrder,2))) for f in pfb.analysisFilters ]

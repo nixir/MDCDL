@@ -5,19 +5,19 @@ import Base.getindex
 import Base.setindex!
 
 function getMatrixB(P::Integer, angs::Vector{T}) where T
-    const hP = fld(P,2)
-    const psangs = (2 .* angs .+ pi) ./ 4
-    const cs = cos.(psangs)
-    const ss = sin.(psangs)
+    hP = fld(P,2)
+    psangs = (2 .* angs .+ pi) ./ 4
+    cs = cos.(psangs)
+    ss = sin.(psangs)
 
     subMatFcn = (x) -> sparse([1,1,2,2], [1,2,1,2], x)
 
-    const LC = [
+    LC = [
         subMatFcn(
             [ -1im*cs[n], -1im*ss[n], cs[n], -ss[n] ]
         )
     for n in 1:fld(hP,2) ]
-    const LS = [
+    LS = [
         subMatFcn(
             [ ss[n], cs[n], 1im*ss[n], -1im*cs[n] ]
         )
@@ -33,13 +33,13 @@ function getMatrixB(P::Integer, angs::Vector{T}) where T
 end
 
 function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
-    const df = cc.decimationFactor
-    const P = cc.nChannels
-    const M = prod(df)
-    const ord = cc.polyphaseOrder
+    df = cc.decimationFactor
+    P = cc.nChannels
+    M = prod(df)
+    ord = cc.polyphaseOrder
 
-    const rngUpper = (1:fld(P,2), :)
-    const rngLower = (fld(P,2)+1:P, :)
+    rngUpper = (1:fld(P,2), :)
+    rngLower = (fld(P,2)+1:P, :)
 
     # output
     ppm = zeros(Complex{T},P, prod(df .* (ord .+ 1)))
@@ -71,12 +71,12 @@ function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
 end
 
 function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
-    const df = cc.decimationFactor
-    const P = cc.nChannels
-    const M = prod(df)
-    const ord = cc.polyphaseOrder
-    const nStages = fld.(ord,2)
-    const chEven = 1:P-1
+    df = cc.decimationFactor
+    P = cc.nChannels
+    M = prod(df)
+    ord = cc.polyphaseOrder
+    nStages = fld.(ord,2)
+    chEven = 1:P-1
 
     # output
     ppm = zeros(Complex{T},P, prod(df .* (ord .+ 1)))
@@ -128,11 +128,11 @@ end
 
 
 function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
-    const df = rc.decimationFactor
-    const nch = rc.nChannels
-    const P = sum(nch)
-    const M = prod(df)
-    const ord = rc.polyphaseOrder
+    df = rc.decimationFactor
+    nch = rc.nChannels
+    P = sum(nch)
+    M = prod(df)
+    ord = rc.polyphaseOrder
 
     rngUpper = (1:nch[1], :)
     rngLower = (nch[1]+1:P, :)
@@ -166,13 +166,13 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
 end
 
 function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
-    const df = rc.decimationFactor
-    const M = prod(df)
-    const ord = rc.polyphaseOrder
-    const nStages = fld.(rc.polyphaseOrder,2)
-    const nch = rc.nChannels
-    const P = sum(nch)
-    const maxP, minP, chMajor, chMinor = if rc.nChannels[1] > rc.nChannels[2]
+    df = rc.decimationFactor
+    M = prod(df)
+    ord = rc.polyphaseOrder
+    nStages = fld.(rc.polyphaseOrder,2)
+    nch = rc.nChannels
+    P = sum(nch)
+    maxP, minP, chMajor, chMinor = if rc.nChannels[1] > rc.nChannels[2]
         (rc.nChannels[1], rc.nChannels[2], 1:rc.nChannels[1], (rc.nChannels[1]+1):P)
     else
         (rc.nChannels[2], rc.nChannels[1], (rc.nChannels[1]+1):P, 1:rc.nChannels[1])
@@ -307,7 +307,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
 end
 
 function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
-    const P = size(x.data,1)
+    P = size(x.data,1)
     output = Array{T,D+1}(x.nBlocks..., P)
 
     foreach(1:P) do p

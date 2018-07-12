@@ -73,7 +73,7 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
 end
 
 function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false)
-    const len = length(y0)
+    len = length(y0)
     y = y0
     errx = Inf
     erry = Inf

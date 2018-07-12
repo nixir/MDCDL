@@ -43,8 +43,8 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, lev
 end
 
 function multipleSynthesisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
-    const M = prod(cc.decimationFactor)
-    const P = cc.nChannels
+    M = prod(cc.decimationFactor)
+    P = cc.nChannels
 
     uy = concatenateAtoms(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks))
     y = uy.data
@@ -58,11 +58,11 @@ function multipleSynthesisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY
 end
 
 function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
-    const chUpper = 1:fld(cc.nChannels,2)
-    const chLower = fld(cc.nChannels,2)+1:cc.nChannels
+    chUpper = 1:fld(cc.nChannels,2)
+    chLower = fld(cc.nChannels,2)+1:cc.nChannels
 
     for d = D:-1:1 # original order
-        const nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = cc.polyphaseOrder[d]:-1:1
             y[chUpper,:] = cc.propMatrices[d][2*k-1]' * y[chUpper,:]
@@ -87,12 +87,12 @@ end
 
 
 function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
-    const nStages = fld.(cc.polyphaseOrder,2)
-    const P = cc.nChannels
-    const chEven = 1:P-1
+    nStages = fld.(cc.polyphaseOrder,2)
+    P = cc.nChannels
+    chEven = 1:P-1
 
     for d = D:-1:1 # original order
-        const nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = nStages[d]:-1:1
             # second step
@@ -127,16 +127,16 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
 end
 
 function multipleSynthesisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D,S}
-    const M = prod(cc.decimationFactor)
-    const cM = cld(M,2)
-    const fM = fld(M,2)
-    const P = cc.nChannels
+    M = prod(cc.decimationFactor)
+    cM = cld(M,2)
+    fM = fld(M,2)
+    P = cc.nChannels
 
     uy = concatenateAtoms(cc, pvy)
     y = uy.data
 
-    const W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
-    const U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
+    W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
+    U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
     ty = vcat(W0' * y[1:P[1],:], U0' * y[P[1]+1:end,:])
 
     ty .= cc.matrixC' * ty
@@ -145,12 +145,12 @@ function multipleSynthesisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY
 end
 
 function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}) where {TF,TY,D}
-    const hP = cc.nChannels[1]
-    const chUpper = 1:hP
-    const chLower = (1:hP)+hP
+    hP = cc.nChannels[1]
+    chUpper = 1:hP
+    chLower = (1:hP)+hP
 
     for d = D:-1:1 # original order
-        const nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = cc.polyphaseOrder[d]:-1:1
             y[chLower,:] = cc.propMatrices[d][k]' * y[chLower,:]
@@ -171,16 +171,16 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
 end
 
 function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
-    const nStages = fld.(cc.polyphaseOrder,2)
-    const P = sum(cc.nChannels)
-    const maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
+    nStages = fld.(cc.polyphaseOrder,2)
+    P = sum(cc.nChannels)
+    maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
         (cc.nChannels[1], cc.nChannels[2], 1:cc.nChannels[1], (cc.nChannels[1]+1):P)
     else
         (cc.nChannels[2], cc.nChannels[1], (cc.nChannels[1]+1):P, 1:cc.nChannels[1])
     end
 
     for d = D:-1:1 # original order
-        const nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = nStages[d]:-1:1
             # second step

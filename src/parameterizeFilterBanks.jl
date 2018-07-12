@@ -326,11 +326,11 @@ end
 
 function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::Vector{T}, mus) where {D,T}
     # Initialization
-    const nch = cc.nChannels
-    const df = cc.decimationFactor
-    const ord = cc.polyphaseOrder
+    nch = cc.nChannels
+    df = cc.decimationFactor
+    ord = cc.polyphaseOrder
 
-    const maxP, minP = if nch[1] > nch[2]
+    maxP, minP = if nch[1] > nch[2]
         (nch[1], nch[2])
     else
         (nch[2], nch[1])

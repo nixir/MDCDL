@@ -43,7 +43,7 @@ function load(filename::AbstractString)
 end
 
 function loadCnsolt(dic::Dict)
-    const dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
+    dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
 
     T = dtSet[dic["DataType"]]
     D = dic["Dimensions"]
@@ -92,7 +92,7 @@ function loadCnsolt(dic::Dict)
 end
 
 function loadRnsolt(dic::Dict)
-    const dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
+    dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
 
     T = dtSet[dic["DataType"]]
     D = dic["Dimensions"]
