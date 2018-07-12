@@ -88,5 +88,5 @@ function permdctmtx(sz::Integer...)
     evenMtx = hcat([ mtx[idx,:] for idx in evenIds]...)
     oddMtx = hcat([ mtx[idx,:] for idx in oddIds]...)
 
-    vcat(evenMtx.', oddMtx.')
+    vcat(transpose(evenMtx), transpose(oddMtx))
 end

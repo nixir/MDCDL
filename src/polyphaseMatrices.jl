@@ -284,7 +284,7 @@ end
 function mdarray2polyphase(x::Array{T,D}) where {T,D}
     data = vcat(
         [
-            vec( x[fill(:,D-1)..., p] ).'
+            transpose(vec( x[fill(:,D-1)..., p] ))
         for p in 1:size(x,D) ]...
     )
     nBlocks = size(x)[1:end-1]
