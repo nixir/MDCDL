@@ -12,7 +12,7 @@ function ista(gradOfLossFcn::Function, prox::Function, x0; maxIterations::Intege
         errx = vecnorm(x-xprev)^2/len
 
         if viewStatus
-            println("\#Iterations $nItr: err = $errx ")
+            println("number of Iterations $nItr: err = $errx ")
         end
 
         if errx <= absTol
@@ -39,7 +39,7 @@ function fista(gradOfLossFcn::Function, prox::Function, x0; maxIterations::Integ
         errx = vecnorm(x-xprev)^2/len
 
         if viewStatus
-            println("\#Iterations $nItr: err = $errx ")
+            println("number of Iterations $nItr: err = $errx ")
         end
 
         if errx <= absTol
@@ -88,7 +88,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; 
         # erry = vecnorm(y - yprev)^2
 
         if viewStatus
-            println("\#Iterations $itr: err = $errx ")
+            println("number ofIterations $itr: err = $errx ")
         end
 
         if errx <= absTol
