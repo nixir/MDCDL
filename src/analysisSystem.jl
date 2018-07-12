@@ -17,16 +17,14 @@ function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::I
         if k <= 1
             return [ sy ]
         else
-            res = Vector{PolyphaseVector{TX,D}}(k)
-            res[1] = PolyphaseVector{TX,D}(sy.data[2:end,:], sy.nBlocks)
+            nondcs = PolyphaseVector(sy.data[2:end,:], sy.nBlocks)
 
             # reshape Low-pass MD filter
-            dcCoefs = PolyphaseVector{TX,D}(sy.data[1:1,:], sy.nBlocks)
+            dcCoefs = PolyphaseVector(sy.data[1:1,:], sy.nBlocks)
             dcData = polyphase2mdarray(dcCoefs, tuple(fill(1,D)...))
             nsx = mdarray2polyphase(dcData, fb.decimationFactor)
 
-            res[2:end] = subanalyze(nsx, k-1)
-            return res
+            [ nondcs, subanalyze(nsx, k-1)... ]
         end
     end
 
