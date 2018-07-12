@@ -4,7 +4,6 @@ module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
     using LinearAlgebra
 end
 
-import ImageView, Gtk
 import Base.promote_rule
 
 include("basicComplexDSP.jl")
