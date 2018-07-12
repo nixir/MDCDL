@@ -9,13 +9,13 @@ srand(23485729)
 D = 2
 nl = 3
 szSubData = ntuple( d -> 64, D)
-nSubData = 64
-nEpoch = 20
+nSubData = 4
+nEpoch = 1
 nIterIht = 100
 dt = Float64
 
 # nnzCoefs = fld(prod(szSubData), 32)
-nnzCoefs = 128
+nnzCoefs = 256
 ##########################
 
 
@@ -97,8 +97,8 @@ for epoch = 1:nEpoch, k = 1:length(x)
     end
 end
 
-gs = MDCDL.mlfista(mlcsc, x[1], fill(1e-6,nl))
-recx = MDCDL.synthesize(mlcsc, gs[nl])
+gs = MDCDL.mlfista(mlcsc, x[1], fill(1e-6,nl); viewStatus=true)
+recx = MDCDL.synthesize(mlcsc, gs)
 
 errx = vecnorm(recx - x[1])
 println(errx)
