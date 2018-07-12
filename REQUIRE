@@ -5,3 +5,4 @@ Gtk 0.14.0
 Conda 0.8.1
 FFTW 0.0.4
 JSON 0.17.2
+NLopt 0.3.6
