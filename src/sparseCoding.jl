@@ -88,7 +88,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; 
         # erry = vecnorm(y - yprev)^2
 
         if viewStatus
-            println("number ofIterations $itr: err = $errx ")
+            println("number of Iterations $itr: err = $errx ")
         end
 
         if errx <= absTol
