@@ -1,6 +1,7 @@
 julia 0.6
 Images 0.14.0
 ImageView 0.6.0
+TestImages 0.2.0
 Gtk 0.14.0
 Conda 0.8.1
 FFTW 0.0.4
