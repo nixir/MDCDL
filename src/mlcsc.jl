@@ -4,13 +4,13 @@ function analyze(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}) where {TC,TX,
     end
 end
 
-function adjoint_synthesize(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}; isAllCoefs::Bool=false) where {TC,TX,D}
+function adjoint_synthesize(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}) where {TC,TX,D}
     foldl(x, mlcsc.dictionaries) do tx, dic
         adjoint_synthesize(dic, tx; outputMode=:augumented)
     end
 end
 
-function synthesize(mlcsc::MDCDL.MultiLayerCsc, y::Array; isAllCoefs::Bool=false)
+function synthesize(mlcsc::MDCDL.MultiLayerCsc, y::Array)
     foldr(y, mlcsc.dictionaries) do dic, ty
         synthesize(dic, ty)
     end
@@ -21,23 +21,13 @@ function mlista(mlcsc::MDCDL.MultiLayerCsc, x, λs::Vector{T}; maxIterations::In
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
     opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionariess[l], v; outputMode=:augumented)
 
-    γ = Vector(L+1)
-    γ[1] = x
-    for l = 2:L+1
-        γ[l] = opDt(l-1, γ[l-1])
-    end
-
+    γ = [ x, accumulate((tx, l)->opDt(l,tx), x, 1:L)... ]
 
     for k = 1:maxIterations
-        hγ = Vector(L+1)
-        hγ[L+1] = γ[L+1]
-        for l = L:-1:2
-            hγ[l] = opD(l, γ[l+1])
-        end
-        hγ[1] = x
+        hγ = [ x, [ opD(l, γ[l+1]) for l in 2:L ]..., γ[L+1] ]
 
-        for l = 1:L
-            γ[l+1] = softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]), λs[l])
+        γ[2:L+1] = map(1:L) do l
+            softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]), λs[l])
         end
     end
     γ[2:end]
@@ -48,30 +38,20 @@ function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, λs::Vector{T}; maxIterations::I
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
     opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)
 
-    γ = Vector(L+1)
-    γ[1] = x
-    for l = 2:L+1
-        γ[l] = opDt(l-1, γ[l-1])
-    end
+    γ = [ x, accumulate((tx, l)->opDt(l,tx), x, 1:L)... ]
 
     tk = 1.0
     z = γ[L+1]
     for k = 1:maxIterations
-        hγ = Vector(L+1)
-        hγ[L+1] = z
-        for l = L:-1:2
-            hγ[l] = opD(l, γ[l+1])
-        end
-        hγ[1] = x
+        hγ = [ x, [ opD(l, γ[l+1]) for l in 2:L ]..., γ[L+1] ]
 
-        glp = γ[L+1]
-        for l = 1:L
-            γ[l+1] = softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]), λs[l])
+        γ[2:L+1] = map(1:L) do l
+            softshrink(hγ[l+1] - opDt(l, opD(l,hγ[l+1]) - γ[l]), λs[l])
         end
         tkprev = tk
         tk = (1 + sqrt(1+4*tkprev)) / 2
 
-        z = γ[L+1] + (tkprev - 1)/tk * (γ[L+1] - glp)
+        z = γ[L+1] + (tkprev - 1)/tk * (γ[L+1] - z)
         if viewStatus
             println("Iteration $k finished.")
         end
