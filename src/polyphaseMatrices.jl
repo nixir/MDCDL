@@ -139,7 +139,6 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
 
     # output
     ppm = zeros(T, P, prod(df .* (ord .+ 1)))
-    # ppm[1:M,1:M] = rc.matrixF
     ppm[1:cld(M,2), 1:M] = rc.matrixC[1:cld(M,2),:]
     ppm[nch[1]+(1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
 
@@ -296,7 +295,6 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
         throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
     end
 
-    # primeBlock = ntuple(n -> 1:szBlock[n], D)
     primeBlock = colon.(1, szBlock)
     out = similar(x.data, (x.nBlocks .* szBlock)...)
     foreach(1:prod(x.nBlocks)) do idx

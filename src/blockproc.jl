@@ -3,7 +3,6 @@ function blockproc(A::Array{T,D}, blockSize::NTuple{D, Integer}, fun::Function) 
     primeBlock = ntuple(n -> 1:blockSize[n], D)
 
     out = Array{T,D}(size(A))
-    # for cr in CartesianRange(nBlocks)
     foreach(CartesianRange(nBlocks)) do cr
         block = (cr.I .- 1) .* blockSize .+ primeBlock
         out[block...] = fun(A[block...])
@@ -15,7 +14,6 @@ function blockproc!(A::Array{T,D}, blockSize::NTuple{D, Integer}, fun::Function)
     nBlocks = div.(size(A),blockSize)
     primeBlock = ntuple(n -> 1:blockSize[n], D)
 
-    # for cr in CartesianRange(nBlocks)
     foreach(CartesianRange(nBlocks)) do cr
         block = (cr.I .- 1) .* blockSize .+ primeBlock
         fun(A[block...])
@@ -29,7 +27,6 @@ function array2vecblocks(x::Array{T,D}, szBlock::NTuple{D}) where {T,D}
     primeBlock = ntuple(n -> 1:szBlock[n], D)
 
     out = Array{Vector{T},D}(nBlocks...)
-    # for cr in CartesianRange(nBlocks)
     foreach(CartesianRange(nBlocks)) do cr
         block = (cr.I .- 1) .* szBlock .+ primeBlock
         out[cr] = vec(x[block...])

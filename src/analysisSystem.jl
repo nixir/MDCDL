@@ -72,7 +72,6 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; 
             B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
 
             x .= B' * x
-            # x[chLower,:] = circshift(x[chLower,:], (0, nShift))
             if isodd(k)
                 x[chLower,:] = circshift(x[chLower,:],(0, nShift))
             else
@@ -111,13 +110,10 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
             x[chLower,:] .= cc.propMatrices[d][4*k-2] * x[chLower,:]
 
             # second step
-            # chUpper = 1:cld(P,2)
-            # chLower = cld(P,2):P
 
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k])
 
             x[chEven,:]  .= B' * x[chEven,:]
-            # x[chLower,:] .= circshift(x[chLower,:], (0, nShift))
             x[chUpper,:] .= circshift(x[chUpper,:], (0, -nShift))
             x[chEven,:]  .= B * x[chEven,:]
 
@@ -141,7 +137,6 @@ function multipleAnalysisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,
 
     tx = cc.matrixC * flipdim(x, 1)
 
-    # V0 = cc.initMatrices[1] * [ eye(T,M) ; zeros(T,P-M,M) ]
     W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
     U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
 
@@ -199,7 +194,6 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
 
             # second step
             x = butterfly(x, minP)
-            # x[maxP+1:end,:] = circshift(x[maxP+1:end,:], (0, nShift))
             x[1:maxP,:] = circshift(x[1:maxP,:] , (0, -nShift))
             x = butterfly(x, minP)
 
@@ -217,11 +211,15 @@ function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) wh
     region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
 
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        sy = [ MDCDL.downsample(imfilter(sx, reflect(OffsetArray(f,region...)),"circular",ImageFiltering.FIR()), df, offset) for f in pfb.analysisFilters ]
+        sy = map(pfb.analysisFilters) do f
+            ker = reflect(OffsetArray(f, region...))
+            fltimg = imfilter(sx, ker, "circular", ImageFiltering.FIR())
+            MDCDL.downsample(fltimg, df, offset)
+        end
         if k <= 1
             return [ sy ]
         else
-            [ sy[2:end], subanalyze(sy[1],k-1)... ]
+            [ sy[2:end], subanalyze(sy[1], k-1)... ]
         end
     end
 

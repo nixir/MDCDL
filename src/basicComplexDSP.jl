@@ -33,6 +33,7 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
     output
 end
 
+# TODO: delete. deprecated function
 # multidimensional FIR filtering
 function mdfilter(A::Array{T,D}, h::Array{T,D}; boundary=:circular, outputSize=:same, operation=:corr) where {T,D}
     # center = cld.(size(h), 2)

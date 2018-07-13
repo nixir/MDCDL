@@ -2,7 +2,6 @@ function mat2rotations(mtx::Matrix{T}) where T <: Real
     sz = size(mtx)
     P = sz[1]
 
-    # res = Array{LinAlg.Givens}(round(Integer,P*(P-1)/2))
     res = Array{T}(fld(P*(P-1),2))
 
     nr = 1

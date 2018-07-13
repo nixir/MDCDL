@@ -53,7 +53,6 @@ function multipleSynthesisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY
 
     py = (cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ])' *  y
 
-    # py .= cc.matrixF' * py
     py .= ctranspose(cc.matrixF) * py
 
     PolyphaseVector(flipdim(py, 1), pvy.nBlocks)
@@ -63,7 +62,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
     chUpper = 1:fld(cc.nChannels,2)
     chLower = fld(cc.nChannels,2)+1:cc.nChannels
 
-    for d = D:-1:1 # original order
+    for d = D:-1:1
         nShift = -fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = cc.polyphaseOrder[d]:-1:1
@@ -72,7 +71,6 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
 
             B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
             y .= B' * y
-            # y[chLower,:] = circshift(y[chLower,:], (0, nShift))
 
             if k % 2 == 1
                 y[chLower,:] = circshift(y[chLower,:],(0, nShift))
@@ -93,7 +91,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
     P = cc.nChannels
     chEven = 1:P-1
 
-    for d = D:-1:1 # original order
+    for d = D:-1:1
         nShift = -fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = nStages[d]:-1:1
@@ -158,7 +156,6 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
             y[chLower,:] = cc.propMatrices[d][k]' * y[chLower,:]
 
             y .= butterfly(y, hP)
-            # y[chLower,:] = circshift(y[chLower,:], (0, nShift))
             if isodd(k)
                 y[chLower,:] = circshift(y[chLower,:],(0, nShift))
             else
@@ -188,7 +185,6 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
             # second step
             y[chMajor,:] = cc.propMatrices[d][2*k]' * y[chMajor,:]
             y = butterfly(y, minP)
-            # y[maxP+1:end,:] = circshift(y[maxP+1:end,:], (0, nShift))
             y[1:maxP,:] = circshift(y[1:maxP,:], (0, -nShift))
             y = butterfly(y, minP)
 
@@ -216,7 +212,9 @@ function synthesize(pfb::MDCDL.ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}},
             [ subsynthesize(sy[2:end],k-1), sy[1]... ]
         end
         sxs = map(ya, pfb.synthesisFilters) do yp, sfp
-            imfilter(MDCDL.upsample(yp, df), reflect(OffsetArray(sfp,region...)),"circular",ImageFiltering.FIR())
+            upimg = MDCDL.upsample(yp, df)
+            ker = reflect(OffsetArray(sfp,region...))
+            imfilter(upimg, ker, "circular" ,ImageFiltering.FIR())
         end
         sum(sxs)
     end

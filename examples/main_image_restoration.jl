@@ -6,13 +6,12 @@ using ImageFiltering
 dirNsolt = joinpath(Pkg.dir(),"MDCDL","examples","design","sample.json")
 σ_noise = 1e-3
 λ = 1e-6
-lv = 2 # tree level of NSOLT
+lv = 3 # tree level of NSOLT
 ######################
 
 ### setup observed image
 orgImg = testimage("lena")
-orgImgFloat = Array{ColorTypes.RGB{Float64}}(orgImg)
-u = orgImg
+u = Array{ColorTypes.RGB{Float64}}(orgImg)
 
 # AWGN
 w = mapc.( v -> σ_noise * randn(), u)
@@ -28,7 +27,7 @@ nsolt = MDCDL.load(dirNsolt)
 println("NSOLT configurations:")
 println(" - Type = $(typeof(nsolt))")
 println(" - Decimation Factor = $(nsolt.decimationFactor)")
-println(" - Number Of Channels = $(nsolt.nChannels)")
+println(" - Number of Channels = $(nsolt.nChannels)")
 println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
 
 # analysis/synthesis filter set
