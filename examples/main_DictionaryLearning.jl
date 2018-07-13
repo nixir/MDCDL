@@ -8,12 +8,12 @@ count = 0
 
 D = 2
 df = (2,2)
-nch = (3,3)
 ord = (2,2)
+nch = (3,3)
 lv = 3
 nIters = 20
 
-nsolt = Rnsolt(df, nch, ord)
+nsolt = Rnsolt(df, ord, nch)
 randomInit!(nsolt; isSymmetry = false)
 
 xraw = testimage("cameraman")[((1:128,1:128) .+ (64,168))...]

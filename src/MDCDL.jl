@@ -36,8 +36,8 @@ abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
 
 struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
     decimationFactor::NTuple{D, Int}
-    nChannels::Tuple{Int,Int}
     polyphaseOrder::NTuple{D, Int}
+    nChannels::Tuple{Int,Int}
 
     nVanishingMoment::Int
 
@@ -46,7 +46,7 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
 
     matrixC::Matrix{T}
 
-    function Rnsolt(::Type{T}, df::NTuple{D,Int}, nChs::Tuple{Int, Int}, ppo::NTuple{D,Int}; vanishingMoment::Int = 0) where {T,D}
+    function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int, Int}; vanishingMoment::Int = 0) where {T,D}
         P = sum(nChs)
         M = prod(df)
         if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
@@ -87,18 +87,17 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
 
         mtxc = flipdim(MDCDL.permdctmtx(df...),2)
 
-        new{T,D,S}(df, nChs, ppo, vanishingMoment, initMts, propMts, mtxc)
+        new{T,D,S}(df, ppo, nChs, vanishingMoment, initMts, propMts, mtxc)
     end
-    Rnsolt(df::NTuple{D,Int}, nChs::Tuple{Int,Int}, ppo::NTuple{D,Int}; kwargs...) where {D} = Rnsolt(Float64, df, nChs, ppo; kwargs...)
+    Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
 end
 
 promote_rule(::Type{Rnsolt{TA,D,S}}, ::Type{Rnsolt{TB,D,S}}) where {D,S,TA,TB} = Rnsolt{promote_type(TA,TB),D,S}
 
 struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
     decimationFactor::NTuple{D, Int}
-    nChannels::Int
     polyphaseOrder::NTuple{D, Int}
-    # directionPermutation::NTuple{D, Int}
+    nChannels::Int
 
     initMatrices::Vector{Matrix{T}}
     propMatrices::Vector{Vector{Matrix{T}}}
@@ -107,7 +106,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
     matrixF::Matrix{Complex{T}}
 
     # constructor
-    function Cnsolt(::Type{T}, df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; vanishingMoment::Int = 0) where {T,D}
+    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; vanishingMoment::Int = 0) where {T,D}
         if prod(df) > nChs
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
@@ -140,32 +139,32 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
         sym = Diagonal{Complex{T}}(ones(nChs))
         mtxf = flipdim(MDCDL.cdftmtx(df...),2)
 
-        new{T,D,S}(df, nChs, ppo, initMts, propMts, paramAngs, sym, mtxf)
+        new{T,D,S}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end
-    Cnsolt(df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}; kwargs...) where {D} = Cnsolt(Float64, df, nChs, ppo; kwargs...)
+    Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
 end
 
 promote_rule(::Type{Cnsolt{TA,D,S}}, ::Type{Cnsolt{TB,D,S}}) where {D,S,TA,TB} = Cnsolt{promote_type(TA,TB),D,S}
 
 struct ParallelFB{T,D} <: FilterBank{T,D}
     decimationFactor::NTuple{D, Int}
-    nChannels::Int
     polyphaseOrder::NTuple{D, Int}
+    nChannels::Int
 
     analysisFilters::Vector{Array{T,D}}
     synthesisFilters::Vector{Array{T,D}}
 
-    function ParallelFB(::Type{T}, df::NTuple{D,Int}, nChs::Int, ppo::NTuple{D,Int}) where {T,D}
+    function ParallelFB(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
         szFilters = df .* (ppo .+ 1)
         afs = [ Array{T, D}(szFilters...) for p in 1:nChs ]
         sfs = [ Array{T, D}(szFilters...) for p in 1:nChs ]
-        new{T, D}(df, nChs, ppo, afs, sfs)
+        new{T, D}(df, ppo, nChs, afs, sfs)
     end
 
     function ParallelFB(fb::Rnsolt{T,D,S}) where {T,D,S}
         afs = getAnalysisFilters(fb)
         fsf = getSynthesisFilters(fb)
-        new{T, D}(fb.decimationFactor, sum(fb.nChannels), fb.polyphaseOrder, afs, fsf)
+        new{T, D}(fb.decimationFactor, fb.polyphaseOrder, sum(fb.nChannels), afs, fsf)
     end
 end
 

@@ -5,15 +5,15 @@ using OffsetArrays
 
 D = 2
 df = (2,2)
-ch = 1
 ord = (3,5)
+ch = 1
 
 szImg = tuple(fill(32,D)...)
 
 typeKernel = Complex{Float64}
 typeSignal = Complex{Float64}
 
-pfb = ParallelFB(typeKernel,df,ch,ord)
+pfb = ParallelFB(typeKernel,df,ord,ch)
 
 # afs = [ rand(typeKernel,(df.*(ord.+1))...) for p in 1:ch ]
 afs = [ zeros(typeKernel, df.*(ord.+1)) ]

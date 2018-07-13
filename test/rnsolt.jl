@@ -19,28 +19,28 @@ using MDCDL
         defaultType = Float64
 
         for d in 1:maxDims
-            allcfgset = [ (crdf.I, crnch.I, crord.I .- 1) for crdf in CartesianRange(tuple(fill(4,d)...)), crnch in CartesianRange(tuple(fill(10,2)...)), crord in CartesianRange(tuple(fill(6+1,d)...)) ]
-            cfgsetTypeI  = filter(c -> c[2][1] == c[2][2], allcfgset)
-            cfgsetTypeII = filter(c -> c[2][1] != c[2][2], allcfgset)
+            allcfgset = [ (crdf.I, crord.I .- 1, crnch.I) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(6+1,d)...)), crnch in CartesianRange(tuple(fill(10,2)...)) ]
+            cfgsetTypeI  = filter(c -> c[3][1] == c[3][2], allcfgset)
+            cfgsetTypeII = filter(c -> c[3][1] != c[3][2], allcfgset)
             cfgset = vcat(randsubseq(cfgsetTypeI, 50 / length(cfgsetTypeI))..., randsubseq(cfgsetTypeII, 50 / length(cfgsetTypeII))...)
 
-            for (df, nch, ord) in cfgset
+            for (df, ord, nch) in cfgset
                 if prod(df) > sum(nch)
-                    @test_throws ArgumentError Rnsolt(df, nch, ord)
+                    @test_throws ArgumentError Rnsolt(df, ord, nch)
                     continue
                 end
 
                 if !(cld(prod(df),2) <= nch[1] <= sum(nch) - fld(prod(df),2)) || !(fld(prod(df),2) <= nch[2] <= sum(nch) - cld(prod(df),2))
-                    @test_throws ArgumentError Rnsolt(df, nch, ord)
+                    @test_throws ArgumentError Rnsolt(df, ord, nch)
                     continue
                 end
 
                 if nch[1] != nch[2] && any(isodd.(ord))
-                    @test_throws ArgumentError Rnsolt(df, nch, ord)
+                    @test_throws ArgumentError Rnsolt(df, ord, nch)
                     continue
                 end
 
-                nsolt = Rnsolt(df, nch, ord)
+                nsolt = Rnsolt(df, ord, nch)
 
                 if nch[1] == nch[2]
                     @test isa(nsolt, Rnsolt{defaultType,d,:TypeI})
@@ -60,8 +60,8 @@ using MDCDL
     # end
 
     @testset "FilterSymmetry" begin
-        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d]
-            nsolt = Rnsolt(df, nch, ord)
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
+            nsolt = Rnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             afb = MDCDL.getAnalysisBank(nsolt)
@@ -97,9 +97,9 @@ using MDCDL
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
         oms = [ :polyphase, :reshaped, :augumented ]
-        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d]
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             szx = df .* (ord .+ 1)
-            nsolt = Rnsolt(df, nch, ord)
+            nsolt = Rnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             x = rand(Float64, szx...)
@@ -123,10 +123,10 @@ using MDCDL
     @testset "AnalysisSynthesisMultiscale" begin
         # output mode options for analyzer
         oms = [ :polyphase, :reshaped, :augumented ]
-        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
 
-            nsolt = Rnsolt(df, nch, ord)
+            nsolt = Rnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             x = rand(Float64, szx...)
@@ -148,11 +148,11 @@ using MDCDL
     end
 
     @testset "AnalyzerKernel" begin
-        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             x = rand(Float64, szx)
 
-            nsolt = Rnsolt(df, nch, ord)
+            nsolt = Rnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             ya = analyze(nsolt, x, lv; outputMode = :reshaped)
@@ -175,9 +175,9 @@ using MDCDL
     end
 
     @testset "SynthesizerKernel" begin
-        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d], lv in 1:3
 
-            nsolt = Rnsolt(df, nch, ord)
+            nsolt = Rnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             y = [ [ rand(Float64,((ord.+1) .* df.^(lv-l))...) for p in 1:(l==lv ? sum(nch) : sum(nch)-1) ] for l in 1:lv]
@@ -203,9 +203,9 @@ using MDCDL
     end
 
     @testset "Factorization" begin
-        for d in 1:length(rcsd), (df, nch, ord) in rcsd[d]
-            src = Rnsolt(df, nch, ord)
-            dst = Rnsolt(df, nch, ord)
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
+            src = Rnsolt(df, ord, nch)
+            dst = Rnsolt(df, ord, nch)
             randomInit!(src)
 
             (angs, mus) = getAngleParameters(src)

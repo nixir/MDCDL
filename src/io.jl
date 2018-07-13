@@ -114,7 +114,7 @@ function loadRnsolt(dic::Dict)
     nch = tuple(ncha...)
     ppo = tuple(ppoa...)
 
-    nsolt = Rnsolt(T, df, nch, ppo)
+    nsolt = Rnsolt(T, df, ppo, nch)
 
     foreach(keys(cfgs)) do key
         if key == "initMatrices"

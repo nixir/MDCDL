@@ -35,21 +35,21 @@ using MDCDL
         # cfgset = [ (crdf.I, nch, crord.I .- 1) for crdf in CartesianRange(tuple(fill(4,d)...)), nch in 2:20, crord in CartesianRange(tuple(fill(6,d)...)) ]
 
         for d in 1:maxDims
-            allcfgset = [ (crdf.I, nch, crord.I .- 1) for crdf in CartesianRange(tuple(fill(4,d)...)), nch in 2:20, crord in CartesianRange(tuple(fill(6+1,d)...)) ]
+            allcfgset = [ (crdf.I, crord.I .- 1, nch) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(6+1,d)...)), nch in 2:20 ]
             cfgset = randsubseq(vec(allcfgset), 100 / length(allcfgset))
 
-            for (df, nch, ord) in cfgset
+            for (df, ord, nch) in cfgset
                 if prod(df) > sum(nch)
-                    @test_throws ArgumentError Cnsolt(df, nch, ord)
+                    @test_throws ArgumentError Cnsolt(df, ord, nch)
                     continue
                 end
 
                 if isodd(sum(nch)) && any(isodd.(ord))
-                    @test_throws ArgumentError Cnsolt(df, nch, ord)
+                    @test_throws ArgumentError Cnsolt(df, ord, nch)
                     continue
                 end
 
-                nsolt = Cnsolt(df, nch, ord)
+                nsolt = Cnsolt(df, ord, nch)
 
                 if iseven(sum(nch))
                     @test isa(nsolt, Cnsolt{defaultType,d,:TypeI})
@@ -69,8 +69,8 @@ using MDCDL
     # end
 
     @testset "FilterSymmetry" begin
-        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d]
-            nsolt = Cnsolt(df, nch, ord)
+        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
+            nsolt = Cnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             afb = MDCDL.getAnalysisBank(nsolt)
@@ -83,9 +83,9 @@ using MDCDL
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
         oms = [ :polyphase, :reshaped, :augumented ]
-        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d]
+        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
             szx = df .* (ord .+ 1)
-            nsolt = Cnsolt(df, nch, ord)
+            nsolt = Cnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             x = rand(Complex{Float64}, szx...)
@@ -109,9 +109,9 @@ using MDCDL
     @testset "AnalysisSynthesisMultiscale" begin
         # output mode options for analyzer
         oms = [ :polyphase, :reshaped, :augumented ]
-        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d], lv in 1:3
+        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
-            nsolt = Cnsolt(df, nch, ord)
+            nsolt = Cnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             x = rand(Complex{Float64}, szx...)
@@ -133,11 +133,11 @@ using MDCDL
     end
 
     @testset "AnalyzerKernel" begin
-        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d], lv in 1:3
+        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             x = rand(Complex{Float64}, szx)
 
-            nsolt = Cnsolt(df, nch, ord)
+            nsolt = Cnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             ya = analyze(nsolt, x, lv; outputMode = :reshaped)
@@ -160,9 +160,9 @@ using MDCDL
     end
 
     @testset "SynthesizerKernel" begin
-        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d], lv in 1:3
+        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
 
-            nsolt = Cnsolt(df, nch, ord)
+            nsolt = Cnsolt(df, ord, nch)
             randomInit!(nsolt)
 
             y = [ [ rand(Complex{Float64},((ord.+1) .* df.^(lv-l))...) for p in 1:(l==lv ? sum(nch) : sum(nch)-1) ] for l in 1:lv]
@@ -188,9 +188,9 @@ using MDCDL
     end
 
     @testset "Factorization" begin
-        for d in 1:length(ccsd), (df, nch, ord) in ccsd[d]
-            src = Cnsolt(df, nch, ord)
-            dst = Cnsolt(df, nch, ord)
+        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
+            src = Cnsolt(df, ord, nch)
+            dst = Cnsolt(df, ord, nch)
             randomInit!(src)
 
             (angs, mus) = getAngleParameters(src)

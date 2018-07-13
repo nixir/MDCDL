@@ -31,11 +31,11 @@ for l = 1:nl
     # df = ntuple( d -> 2, Dl)
     df = tuple(fill(2,D)..., ones(Integer,l-1)...)
     nch = (cld(prod(df),2), fld(prod(df),2)) .+ (1,1)
-    # nch = (fld(prod(df),2) + 1, fld(prod(df),2) + 1)
     ord = ntuple( d -> 2, Dl)
+    # nch = (fld(prod(df),2) + 1, fld(prod(df),2) + 1
 
     # nsolt = Cnsolt(df, nch, ord, dataType=dt)
-    nsolt = Rnsolt(dt, df, nch, ord)
+    nsolt = Rnsolt(dt, df, ord, nch)
     randomInit!(nsolt; isSymmetry = false)
     mlcsc.dictionaries[l] = nsolt
 end
