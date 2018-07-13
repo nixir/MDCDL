@@ -1,3 +1,5 @@
+using ImageFiltering
+using OffsetArrays
 # Finit-dimensional lienar operator
 analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
@@ -210,10 +212,12 @@ end
 
 function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {TF,TX,D}
     df = pfb.decimationFactor
+    ord = pfb.polyphaseOrder
     offset = df .- 1
 
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        sy = [  circshift(MDCDL.downsample(MDCDL.mdfilter(sx, f; operation=:conv), df, offset), (-1 .* fld.(pfb.polyphaseOrder,2))) for f in pfb.analysisFilters ]
+        region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
+        sy = [ MDCDL.downsample(imfilter(sx, reflect(OffsetArray(f,region...)),"circular",ImageFiltering.FIR()), df, offset) for f in pfb.analysisFilters ]
         if k <= 1
             return [ sy ]
         else
