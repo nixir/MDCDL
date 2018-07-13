@@ -1,3 +1,5 @@
+using ImageFiltering
+using OffsetArrays
 # Finit-dimensional linear operator
 synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
@@ -205,6 +207,8 @@ end
 
 function synthesize(pfb::MDCDL.ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer) where {TF,TY,D}
     df = pfb.decimationFactor
+    ord = pfb.polyphaseOrder
+    region = colon.(1,df.*(ord.+1)) .- df.*cld.(ord,2) .- 1
     function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
         ya = if k <= 1
             sy[1]
@@ -212,10 +216,9 @@ function synthesize(pfb::MDCDL.ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}},
             [ subsynthesize(sy[2:end],k-1), sy[1]... ]
         end
         sxs = map(ya, pfb.synthesisFilters) do yp, sfp
-            MDCDL.mdfilter(MDCDL.upsample(yp, df), sfp; operation=:conv)
+            imfilter(MDCDL.upsample(yp, df), reflect(OffsetArray(sfp,region...)),"circular",ImageFiltering.FIR())
         end
-        circshift(sum(sxs), -1 .* df .* cld.(pfb.polyphaseOrder,2))
-        # sum(sxs)
+        sum(sxs)
     end
     vx = subsynthesize(y, level)
 end

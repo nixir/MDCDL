@@ -214,17 +214,14 @@ function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) wh
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     offset = df .- 1
+    region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
 
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
         sy = [ MDCDL.downsample(imfilter(sx, reflect(OffsetArray(f,region...)),"circular",ImageFiltering.FIR()), df, offset) for f in pfb.analysisFilters ]
         if k <= 1
             return [ sy ]
         else
-            res = Vector{Vector{Array{TF,D}}}(k)
-            res[1] = sy[2:end]
-            res[2:end] = subanalyze(sy[1], k-1)
-            return res
+            [ sy[2:end], subanalyze(sy[1],k-1)... ]
         end
     end
 

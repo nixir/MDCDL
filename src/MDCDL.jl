@@ -161,6 +161,12 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
         sfs = [ Array{T, D}(szFilters...) for p in 1:nChs ]
         new{T, D}(df, nChs, ppo, afs, sfs)
     end
+
+    function ParallelFB(fb::Rnsolt{T,D,S}) where {T,D,S}
+        afs = getAnalysisFilters(fb)
+        fsf = getSynthesisFilters(fb)
+        new{T, D}(fb.decimationFactor, sum(fb.nChannels), fb.polyphaseOrder, afs, fsf)
+    end
 end
 
 promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
