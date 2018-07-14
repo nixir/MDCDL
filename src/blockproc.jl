@@ -1,8 +1,8 @@
 function blockproc(A::Array{T,D}, blockSize::NTuple{D, Integer}, fun::Function) where {T,D}
     nBlocks = div.(size(A),blockSize)
-    primeBlock = ntuple(n -> 1:blockSize[n], D)
+    primeBlock = colon.(1,blockSize)
 
-    out = Array{T,D}(size(A))
+    out = simular(A)
     foreach(CartesianRange(nBlocks)) do cr
         block = (cr.I .- 1) .* blockSize .+ primeBlock
         out[block...] = fun(A[block...])
@@ -12,7 +12,7 @@ end
 
 function blockproc!(A::Array{T,D}, blockSize::NTuple{D, Integer}, fun::Function) where {T,D}
     nBlocks = div.(size(A),blockSize)
-    primeBlock = ntuple(n -> 1:blockSize[n], D)
+    primeBlock = colon.(1,blockSize)
 
     foreach(CartesianRange(nBlocks)) do cr
         block = (cr.I .- 1) .* blockSize .+ primeBlock

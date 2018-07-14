@@ -35,11 +35,11 @@ function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::I
     if outputMode == :polyphase
         y
     elseif outputMode == :reshaped
-        [
-            [
+        map(y) do py
+            map(1:size(py.data,1)) do p
                 reshape(py.data[p,:], py.nBlocks)
-            for p in 1:size(py.data,1) ]
-        for py in y ]
+            end
+        end
     elseif outputMode == :augumented
         polyphase2mdarray.(y)
     end
