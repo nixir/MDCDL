@@ -8,12 +8,10 @@ synthesize(fb::FilterBank, y; kwargs...) = synthesize(fb, [y], 1; kwargs...)
 
 # Filter bank with polyphase representation
 function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer; kwargs...) where {TF,TY,D}
-    #TODO: リファクタリングする
-    #TODO: array2vecblocks を mdarray2polyphaseに置き換える
     nBlocks = [ size(y[l][1]) for l in 1:level ]
     pvy = map(y,nBlocks) do yp, nb
         PolyphaseVector( vcat(
-            [ transpose(array2vecblocks(ypa, nb)) for ypa in yp ]...
+            [ transpose(vec(ypa)) for ypa in yp ]...
         ), nb)
     end
     synthesize(fb, pvy, level; kwargs...)
