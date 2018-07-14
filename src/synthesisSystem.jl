@@ -68,7 +68,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
             B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
             y .= B' * y
 
-            if k % 2 == 1
+            if isodd(k)
                 y[chLower,:] = circshift(y[chLower,:],(0, nShift))
             else
                 y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
