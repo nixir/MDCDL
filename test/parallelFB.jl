@@ -64,24 +64,36 @@ using MDCDL
             for (df, ord, nch, lv) in subcfgs
                 pfb = ParallelFB(dt, df, ord, nch)
 
-                const szFilter = df .* (ord .+ 1)
-                const afs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
-                const sfs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
+                szFilter = df .* (ord .+ 1)
+                afs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
+                sfs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
                 pfb.analysisFilters .= afs
                 pfb.synthesisFilters .= sfs
 
-                const szx = rand(1:4) .* (df.^lv) .* (ord .+ 1)
-                const x = rand(dt, szx)
+                szx = rand(1:4) .* (df.^lv) .* (ord .+ 1)
+                x = rand(dt, szx)
 
                 y = analyze(pfb, x, lv)
 
-                myfilter = (A, h) -> MDCDL.mdfilter(A, h; boundary=:circular, operation=:conv)
-                const offset = df .- 1
+                myfilter = (A, h) -> begin
+                    ha = zeros(A)
+                    ha[colon.(1,size(h))...] = h
+                    if dt <: Real
+                        real(ifft(fft(A).*fft(ha)))
+                    else
+                        ifft(fft(A).*fft(ha))
+                    end
+                end
+                offset = df .- 1
 
                 # check analyzer
                 subx = x
                 for idx = 1:lv-1
-                    sys = [ circshift(downsample(myfilter(subx, af), df, offset), (-1 .* fld.(ord,2))) for af in afs ]
+                    sys = map(afs) do af
+                        fx = myfilter(subx, af)
+                        dwfx = downsample(fx, df, offset)
+                        circshift(dwfx, (-1 .* fld.(ord,2)))
+                    end
                     if idx < lv
                         @test all(y[idx] .≈ sys[2:end])
                         subx = sys[1]
@@ -95,7 +107,11 @@ using MDCDL
                 # check synthesizer
                 suby = y[lv]
                 for idx = lv:-1:1
-                    subrxs = sum([ myfilter( MDCDL.upsample(suby[p], df), sfs[p] ) for p in 1:sum(nch) ])
+                    fy = map(suby, sfs) do  yp, fp
+                        upyp = MDCDL.upsample(yp, df)
+                        myfilter( upyp, fp )
+                    end
+                    subrxs = sum(fy)
                     subrx = circshift(subrxs, -1 .* df .* cld.(ord,2))
                     if idx > 1
                         suby = [subrx, y[idx-1]... ]

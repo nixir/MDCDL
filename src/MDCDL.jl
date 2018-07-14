@@ -161,7 +161,7 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
         new{T, D}(df, ppo, nChs, afs, sfs)
     end
 
-    function ParallelFB(fb::PolyphaseFB{T,D,S}) where {T,D,S}
+    function ParallelFB(fb::PolyphaseFB{T,D}) where {T,D}
         afs = getAnalysisFilters(fb)
         fsf = getSynthesisFilters(fb)
         new{T, D}(fb.decimationFactor, fb.polyphaseOrder, sum(fb.nChannels), afs, fsf)
