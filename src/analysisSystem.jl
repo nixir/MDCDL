@@ -37,7 +37,7 @@ function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::I
     elseif outputMode == :reshaped
         [
             [
-                vecblocks2array(py.data[p,:], py.nBlocks, tuple(ones(Integer,D)...))
+                reshape(py.data[p,:], py.nBlocks)
             for p in 1:size(py.data,1) ]
         for py in y ]
     elseif outputMode == :augumented
