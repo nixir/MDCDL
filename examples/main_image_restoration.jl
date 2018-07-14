@@ -4,23 +4,23 @@ using ImageFiltering
 
 ### configurations ###
 dirNsolt = joinpath(Pkg.dir(),"MDCDL","examples","design","sample.json")
-σ_noise = 1e-3
-λ = 1e-6
-lv = 3 # tree level of NSOLT
+σ_noise = 3e-2
+λ = 1e-2
+lv = 1 # tree level of NSOLT
 ######################
 
 ### setup observed image
-orgImg = testimage("lena")
-u = Array{ColorTypes.RGB{Float64}}(orgImg)
+orgImg = testimage("cameraman")
+u = Array{Float64}(imresize(orgImg,(256,256)))
 
 # AWGN
-w = mapc.( v -> σ_noise * randn(), u)
+w = σ_noise * randn(size(u))
 
-# blur kernel
-h = centered([ 0 1 0; 1 -4 1; 0 1 0 ])
+# Degradation (pixel loss)
+P = map((v)-> v > 0.1 ? 1 : 0, rand(size(u)))
 
-# observed image
-x = imfilter(u,h,"circular") + w
+# Observation
+x = P.*u + w
 
 ### setup NSOLT
 nsolt = MDCDL.load(dirNsolt)
@@ -33,10 +33,20 @@ println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
 # analysis/synthesis filter set
 pfb = ParallelFB(nsolt)
 
-y = analyze(pfb, x, lv)
+y0 = analyze(pfb, x, lv)
 
-rx = synthesize(pfb, y, lv)
+gradOfLossFcn = (ty) -> begin
+    - analyze(pfb, P.*(x - synthesize(pfb, ty, lv)), lv)
+end
+proxFcn = (ty, η) -> MDCDL.softshrink(ty, λ*η)
+viewFcn = (itrs, ty, err) -> begin
+    println("# Iterations=$itrs, error=$err")
+end
 
-errx = vecnorm(rx - x)
+hy = MDCDL.fista(gradOfLossFcn, proxFcn, 1.0, y0; maxIterations=200, viewFunction=viewFcn, absTol=eps())
+
+ru = Array{Gray{Float64}}(synthesize(pfb, hy, lv))
+
+errx = vecnorm(ru - u)
 
 println("error: $errx")
