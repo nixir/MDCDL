@@ -158,7 +158,11 @@ using MDCDL
             ya = analyze(nsolt, x, lv; outputMode = :reshaped)
 
             afs = getAnalysisFilters(nsolt)
-            myfilter = (A, h) -> MDCDL.mdfilter(A, h; boundary=:circular, operation=:conv)
+            myfilter = (A, h) -> begin
+                ha = zeros(A)
+                ha[colon.(1,size(h))...] = h
+                real(ifft(fft(A).*fft(ha)))
+            end
             offset = df .- 1
             subx = x
             for idx = 1:lv-1
@@ -185,7 +189,11 @@ using MDCDL
             x = synthesize(nsolt, y, lv)
 
             sfs = getSynthesisFilters(nsolt)
-            myfilter = (A, h) -> MDCDL.mdfilter(A, h; boundary=:circular, operation=:conv)
+            myfilter = (A, h) -> begin
+                ha = zeros(A)
+                ha[colon.(1,size(h))...] = h
+                real(ifft(fft(A).*fft(ha)))
+            end
             offset = df .- 1
             suby = y[lv]
             for idx = lv:-1:1

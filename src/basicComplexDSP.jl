@@ -33,27 +33,6 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
     output
 end
 
-# TODO: delete. deprecated function
-# multidimensional FIR filtering
-function mdfilter(A::Array{T,D}, h::Array{T,D}; boundary=:circular, outputSize=:same, operation=:corr) where {T,D}
-    # center = cld.(size(h), 2)
-    szA = size(A)
-    szh = size(h)
-
-    ker = zeros(T,szA...)
-    if operation == :conv
-        ker[colon.(1,szh)...] = h
-    elseif operation == :corr
-        ker[colon.(szA .- szh .+ 1, szA)...] = conj(h[colon.(szh,-1,1)...])
-    else
-        error("Invalid option: operation=$operation.")
-    end
-
-    cconv(A,ker) # boundary="circular", outputsize="same", convOrCorr="conv"
-end
-
-mdfilter(A::Array, h::Array; kwargs...) = mdfilter(promote(A,h)...; kwargs...)
-
 # matrix-formed CDFT operator for D-dimensional signal
 function cdftmtx(sz::Integer...)
     len = prod(sz)
