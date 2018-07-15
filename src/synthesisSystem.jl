@@ -31,7 +31,6 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, lev
         else
             dcData = subsynthesize(sy[2:end], k-1)
             dcvec = transpose(vec(polyphase2mdarray(dcData, df)))
-            # pvdc = mdarray2polyphase(dcCoefs, tuple(fill(1,D)...))
             PolyphaseVector(vcat(dcvec, sy[1].data), sy[1].nBlocks)
         end
         multipleSynthesisBank(fb, ya)
