@@ -29,10 +29,9 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, lev
         ya = if k <= 1
             sy[1]
         else
-            dcData = subsynthesize(sy[2:end],k-1)
-            dcCoefs = polyphase2mdarray(dcData, df)
-            pvdc = mdarray2polyphase(dcCoefs, tuple(fill(1,D)...))
-            PolyphaseVector(vcat(pvdc.data, sy[1].data), sy[1].nBlocks)
+            dcData = subsynthesize(sy[2:end], k-1)
+            dcvec = transpose(vec(dcData))
+            PolyphaseVector(vcat(dcvec, sy[1].data), sy[1].nBlocks)
         end
         multipleSynthesisBank(fb, ya)
     end

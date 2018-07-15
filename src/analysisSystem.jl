@@ -22,10 +22,8 @@ function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer
             nondcs = PolyphaseVector(sy.data[2:end,:], sy.nBlocks)
 
             # reshape Low-pass MD filter
-            dcCoefs = PolyphaseVector(sy.data[1:1,:], sy.nBlocks)
-            dcData = polyphase2mdarray(dcCoefs, tuple(fill(1,D)...))
+            dcData = reshape(sy.data[1,:], sy.nBlocks)
             nsx = mdarray2polyphase(dcData, fb.decimationFactor)
-
             [ nondcs, subanalyze(nsx, k-1)... ]
         end
     end
