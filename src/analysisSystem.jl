@@ -61,26 +61,28 @@ function multipleAnalysisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,
 end
 
 function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
-    chUpper = 1:fld(cc.nChannels,2)
-    chLower = fld(cc.nChannels,2)+1:cc.nChannels
+    P = cc.nChannels
 
     for d = 1:D # original order
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = MDCDL.permutedims(pvx)
         x = pvx.data
+        # submatrices
+        xu = view(x, 1:fld(P, 2), :)
+        xl = view(x, (fld(P, 2)+1):P, :)
         for k = 1:cc.polyphaseOrder[d]
-            B = MDCDL.getMatrixB(cc.nChannels, cc.paramAngles[d][k])
+            B = MDCDL.getMatrixB(P, cc.paramAngles[d][k])
 
             x .= B' * x
             if isodd(k)
-                x[chLower,:] = circshift(x[chLower,:],(0, nShift))
+                xl .= circshift(xl,(0, nShift))
             else
-                x[chUpper,:] = circshift(x[chUpper,:],(0, -nShift))
+                xu .= circshift(xu,(0, -nShift))
             end
             x .= B * x
 
-            x[chUpper,:] = cc.propMatrices[d][2*k-1] * x[chUpper,:]
-            x[chLower,:] = cc.propMatrices[d][2*k]   * x[chLower,:]
+            xu .= cc.propMatrices[d][2*k-1] * xu
+            xl .= cc.propMatrices[d][2*k]   * xl
         end
         pvx.data .= x
     end
@@ -90,38 +92,37 @@ end
 function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = cc.nChannels
-    chEven = 1:P-1
 
-    for d = 1:D # original order
+    for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = MDCDL.permutedims(pvx)
         x = pvx.data
+        # submatrices
+        xe  = view(x, 1:P-1, :)
+        xu1 = view(x, 1:fld(P,2), :)
+        xl1 = view(x, (fld(P,2)+1):(P-1), :)
+        xu2 = view(x, 1:cld(P,2), :)
+        xl2 = view(x, cld(P,2):P, :)
         for k = 1:nStages[d]
             # first step
-            chUpper = 1:fld(P,2)
-            chLower = (fld(P,2)+1):(P-1)
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k-1])
 
-            x[chEven,:]  .= B' * x[chEven,:]
-            x[chLower,:] .= circshift(x[chLower,:], (0, nShift))
-            x[chEven,:]  .= B * x[chEven,:]
+            xe  .= B' * xe
+            xl1 .= circshift(xl1, (0, nShift))
+            xe  .= B * xe
 
-            x[chUpper,:] .= cc.propMatrices[d][4*k-3] * x[chUpper,:]
-            x[chLower,:] .= cc.propMatrices[d][4*k-2] * x[chLower,:]
+            xu1 .= cc.propMatrices[d][4*k-3] * xu1
+            xl1 .= cc.propMatrices[d][4*k-2] * xl1
 
             # second step
-
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k])
 
-            x[chEven,:]  .= B' * x[chEven,:]
-            x[chUpper,:] .= circshift(x[chUpper,:], (0, -nShift))
-            x[chEven,:]  .= B * x[chEven,:]
+            xe  .= B' * xe
+            xu1 .= circshift(xu1, (0, -nShift))
+            xe  .= B * xe
 
-            chUpper = 1:cld(P,2)
-            chLower = cld(P,2):P
-
-            x[chLower,:] = cc.propMatrices[d][4*k]   * x[chLower,:]
-            x[chUpper,:] = cc.propMatrices[d][4*k-1] * x[chUpper,:]
+            xl2 .= cc.propMatrices[d][4*k]   * xl2
+            xu2 .= cc.propMatrices[d][4*k-1] * xu2
         end
         pvx.data .= x
     end
@@ -145,30 +146,34 @@ function multipleAnalysisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,
     extendAtoms(cc, ux)
 end
 
-function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, px::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
     hP = cc.nChannels[1]
     chUpper = 1:hP
     chLower = (1:hP)+hP
 
     for d = 1:D # original order
-        nShift = fld(size(px,2), px.nBlocks[1])
-        px = MDCDL.permutedims(px)
+        nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        pvx = MDCDL.permutedims(pvx)
+        x = pvx.data
+        # submatrices
+        xu = view(x, 1:hP, :)
+        xl = view(x, (1:hP)+hP, :)
         for k = 1:cc.polyphaseOrder[d]
-
-            px .= butterfly(px.data, hP)
+            x .= butterfly(x, hP)
 
             # px[chLower,:] = circshift(px[chLower,:], (0, nShift))
             if isodd(k)
-                px[chLower,:] = circshift(px[chLower,:],(0, nShift))
+                xl .= circshift(xl, (0, nShift))
             else
-                px[chUpper,:] = circshift(px[chUpper,:],(0, -nShift))
+                xu .= circshift(xu, (0, -nShift))
             end
-            px .= butterfly(px.data, hP)
+            x .= butterfly(x, hP)
 
-            px[chLower,:] = cc.propMatrices[d][k] * px[chLower,:]
+            xl .= cc.propMatrices[d][k] * xl
         end
+        pvx.data .= x
     end
-    return px
+    return pvx
 end
 
 function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
@@ -184,20 +189,25 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = MDCDL.permutedims(pvx)
         x = pvx.data
+        # submatrices
+        xs1 = view(x, minP+1:P, :)
+        xs2 = view(x, 1:maxP, :)
+        xmj  = view(x, chMajor, :)
+        xmn  = view(x, chMinor, :)
         for k = 1:nStages[d]
             # first step
-            x = butterfly(x, minP)
-            x[minP+1:end,:] = circshift(x[minP+1:end,:], (0, nShift))
-            x = butterfly(x, minP)
+            x   .= butterfly(x, minP)
+            xs1 .= circshift(xs1, (0, nShift))
+            x   .= butterfly(x, minP)
 
-            x[chMinor,:] = cc.propMatrices[d][2*k-1] * x[chMinor,:]
+            xmn .= cc.propMatrices[d][2*k-1] * xmn
 
             # second step
-            x = butterfly(x, minP)
-            x[1:maxP,:] = circshift(x[1:maxP,:] , (0, -nShift))
-            x = butterfly(x, minP)
+            x   .= butterfly(x, minP)
+            xs2 .= circshift(xs2, (0, -nShift))
+            x   .= butterfly(x, minP)
 
-            x[chMajor,:] = cc.propMatrices[d][2*k]   * x[chMajor,:]
+            xmj .= cc.propMatrices[d][2*k] * xmj
         end
         pvx.data .= x
     end
