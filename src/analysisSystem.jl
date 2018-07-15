@@ -161,7 +161,6 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, 
         for k = 1:cc.polyphaseOrder[d]
             x .= butterfly(x, hP)
 
-            # px[chLower,:] = circshift(px[chLower,:], (0, nShift))
             if isodd(k)
                 xl .= circshift(xl, (0, nShift))
             else
@@ -192,8 +191,8 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
         # submatrices
         xs1 = view(x, minP+1:P, :)
         xs2 = view(x, 1:maxP, :)
-        xmj  = view(x, chMajor, :)
-        xmn  = view(x, chMinor, :)
+        xmj = view(x, chMajor, :)
+        xmn = view(x, chMinor, :)
         for k = 1:nStages[d]
             # first step
             x   .= butterfly(x, minP)

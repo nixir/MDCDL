@@ -59,7 +59,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
     chLower = fld(cc.nChannels,2)+1:cc.nChannels
 
     for d = D:-1:1
-        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = cc.polyphaseOrder[d]:-1:1
             y[chUpper,:] = cc.propMatrices[d][2*k-1]' * y[chUpper,:]
@@ -69,9 +69,9 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
             y .= B' * y
 
             if isodd(k)
-                y[chLower,:] = circshift(y[chLower,:],(0, nShift))
+                y[chLower,:] = circshift(y[chLower,:],(0, -nShift))
             else
-                y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
+                y[chUpper,:] = circshift(y[chUpper,:],(0, nShift))
             end
             y .= B * y
         end
@@ -88,7 +88,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
     chEven = 1:P-1
 
     for d = D:-1:1
-        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = nStages[d]:-1:1
             # second step
@@ -103,7 +103,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k])
             y[chEven,:] .= B' * y[chEven,:]
             # y[chLower,:] = circshift(y[chLower,:], (0, nShift))
-            y[chUpper,:] = circshift(y[chUpper,:], (0, -nShift))
+            y[chUpper,:] = circshift(y[chUpper,:], (0, nShift))
             y[chEven,:] .= B * y[chEven,:]
 
             # first step
@@ -113,7 +113,7 @@ function concatenateAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
 
             B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k-1])
             y[chEven,:] .= B' * y[chEven,:]
-            y[chLower,:] = circshift(y[chLower,:], (0, nShift))
+            y[chLower,:] = circshift(y[chLower,:], (0, -nShift))
             y[chEven,:] .= B * y[chEven,:]
         end
         pvy.data .= y
@@ -146,16 +146,16 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY
     chLower = (1:hP)+hP
 
     for d = D:-1:1 # original order
-        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = cc.polyphaseOrder[d]:-1:1
             y[chLower,:] = cc.propMatrices[d][k]' * y[chLower,:]
 
             y .= butterfly(y, hP)
             if isodd(k)
-                y[chLower,:] = circshift(y[chLower,:],(0, nShift))
+                y[chLower,:] = circshift(y[chLower,:],(0, -nShift))
             else
-                y[chUpper,:] = circshift(y[chUpper,:],(0, -nShift))
+                y[chUpper,:] = circshift(y[chUpper,:],(0, nShift))
             end
             y .= butterfly(y, hP)
         end
@@ -175,20 +175,20 @@ function concatenateAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{T
     end
 
     for d = D:-1:1 # original order
-        nShift = -fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy,2), pvy.nBlocks[end])
         y = pvy.data
         for k = nStages[d]:-1:1
             # second step
             y[chMajor,:] = cc.propMatrices[d][2*k]' * y[chMajor,:]
             y = butterfly(y, minP)
-            y[1:maxP,:] = circshift(y[1:maxP,:], (0, -nShift))
+            y[1:maxP,:] = circshift(y[1:maxP,:], (0, nShift))
             y = butterfly(y, minP)
 
             # first step
             y[chMinor,:] = cc.propMatrices[d][2*k-1]' * y[chMinor,:]
 
             y = butterfly(y, minP)
-            y[minP+1:end,:] = circshift(y[minP+1:end,:], (0, nShift))
+            y[minP+1:end,:] = circshift(y[minP+1:end,:], (0, -nShift))
             y = butterfly(y, minP)
         end
         pvy.data .= y
