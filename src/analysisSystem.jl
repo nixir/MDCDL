@@ -5,15 +5,15 @@ analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
 #
-analyze(fb::MDCDL.FilterBank, x; kwargs...) = analyze(fb, x, 1; kwargs...)[1]
+analyze(fb::FilterBank, x; kwargs...) = analyze(fb, x, 1; kwargs...)[1]
 
 # Filter bank with polyphase representation
-function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D}
+function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 end
-adjoint_synthesize(fb::MDCDL.PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
+adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
+function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
         sy = multipleAnalysisBank(fb, sx)
         if k <= 1
@@ -44,9 +44,9 @@ function analyze(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::I
         polyphase2mdarray.(y)
     end
 end
-adjoint_synthesize(fb::MDCDL.PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
+adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function multipleAnalysisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function multipleAnalysisBank(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
@@ -60,18 +60,18 @@ function multipleAnalysisBank(cc::MDCDL.Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,
     PolyphaseVector(cc.symmetry*extx.data, extx.nBlocks)
 end
 
-function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     P = cc.nChannels
 
-    for d = 1:D # original order
+    for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
-        pvx = MDCDL.permutedims(pvx)
+        pvx = permutedims(pvx)
         x = pvx.data
         # submatrices
         xu = view(x, 1:fld(P, 2), :)
         xl = view(x, (fld(P, 2)+1):P, :)
         for k = 1:cc.polyphaseOrder[d]
-            B = MDCDL.getMatrixB(P, cc.paramAngles[d][k])
+            B = getMatrixB(P, cc.paramAngles[d][k])
 
             x .= B' * x
             if isodd(k)
@@ -89,13 +89,13 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; 
     return pvx
 end
 
-function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = cc.nChannels
 
     for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
-        pvx = MDCDL.permutedims(pvx)
+        pvx = permutedims(pvx)
         x = pvx.data
         # submatrices
         xe  = view(x, 1:P-1, :)
@@ -105,7 +105,7 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
         xl2 = view(x, cld(P,2):P, :)
         for k = 1:nStages[d]
             # first step
-            B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k-1])
+            B = getMatrixB(P, cc.paramAngles[d][2*k-1])
 
             xe  .= B' * xe
             xl1 .= circshift(xl1, (0, nShift))
@@ -115,7 +115,7 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
             xl1 .= cc.propMatrices[d][4*k-2] * xl1
 
             # second step
-            B = MDCDL.getMatrixB(P, cc.paramAngles[d][2*k])
+            B = getMatrixB(P, cc.paramAngles[d][2*k])
 
             xe  .= B' * xe
             xu1 .= circshift(xu1, (0, -nShift))
@@ -129,7 +129,7 @@ function extendAtoms(cc::MDCDL.Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
     return pvx
 end
 
-function multipleAnalysisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function multipleAnalysisBank(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
@@ -146,14 +146,12 @@ function multipleAnalysisBank(cc::MDCDL.Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,
     extendAtoms(cc, ux)
 end
 
-function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
     hP = cc.nChannels[1]
-    chUpper = 1:hP
-    chLower = (1:hP)+hP
 
-    for d = 1:D # original order
+    for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
-        pvx = MDCDL.permutedims(pvx)
+        pvx = permutedims(pvx)
         x = pvx.data
         # submatrices
         xu = view(x, 1:hP, :)
@@ -175,7 +173,7 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, 
     return pvx
 end
 
-function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = sum(cc.nChannels)
     maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
@@ -184,9 +182,9 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
         (cc.nChannels[2], cc.nChannels[1], (cc.nChannels[1]+1):P, 1:cc.nChannels[1])
     end
 
-    for d = 1:D # original order
+    for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
-        pvx = MDCDL.permutedims(pvx)
+        pvx = permutedims(pvx)
         x = pvx.data
         # submatrices
         xs1 = view(x, minP+1:P, :)
@@ -213,7 +211,7 @@ function extendAtoms(cc::MDCDL.Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D};
     return pvx
 end
 
-function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     offset = df .- 1
@@ -223,7 +221,7 @@ function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) wh
         sy = map(pfb.analysisFilters) do f
             ker = reflect(OffsetArray(f, region...))
             fltimg = imfilter(sx, ker, "circular", ImageFiltering.FIR())
-            MDCDL.downsample(fltimg, df, offset)
+            downsample(fltimg, df, offset)
         end
         if k <= 1
             return [ sy ]
@@ -234,4 +232,4 @@ function analyze(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) wh
 
     subanalyze(x,level)
 end
-adjoint_synthesize(pfb::MDCDL.ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pdf, x, args...; kwargs...)
+adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pdf, x, args...; kwargs...)
