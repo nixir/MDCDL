@@ -10,3 +10,5 @@ end
 include("parallelFB.jl")
 include("cnsolt.jl")
 include("rnsolt.jl")
+
+include("multiscale.jl")

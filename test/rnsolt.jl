@@ -71,29 +71,6 @@ using MDCDL
         end
     end
 
-    # @testset "AnalysisSynthesis" begin
-    #     for d in 1:length(rcsd), (df, nch, ord) in rcsd[d], lv in 1:3
-    #         szx = (df.^lv) .* (ord .+ 1)
-    #
-    #         nsolt = Rnsolt(df, nch, ord)
-    #         randomInit!(nsolt)
-    #
-    #         x = rand(Float64, szx...)
-    #
-    #         y = analyze(nsolt, x, lv; outputMode = :polyphase)
-    #         rx = synthesize(nsolt, y, lv)
-    #
-    #         @test size(x) == size(rx)
-    #         @test rx ≈ x
-    #
-    #         y = analyze(nsolt, x, lv; outputMode = :reshaped)
-    #         rx = synthesize(nsolt, y, lv)
-    #
-    #         @test size(x) == size(rx)
-    #         @test rx ≈ x
-    #     end
-    # end
-
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
         oms = [ :polyphase, :reshaped, :augumented ]
@@ -120,42 +97,15 @@ using MDCDL
         end
     end
 
-    @testset "AnalysisSynthesisMultiscale" begin
-        # output mode options for analyzer
-        oms = [ :polyphase, :reshaped, :augumented ]
-        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d], lv in 1:3
-            szx = (df.^lv) .* (ord .+ 1)
-
-            nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
-
-            x = rand(Float64, szx...)
-
-            y = analyze(nsolt, x, lv)
-            rx = synthesize(nsolt, y, lv)
-
-            @test size(x) == size(rx)
-            @test rx ≈ x
-
-            foreach(oms) do om
-                y = analyze(nsolt, x, lv; outputMode = om)
-                rx = synthesize(nsolt, y, lv)
-
-                @test size(x) == size(rx)
-                @test rx ≈ x
-            end
-        end
-    end
-
     @testset "AnalyzerKernel" begin
-        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d], lv in 1:3
-            szx = (df.^lv) .* (ord .+ 1)
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
+            szx = df .* (ord .+ 1)
             x = rand(Float64, szx)
 
             nsolt = Rnsolt(df, ord, nch)
             randomInit!(nsolt)
 
-            ya = analyze(nsolt, x, lv; outputMode = :reshaped)
+            ya = analyze(nsolt, x; outputMode = :reshaped)
 
             afs = getAnalysisFilters(nsolt)
             myfilter = (A, h) -> begin
@@ -164,29 +114,25 @@ using MDCDL
                 real(ifft(fft(A).*fft(ha)))
             end
             offset = df .- 1
-            subx = x
-            for idx = 1:lv-1
-                sys = [ circshift(downsample(myfilter(subx, af), df, offset), (-1 .* fld.(ord,2))) for af in afs]
-                if idx < lv
-                    @test all(ya[idx] .≈ sys[2:end])
-                    subx = sys[1]
-                else
-                    @test all(ya[idx] .≈ sys)
-                end
-            end
 
+            sys = map(afs) do af
+                fx = myfilter(x, af)
+                dwfx = downsample(fx, df, offset)
+                circshift(dwfx, (-1 .* fld.(ord,2)))
+            end
+            @test all(ya .≈ sys)
         end
     end
 
     @testset "SynthesizerKernel" begin
-        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d], lv in 1:3
+        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
 
             nsolt = Rnsolt(df, ord, nch)
             randomInit!(nsolt)
 
-            y = [ [ rand(Float64,((ord.+1) .* df.^(lv-l))...) for p in 1:(l==lv ? sum(nch) : sum(nch)-1) ] for l in 1:lv]
+            y = [ rand(Float64,((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            x = synthesize(nsolt, y, lv)
+            x = synthesize(nsolt, y)
 
             sfs = getSynthesisFilters(nsolt)
             myfilter = (A, h) -> begin
@@ -195,18 +141,11 @@ using MDCDL
                 real(ifft(fft(A).*fft(ha)))
             end
             offset = df .- 1
-            suby = y[lv]
-            for idx = lv:-1:1
-                subrxs = sum([ myfilter( MDCDL.upsample(suby[p], df), sfs[p] ) for p in 1:sum(nch) ])
-                subrx = circshift(subrxs, -1 .* df .* cld.(ord,2))
-                if idx > 1
-                    suby = [subrx, y[idx-1]... ]
-                else
-                    @test size(x) == size(subrx)
-                    @test subrx ≈ x
-                end
-            end
 
+            subrxs = sum(map((yp,fp)->myfilter( MDCDL.upsample(yp, df), fp ), y, sfs))
+            subrx = circshift(subrxs, -1 .* df .* cld.(ord,2))
+            @test size(x) == size(subrx)
+            @test subrx ≈ x
         end
     end
 
