@@ -188,26 +188,17 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     offset = df .- 1
     region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
 
-    function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        sy = map(pfb.analysisFilters) do f
-            ker = reflect(OffsetArray(f, region...))
-            fltimg = imfilter(sx, ker, "circular", ImageFiltering.FIR())
-            downsample(fltimg, df, offset)
-        end
-        if k <= 1
-            return [ sy ]
-        else
-            [ sy[2:end], subanalyze(sy[1], k-1)... ]
-        end
+    map(pfb.analysisFilters) do f
+        ker = reflect(OffsetArray(f, region...))
+        fltimg = imfilter(x, ker, "circular", ImageFiltering.FIR())
+        downsample(fltimg, df, offset)
     end
-
-    subanalyze(x,level)
 end
 adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
 
@@ -223,5 +214,4 @@ function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}) where {TF,TX,D}
 
     subanalyze(x, msfb.treeLevel)
 end
-
 adjoint_synthesize(msfb::Multiscale{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
