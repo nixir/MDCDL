@@ -6,7 +6,6 @@ else
 end
 
 # write your own tests here
-# @test 1 == 2
 include("parallelFB.jl")
 include("cnsolt.jl")
 include("rnsolt.jl")
