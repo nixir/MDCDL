@@ -92,8 +92,6 @@ for epoch = 1:nEpoch, k = 1:length(x)
         (minf, minx, ret) = optimize(opt, angles0)
 
         MDCDL.setAngleParameters!(mlcsc.dictionaries[l], minx, mus0)
-
-        hy = MDCDL.synthesize(submlcsc.dictionaries[l], hy)
     end
 end
 
