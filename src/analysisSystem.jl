@@ -4,42 +4,21 @@ using OffsetArrays
 analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
-#
-analyze(fb::FilterBank, x; kwargs...) = analyze(fb, x, 1; kwargs...)[1]
-
 # Filter bank with polyphase representation
 function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 end
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
-    function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
-        sy = multipleAnalysisBank(fb, sx)
-        if k <= 1
-            return [ sy ]
-        else
-            nondcs = PolyphaseVector(sy.data[2:end,:], sy.nBlocks)
-
-            # reshape Low-pass MD filter
-            dcData = reshape(sy.data[1,:], sy.nBlocks)
-            nsx = mdarray2polyphase(dcData, fb.decimationFactor)
-            [ nondcs, subanalyze(nsx, k-1)... ]
-        end
-    end
-
-    y = subanalyze(x,level)
+function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+    y = multipleAnalysisBank(fb, x)
 
     if outputMode == :polyphase
         y
     elseif outputMode == :reshaped
-        map(y) do py
-            map(1:size(py.data,1)) do p
-                reshape(py.data[p,:], py.nBlocks)
-            end
-        end
+        [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
     elseif outputMode == :augumented
-        polyphase2mdarray.(y)
+        polyphase2mdarray(y)
     end
 end
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
