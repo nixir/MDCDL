@@ -209,7 +209,7 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     offset = df .- 1
@@ -230,4 +230,19 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {T
 
     subanalyze(x,level)
 end
-adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pdf, x, args...; kwargs...)
+adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
+
+function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}) where {TF,TX,D}
+    function subanalyze(sx::Array{TS,D}, k::Integer) where TS
+        sy = analyze(msfb.filterBank, sx; outputMode=:reshaped)
+        if k <= 1
+            return [ sy ]
+        else
+            [ sy[2:end], subanalyze(sy[1], k-1)... ]
+        end
+    end
+
+    subanalyze(x, msfb.treeLevel)
+end
+
+adjoint_synthesize(msfb::Multiscale{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)

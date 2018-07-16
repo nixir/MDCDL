@@ -170,6 +170,11 @@ end
 
 promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
 
+struct Multiscale{T,D} <: CodeBook{T,D}
+    filterBank::FilterBank{T,D}
+    treeLevel::Int
+end
+
 struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int
 

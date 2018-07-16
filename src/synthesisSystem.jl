@@ -225,3 +225,15 @@ function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level
     end
     vx = subsynthesize(y, level)
 end
+
+function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) where {TF,TY,D}
+    function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
+        ya = if k <= 1
+            sy[1]
+        else
+            [ subsynthesize(sy[2:end],k-1), sy[1]... ]
+        end
+        synthesize(msfb.filterBank, ya)
+    end
+    vx = subsynthesize(y, msfb.treeLevel)
+end
