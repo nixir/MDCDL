@@ -15,14 +15,15 @@ nIters = 20
 
 nsolt = Rnsolt(df, ord, nch)
 randomInit!(nsolt; isSymmetry = false)
+mspfb = Multiscale(nsolt, lv)
 
 xraw = testimage("cameraman")[((1:128,1:128) .+ (64,168))...]
 x = complex(Array{Float64}(xraw))
 
-y0 = analyze(nsolt, x, lv; outputMode = :augumented)
+y0 = analyze(mspfb, x)
 sparsity = fld.(length.(y0),4)
 
-angs0, mus0 = getAngleParameters(nsolt)
+angs0, mus0 = getAngleParameters(mspfb.filterBank)
 
 
 opt = Opt(:LN_COBYLA, length(angs0))
@@ -40,18 +41,14 @@ y = y0
 for idx = 1:nIters
     # hy = map((ys, sp) -> MDCDL.iht(nsol, x, ys, sp), y, sparsity)
     # hy = y
-    hy = MDCDL.iht(
-        (ty)->synthesize(nsolt, ty, lv),
-        (tx)->adjoint_synthesize(nsolt, tx, lv; outputMode=:augumented),
-        x, y, sparsity; viewStatus=true
-    )
+    hy = MDCDL.iht(mspfb, x, y, sparsity; viewStatus=true)
     count = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
         global count
         count::Int += 1
 
-        setAngleParameters!(nsolt, angs, mus0)
-        dist = x - synthesize(nsolt, hy, lv)
+        setAngleParameters!(mspfb.filterBank, angs, mus0)
+        dist = x - synthesize(mspfb, hy)
         cst = vecnorm(dist)^2
 
         # #TODO: 勾配の計算式を間違えている可能性がある．
@@ -77,8 +74,8 @@ for idx = 1:nIters
     min_objective!(opt, objfunc)
     (minf, minx, ret) = optimize(opt, angs0)
 
-    setAngleParameters!(nsolt, minx, mus0)
-    y = analyze(nsolt, x, lv; outputMode=:augumented)
+    setAngleParameters!(mspfb.filterBank, minx, mus0)
+    y = analyze(mspfb, x)
     println("Iterations $idx finished.")
 end
 

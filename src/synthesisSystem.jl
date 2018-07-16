@@ -3,39 +3,28 @@ using OffsetArrays
 # Finit-dimensional linear operator
 synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
-# General Filter banks
-synthesize(fb::FilterBank, y; kwargs...) = synthesize(fb, [y], 1; kwargs...)
-
 # Filter bank with polyphase representation
-function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer; kwargs...) where {TF,TY,D}
-    nBlocks = [ size(y[l][1]) for l in 1:level ]
-    pvy = map(y, nBlocks) do yp, nb
-        PolyphaseVector( transpose(hcat(map(vec, yp)...)), nb)
-    end
-    synthesize(fb, pvy, level; kwargs...)
+function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) where {TF,TY,D}
+    nBlocks = size(y[1])
+    # if any(size.(y) .!= nBlocks)
+    #     throw(ArgumentError("size Error"))
+    # end
+    pvy = PolyphaseVector( transpose(hcat(map(vec, y)...)), nBlocks)
+    # end
+    synthesize(fb, pvy; kwargs...)
 end
 
-function synthesize(fb::PolyphaseFB{TF,DF}, y::Vector{Array{TY,DY}}, level::Integer; kwargs...) where {TF,TY,DF,DY}
+function synthesize(fb::PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
     end
 
-    synthesize(fb, mdarray2polyphase.(y), level; kwargs...)
+    synthesize(fb, mdarray2polyphase(y); kwargs...)
 end
 
-function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{PolyphaseVector{TY,D}}, level::Integer) where {TF,TY,D}
+function synthesize(fb::PolyphaseFB{TF,D}, y::PolyphaseVector{TY,D}) where {TF,TY,D}
     df = fb.decimationFactor
-    function subsynthesize(sy::Vector{PolyphaseVector{TY,D}}, k::Integer)
-        ya = if k <= 1
-            sy[1]
-        else
-            dcData = subsynthesize(sy[2:end], k-1)
-            dcvec = transpose(vec(polyphase2mdarray(dcData, df)))
-            PolyphaseVector(vcat(dcvec, sy[1].data), sy[1].nBlocks)
-        end
-        multipleSynthesisBank(fb, ya)
-    end
-    vx = subsynthesize(y, level)
+    vx = multipleSynthesisBank(fb, y)
     polyphase2mdarray(vx, df)
 end
 
@@ -206,34 +195,37 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
     return pvy
 end
 
-function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Vector{Array{TY,D}}}, level::Integer) where {TF,TY,D}
+function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     region = colon.(1,df.*(ord.+1)) .- df.*cld.(ord,2) .- 1
-    function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
-        ya = if k <= 1
-            sy[1]
-        else
-            [ subsynthesize(sy[2:end],k-1), sy[1]... ]
-        end
-        sxs = map(ya, pfb.synthesisFilters) do yp, sfp
-            upimg = upsample(yp, df)
-            ker = reflect(OffsetArray(sfp,region...))
-            imfilter(upimg, ker, "circular" ,ImageFiltering.FIR())
-        end
-        sum(sxs)
+
+    sxs = map(y, pfb.synthesisFilters) do yp, sfp
+        upimg = upsample(yp, df)
+        ker = reflect(OffsetArray(sfp, region...))
+        imfilter(upimg, ker, "circular" , ImageFiltering.FIR())
     end
-    vx = subsynthesize(y, level)
+    sum(sxs)
 end
 
 function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) where {TF,TY,D}
-    function subsynthesize(sy::Vector{Vector{Array{TY,D}}}, k::Integer)
+    function subsynthesize(sy::Vector, k::Integer)
         ya = if k <= 1
             sy[1]
         else
-            [ subsynthesize(sy[2:end],k-1), sy[1]... ]
+            [ subsynthesize(sy[2:end], k-1), sy[1]... ]
         end
         synthesize(msfb.filterBank, ya)
     end
-    vx = subsynthesize(y, msfb.treeLevel)
+    subsynthesize(y, msfb.treeLevel)
+end
+
+function synthesize(msfb::Multiscale{TF,DF}, y::Vector{Array{TY,DY}}) where {TF,TY,DF,DY}
+    if DF != DY-1
+        throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
+    end
+    yrd = map(y) do ys
+        [ ys[fill(:, DF)...,p] for p in 1:size(ys, DY) ]
+    end
+    synthesize(msfb, yrd)
 end

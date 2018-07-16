@@ -31,12 +31,12 @@ println(" - Number of Channels = $(nsolt.nChannels)")
 println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
 
 # analysis/synthesis filter set
-pfb = ParallelFB(nsolt)
+mlpfb = Multiscale(ParallelFB(nsolt), lv)
 
-y0 = analyze(pfb, x, lv)
+y0 = analyze(mlpfb, x)
 
 gradOfLossFcn = (ty) -> begin
-    - analyze(pfb, P.*(x - synthesize(pfb, ty, lv)), lv)
+    - analyze(mlpfb, P.*(x - synthesize(mlpfb, ty)))
 end
 proxFcn = (ty, η) -> MDCDL.softshrink(ty, λ*η)
 viewFcn = (itrs, ty, err) -> begin
@@ -45,7 +45,7 @@ end
 
 hy = MDCDL.fista(gradOfLossFcn, proxFcn, 1.0, y0; maxIterations=200, viewFunction=viewFcn, absTol=eps())
 
-ru = Array{Gray{Float64}}(synthesize(pfb, hy, lv))
+ru = Array{Gray{Float64}}(synthesize(mlpfb, hy))
 
 errx = vecnorm(ru - u)
 

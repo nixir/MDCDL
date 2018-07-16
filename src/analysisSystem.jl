@@ -202,7 +202,7 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) wh
 end
 adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
 
-function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}) where {TF,TX,D}
+function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
         sy = analyze(msfb.filterBank, sx; outputMode=:reshaped)
         if k <= 1
@@ -212,6 +212,13 @@ function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}) where {TF,TX,D}
         end
     end
 
-    subanalyze(x, msfb.treeLevel)
+    y = subanalyze(x, msfb.treeLevel)
+    if outputMode == :reshaped
+        y
+    elseif outputMode == :augumented
+        map(y) do sy
+            cat(D+1, sy...)
+        end
+    end
 end
 adjoint_synthesize(msfb::Multiscale{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)

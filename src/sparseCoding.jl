@@ -1,7 +1,7 @@
 using ColorTypes
-import Base.LinAlg.norm
-import Base.LinAlg.vecnorm
-import Base.LinAlg.vecnormInf
+# import Base.LinAlg.norm
+# import Base.LinAlg.vecnorm
+# import Base.LinAlg.vecnormInf
 # iterative shrinkage/thresholding algorithm
 # solve a regularized convex optimization problem e.x. f(x) + g(x)
 function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; maxIterations::Integer=20, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)
@@ -101,7 +101,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; 
 end
 
 function iht(cb::CodeBook, args...; kwargs...)
-    iht((y) -> synthesize(cb, y), (x) -> analyze(cb, x), args...; kwargs...)
+    iht((y) -> synthesize(cb, y), (x) -> adjoint_synthesize(cb, x), args...; kwargs...)
 end
 
 # prox of l2-norm
@@ -140,12 +140,23 @@ function l2ballProj(x::T, radius::Real, centerVec::T) where T
     end
 end
 
-hardshrink(x::AbstractArray{T}, ks::AbstractArray) where {T<:AbstractArray} = hardshrink.(x, ks)
-function hardshrink(x::AbstractArray{T,D}, k::Integer) where {T,D}
-    nzids = sortperm(abs.(vec(x)), rev=true)[1:k]
+hardshrink(x::AbstractArray{AbstractArray}, ks; kwargs...) = hardshrink.(x, ks; kwargs...)
+function hardshrink(x::AbstractArray{T}, k::Integer; lt::Function=isless) where T
+    nzids = sortperm(vec(x); lt=lt, rev=true)[1:k]
     output = zeros(x)
     foreach(nzids) do idx
         output[idx] = x[idx]
     end
     output
 end
+
+# function hardshrink(x::AbstractArray{Complex{T}}, ks::Integer) where T
+#     hardshrink(x, ks; lt=(lhs,rhs)->isless(abs(lhs),abs(rhs)))
+# end
+#
+# function hardshrink(x::AbstractArray{Colorant}, ks::Integer)
+#     normc = (c) -> mapreducec((v)->v^2,+,0,c)
+#     ltfcn = (lhs,rhs)->isless(normc(lhs),normc(rhs))
+#     println("FOOOOOOO")
+#     hardshrink(x, ks; lt=ltfcn)
+# end
