@@ -17,7 +17,6 @@ export upsample, downsample
 export atmimshow
 # export getAnalysisBank
 export getAnalysisFilters, getSynthesisFilters
-export mdfilter
 export getAngleParameters, setAngleParameters!
 export mdarray2polyphase, polyphase2mdarray
 export iht

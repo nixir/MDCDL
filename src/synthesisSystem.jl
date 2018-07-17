@@ -4,6 +4,7 @@ using OffsetArrays
 synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
 # Filter bank with polyphase representation
+# outputMode = :reshaped
 function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) where {TF,TY,D}
     nBlocks = size(y[1])
     # if any(size.(y) .!= nBlocks)
@@ -14,6 +15,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) wh
     synthesize(fb, pvy; kwargs...)
 end
 
+# outputMode = :augumented
 function synthesize(fb::PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
@@ -22,6 +24,13 @@ function synthesize(fb::PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {T
     synthesize(fb, mdarray2polyphase(y); kwargs...)
 end
 
+# outputMode = :vector
+function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{TY}, szdata::NTuple{D}; kwargs...) where {TF, TY, D}
+    yaug = reshape(y, fld(szdata, fb.decimationFactor)..., p);
+    synthesize(fb, yaug; kwargs...)
+end
+
+# outputMode = :polyphase
 function synthesize(fb::PolyphaseFB{TF,D}, y::PolyphaseVector{TY,D}) where {TF,TY,D}
     df = fb.decimationFactor
     vx = multipleSynthesisBank(fb, y)
@@ -208,6 +217,7 @@ function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}) where {TF,TY,
     sum(sxs)
 end
 
+# outputMode= :reshaped
 function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) where {TF,TY,D}
     function subsynthesize(sy::Vector, k::Integer)
         ya = if k <= 1
@@ -220,6 +230,7 @@ function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) wher
     subsynthesize(y, msfb.treeLevel)
 end
 
+# outputMode = :augumented
 function synthesize(msfb::Multiscale{TF,DF}, y::Vector{Array{TY,DY}}) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
@@ -228,4 +239,17 @@ function synthesize(msfb::Multiscale{TF,DF}, y::Vector{Array{TY,DY}}) where {TF,
         [ ys[fill(:, DF)...,p] for p in 1:size(ys, DY) ]
     end
     synthesize(msfb, yrd)
+end
+
+# outputMode = :vector
+function synthesize(msfb::Multiscale{TF,D}, y::Vector{TY}, szdata::NTuple{D}) where {TF,TY,D}
+    df = msfb.filterBank.decimationFactor
+    P = sum(msfb.filterBank.nChannels)
+    nCoefs = [ prod(fld.(szdata, df.^l)) * (l==msfb.treeLevel ? P : P-1) for l in 1:msfb.treeLevel ]
+
+    augCoefs = map(1:msfb.treeLevel) do l
+        rang = (1:nCoefs[l]) + sum(nCoefs[1:l-1])
+        reshape(y[rang], fld.(szdata, df.^l)..., (l==msfb.treeLevel ? P : P-1))
+    end
+    synthesize(msfb, augCoefs)
 end

@@ -19,6 +19,8 @@ function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}; outputMode=:re
         [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
     elseif outputMode == :augumented
         polyphase2mdarray(y)
+    elseif outputMode == :vector
+        vec(transpose(y.data))
     end
 end
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
@@ -194,10 +196,18 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) wh
     offset = df .- 1
     region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
 
-    map(pfb.analysisFilters) do f
+    y = map(pfb.analysisFilters) do f
         ker = reflect(OffsetArray(f, region...))
         fltimg = imfilter(x, ker, "circular", ImageFiltering.FIR())
         downsample(fltimg, df, offset)
+    end
+
+    if outputMode == :reshaped
+        y
+    elseif outputMode == :augumented
+        cat(D+1, y...)
+    elseif outputMode == :vector
+        vcat(vec.(y)...)
     end
 end
 adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
@@ -219,6 +229,11 @@ function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) w
         map(y) do sy
             cat(D+1, sy...)
         end
+    elseif outputMode == :vector
+        vty = map(y) do sy
+            vcat(vec.(sy)...)
+        end
+        vcat(vty...)
     end
 end
 adjoint_synthesize(msfb::Multiscale{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
