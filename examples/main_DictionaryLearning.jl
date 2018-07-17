@@ -21,7 +21,7 @@ orgImg = Array{RGB{Float64}}(testimage("lena"))
 trainingSet = [ orgImg[(colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData)))...] for nsd in 1:nSubData ]
 
 y0 = analyze(msnsolt, trainingSet[1]; outputMode=:vector)
-sparsity = fld(length(y0),4)
+sparsity = fld(length(y0),8.....)
 
 angs0, mus0 = getAngleParameters(msnsolt.filterBank)
 
