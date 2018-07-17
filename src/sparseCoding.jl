@@ -74,7 +74,7 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
     end
 end
 
-function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false)
+function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false, lt::Function=isless)
     len = length(y0)
     y = y0
     errx = Inf
@@ -83,7 +83,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; 
     recx = synthesisFunc(y)
     for itr = 1:maxIterations
         yprev = y
-        y = hardshrink(y + adjointSynthesisFunc(x - recx), K)
+        y = hardshrink(y + adjointSynthesisFunc(x - recx), K; lt=lt)
         recx = synthesisFunc(y)
 
         errx = vecnorm(x - recx)^2/len
@@ -100,8 +100,8 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; 
     y
 end
 
-function iht(cb::CodeBook, args...; kwargs...)
-    iht((y) -> synthesize(cb, y), (x) -> adjoint_synthesize(cb, x), args...; kwargs...)
+function iht(cb::CodeBook, x, args...; kwargs...)
+    iht((ty) -> synthesize(cb, ty, size(x)), (tx) -> adjoint_synthesize(cb, tx; outputMode=:vector), x, args...; kwargs...)
 end
 
 # prox of l2-norm
