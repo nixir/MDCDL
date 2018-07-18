@@ -31,6 +31,9 @@ println(" - Type = $(typeof(nsolt))")
 println(" - Decimation Factor = $(nsolt.decimationFactor)")
 println(" - Number of Channels = $(nsolt.nChannels)")
 println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
+### show analysis filters
+# afs = getAnalysisFilters(nsolt)
+# map((f)->imshow(f), afs)
 
 # setup Multiscale NSOLT
 mlpfb = Multiscale(ParallelFB(nsolt), lv)
@@ -55,4 +58,5 @@ errx = vecnorm(ru - u)
 
 println("error: $errx")
 
+# atmimshow(msnsolt.filterBank)
 # imshow(ru)

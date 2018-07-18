@@ -61,5 +61,3 @@ for idx = 1:nEpoch, x in trainingSet
     y = analyze(msnsolt, x; outputMode=:vector)
     println("Iterations $idx finished.")
 end
-
-MDCDL.save("MySample.json", msnsolt.filterBank)
