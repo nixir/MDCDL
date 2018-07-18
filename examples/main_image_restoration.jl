@@ -4,9 +4,9 @@ using ImageFiltering
 
 ### configurations ###
 dirNsolt = joinpath(Pkg.dir(),"MDCDL","examples","design","sample.json")
-σ_noise = 1e-2
-λ = 1e-2
-lv = 1 # tree level of NSOLT
+σ_noise = 1e-2 # variance of AWGN
+λ = 1e-2 # FISTA parameter
+lv = 3 # tree level of NSOLT
 ######################
 
 ### setup observed image
@@ -16,7 +16,6 @@ orgImg = testimage("lena")
 u = Array{RGB{Float64}}(orgImg)
 
 # AWGN
-# w = σ_noise * randn(size(u))
 w = mapc.((v)->σ_noise * randn(), u)
 
 # Degradation (pixel loss)
@@ -33,9 +32,10 @@ println(" - Decimation Factor = $(nsolt.decimationFactor)")
 println(" - Number of Channels = $(nsolt.nChannels)")
 println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
 
-# analysis/synthesis filter set
+# setup Multiscale NSOLT
 mlpfb = Multiscale(ParallelFB(nsolt), lv)
 
+# setup FISTA
 y0 = analyze(mlpfb, x; outputMode = :vector)
 
 gradOfLossFcn = (ty) -> begin
@@ -48,8 +48,11 @@ end
 
 hy = MDCDL.fista(gradOfLossFcn, proxFcn, 1.0, y0; maxIterations=400, viewFunction=viewFcn, absTol=eps())
 
+# restored image
 ru = synthesize(mlpfb, hy, size(x))
 
 errx = vecnorm(ru - u)
 
 println("error: $errx")
+
+# imshow(ru)
