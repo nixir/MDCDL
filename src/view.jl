@@ -1,4 +1,4 @@
-import ImageView, Gtk
+# import ImageView, Gtk
 
 function atmimshow(cc::MDCDL.Cnsolt{T,2,S}, clim = ImageView.CLim(-0.5,0.5)) where {S,T}
     P = cc.nChannels
