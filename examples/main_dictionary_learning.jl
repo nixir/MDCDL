@@ -1,13 +1,20 @@
+# RNSOLT dictionary learning with 1-vanishing moment
+
 using NLopt
 using MDCDL
 using TestImages, Images
 
 count = 0
 
+# data dimension
 D = 2
+# decimation factor
 df = (2,2)
-ord = (2,2)
-nch = (3,3)
+# polyphase order
+ord = (4,4)
+# number of symmetric/antisymmetric channel
+nch = (4,4)
+# tree level
 lv = 3
 
 szSubData = tuple(fill(32,D)...)
@@ -16,7 +23,7 @@ nEpoch = 10
 
 nsolt = Rnsolt(df, ord, nch)
 include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-randomInit!(nsolt)
+# randomInit!(nsolt)
 msnsolt = Multiscale(nsolt, lv)
 
 orgImg = Array{RGB{Float64}}(testimage("lena"))
@@ -26,11 +33,12 @@ y0 = analyze(msnsolt, trainingSet[1]; outputMode=:vector)
 sparsity = fld(length(y0),4)
 
 angs0, mus0 = getAngleParameters(msnsolt.filterBank)
+angs0s = angs0[sum(nch):end]
 
-opt = Opt(:LN_COBYLA, length(angs0))
+opt = Opt(:LN_COBYLA, length(angs0s))
 # opt = Opt(:LD_MMA, length(angs0))
-lower_bounds!(opt, -1*pi*ones(size(angs0)))
-upper_bounds!(opt,  1*pi*ones(size(angs0)))
+lower_bounds!(opt, -1*pi*ones(size(angs0s)))
+upper_bounds!(opt,  1*pi*ones(size(angs0s)))
 xtol_rel!(opt,1e-4)
 maxeval!(opt,400)
 
@@ -46,7 +54,8 @@ for idx = 1:nEpoch, x in trainingSet
         global count
         count::Int += 1
 
-        setAngleParameters!(msnsolt.filterBank, angs, mus0)
+        angsvm1 = vcat(zeros(sum(nch)-1), angs)
+        setAngleParameters!(msnsolt.filterBank, angsvm1, mus0)
         dist = x .- synthesize(msnsolt, hy, size(x))
         cst = vecnorm(dist)^2
 
@@ -55,9 +64,10 @@ for idx = 1:nEpoch, x in trainingSet
         cst
     end
     min_objective!(opt, objfunc)
-    (minf, minx, ret) = optimize(opt, angs0)
+    (minf, minx, ret) = optimize(opt, angs0s)
 
-    setAngleParameters!(msnsolt.filterBank, minx, mus0)
+    minxt = vcat(zeros(sum(nch)-1), minx);
+    setAngleParameters!(msnsolt.filterBank, minxt, mus0)
     y = analyze(msnsolt, x; outputMode=:vector)
     println("Iterations $idx finished.")
 end
