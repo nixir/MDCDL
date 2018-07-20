@@ -19,10 +19,10 @@ function atmimshow(cc::MDCDL.Rnsolt{T,2,S}) where {S,T}
     afs = MDCDL.getAnalysisFilters(cc);
 
     plotatms = map((f)->plot(Array{Gray{T}}(f .+ offset)), afs)
-    plotsyms = plot(plotatms[1:nch[1]]...; layout=(1,nch[1]))
-    plotasyms = plot(plotatms[nch[1]+1:end]...; layout=(1,nch[2]))
+    plotsyms = plot(plotatms[1:nch[1]]...; layout=(1,nch[1]), aspect_ratio=:equal)
+    plotasyms = plot(plotatms[nch[1]+1:end]...; layout=(1,nch[2]), aspect_ratio=:equal)
 
-    plot(plotsyms, plotasyms; layout=(2,1); )
+    plot(plotsyms, plotasyms; layout=(2,1), aspect_ratio=:equal)
 end
 
 # function atmimshow(mlcsc::MDCDL.MultiLayerCsc, args...)
