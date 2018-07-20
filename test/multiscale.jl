@@ -3,6 +3,7 @@ using MDCDL
 
 @testset "Multiscale" begin
     include("testsetGenerator.jl")
+    include("randomInit.jl")
 
     ccsd1D = cnsoltValidConfigSet1D()
     ccsd2D = cnsoltValidConfigSet2D()
