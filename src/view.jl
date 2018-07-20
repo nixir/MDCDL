@@ -1,38 +1,28 @@
-# import ImageView, Gtk
+using Plots, Images
 
-function atmimshow(cc::MDCDL.Cnsolt{T,2,S}, clim = ImageView.CLim(-0.5,0.5)) where {S,T}
+function atmimshow(cc::MDCDL.Cnsolt{T,2,S}) where {S,T}
     P = cc.nChannels
+    offset = 0.5
 
-    afs = MDCDL.getAnalysisFilters(cc)
+    afs = MDCDL.getAnalysisFilters(cc);
 
-    afsRe, afsIm = reim(afs)
-    sigclim = ImageView.Signal(clim)
+    plotsre = plot(map((f)->plot(Array{Gray{T}}(real.(f) .+ offset)), afs)...; layout=(1,P), aspect_ratio=:equal)
+    plotsim = plot(map((f)->plot(Array{Gray{T}}(imag.(f) .+ offset)), afs)...; layout=(1,P), aspect_ratio=:equal)
 
-    grid, frames, canvases = ImageView.canvasgrid((2, P))
-    for p = 1:P
-        zrr, sdr = ImageView.roi(afsRe[p], ImageView.default_axes(afsRe[p]))
-        zri, sdi = ImageView.roi(afsIm[p], ImageView.default_axes(afsIm[p]))
-        ImageView.imshow(frames[1,p], canvases[1,p], afsRe[p], sigclim, zrr, sdr)
-        ImageView.imshow(frames[2,p], canvases[2,p], afsIm[p], sigclim, zri, sdi)
-    end
-    win = Gtk.GtkWindow(grid)
-    ImageView.showall(win)
+    plot(plotsre, plotsim; layout=(2,1), aspect_ratio=:equal)
 end
 
-function atmimshow(cc::MDCDL.Rnsolt{T,2,S}, clim = ImageView.CLim(-0.5,0.5)) where {S,T}
-    P = sum(cc.nChannels)
+function atmimshow(cc::MDCDL.Rnsolt{T,2,S}) where {S,T}
+    nch = cc.nChannels
+    offset = 0.5
 
-    afs = MDCDL.getAnalysisFilters(cc)
+    afs = MDCDL.getAnalysisFilters(cc);
 
-    sigclim = ImageView.Signal(clim)
+    plotatms = map((f)->plot(Array{Gray{T}}(f .+ offset)), afs)
+    plotsyms = plot(plotatms[1:nch[1]]...; layout=(1,nch[1]))
+    plotasyms = plot(plotatms[nch[1]+1:end]...; layout=(1,nch[2]))
 
-    grid, frames, canvases = ImageView.canvasgrid((2, P))
-    for p = 1:P
-        zr, sd = ImageView.roi(afs[p], ImageView.default_axes(afs[p]))
-        ImageView.imshow(frames[1,p], canvases[1,p], afs[p], sigclim, zr, sd)
-    end
-    win = Gtk.GtkWindow(grid)
-    ImageView.showall(win)
+    plot(plotsyms, plotasyms; layout=(2,1); )
 end
 
 # function atmimshow(mlcsc::MDCDL.MultiLayerCsc, args...)
