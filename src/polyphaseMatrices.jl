@@ -272,10 +272,8 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
 
     data = hcat(
         [
-            vec(
-                x[ ((ind2sub(nBlocks,idx) .- 1) .* szBlock .+ primeBlock)... ]
-            )
-        for idx in 1:prod(nBlocks) ]...
+            vec(x[ ((cr.I .- 1) .* szBlock .+ primeBlock)... ])
+        for cr in CartesianRange(nBlocks) ]...
     )
     PolyphaseVector(data, nBlocks)
 end
