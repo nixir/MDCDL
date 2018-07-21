@@ -3,8 +3,11 @@
 using NLopt
 using MDCDL
 using TestImages, Images
-
+using Plots
 count = 0
+
+# output file name
+filename = ""
 
 # data dimension
 D = 2
@@ -70,4 +73,10 @@ for idx = 1:nEpoch, x in trainingSet
     setAngleParameters!(msnsolt.filterBank, minxt, mus0)
     y = analyze(msnsolt, x; outputMode=:vector)
     println("Iterations $idx finished.")
+end
+
+atmimshow(msnsolt.filterBank)
+
+if !isempty(filename)
+    MDCDL.save(filename, msnsolt.filterBank)
 end

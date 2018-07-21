@@ -1,6 +1,7 @@
 using MDCDL
-using Images, ImageView, TestImages
+using Images, TestImages
 using ImageFiltering
+using Plots
 
 ### configurations ###
 dirNsolt = joinpath(Pkg.dir(),"MDCDL","examples","design","sample.json")
@@ -32,8 +33,7 @@ println(" - Decimation Factor = $(nsolt.decimationFactor)")
 println(" - Number of Channels = $(nsolt.nChannels)")
 println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
 ### show analysis filters
-# afs = getAnalysisFilters(nsolt)
-# map((f)->imshow(f), afs)
+atmimshow(nsolt)
 
 # setup Multiscale NSOLT
 mlpfb = Multiscale(ParallelFB(nsolt), lv)
@@ -58,5 +58,9 @@ errx = vecnorm(ru - u)
 
 println("error: $errx")
 
+plotOrg = plot(u ; xlabel="Original Image")
+plotObs = plot(x ; xlabel="Observed Image")
+plotRes = plot(ru; xlabel="Restored Image")
+plot(plotOrg, plotObs, plotRes; aspect_ratio=:equal, layout=(1,3))
 # atmimshow(msnsolt.filterBank)
 # imshow(ru)
