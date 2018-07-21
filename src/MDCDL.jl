@@ -10,14 +10,13 @@ include("basicComplexDSP.jl")
 
 export PolyphaseVector
 export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
-export MultiLayerCsc
+export Multiscale, MultiLayerCsc
 export analyze, synthesize, adjoint_synthesize
 # export cconv
 export upsample, downsample
 export atmimshow
 # export getAnalysisBank
 export getAnalysisFilters, getSynthesisFilters
-export mdfilter
 export getAngleParameters, setAngleParameters!
 export mdarray2polyphase, polyphase2mdarray
 export iht
@@ -169,6 +168,11 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
 end
 
 promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
+
+struct Multiscale{T,D} <: CodeBook{T,D}
+    filterBank::FilterBank{T,D}
+    treeLevel::Int
+end
 
 struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int

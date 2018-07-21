@@ -1,23 +1,26 @@
 using MDCDL
-using Images, ImageView, TestImages
+using Images, TestImages
 using ImageFiltering
+using Plots
 
 ### configurations ###
 dirNsolt = joinpath(Pkg.dir(),"MDCDL","examples","design","sample.json")
-σ_noise = 3e-2
-λ = 1e-2
-lv = 1 # tree level of NSOLT
+σ_noise = 1e-2 # variance of AWGN
+λ = 1e-2 # FISTA parameter
+lv = 3 # tree level of NSOLT
 ######################
 
 ### setup observed image
-orgImg = testimage("cameraman")
-u = Array{Float64}(imresize(orgImg,(256,256)))
+# orgImg = testimage("cameraman")
+# u = Array{Float64}(imresize(orgImg,(256,256)))
+orgImg = testimage("lena")
+u = Array{RGB{Float64}}(orgImg)
 
 # AWGN
-w = σ_noise * randn(size(u))
+w = mapc.((v)->σ_noise * randn(), u)
 
 # Degradation (pixel loss)
-P = map((v)-> v > 0.1 ? 1 : 0, rand(size(u)))
+P = map((v)-> v > 0.01 ? 1 : 0, rand(size(u)))
 
 # Observation
 x = P.*u + w
@@ -29,24 +32,35 @@ println(" - Type = $(typeof(nsolt))")
 println(" - Decimation Factor = $(nsolt.decimationFactor)")
 println(" - Number of Channels = $(nsolt.nChannels)")
 println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
+### show analysis filters
+atmimshow(nsolt)
 
-# analysis/synthesis filter set
-pfb = ParallelFB(nsolt)
+# setup Multiscale NSOLT
+mlpfb = Multiscale(ParallelFB(nsolt), lv)
 
-y0 = analyze(pfb, x, lv)
+# setup FISTA
+y0 = analyze(mlpfb, x; outputMode = :vector)
 
 gradOfLossFcn = (ty) -> begin
-    - analyze(pfb, P.*(x - synthesize(pfb, ty, lv)), lv)
+    - analyze(mlpfb, P.*(x - synthesize(mlpfb, ty, size(x))); outputMode = :vector)
 end
 proxFcn = (ty, η) -> MDCDL.softshrink(ty, λ*η)
 viewFcn = (itrs, ty, err) -> begin
     println("# Iterations=$itrs, error=$err")
 end
 
-hy = MDCDL.fista(gradOfLossFcn, proxFcn, 1.0, y0; maxIterations=200, viewFunction=viewFcn, absTol=eps())
+hy = MDCDL.fista(gradOfLossFcn, proxFcn, 1.0, y0; maxIterations=400, viewFunction=viewFcn, absTol=eps())
 
-ru = Array{Gray{Float64}}(synthesize(pfb, hy, lv))
+# restored image
+ru = synthesize(mlpfb, hy, size(x))
 
 errx = vecnorm(ru - u)
 
 println("error: $errx")
+
+plotOrg = plot(u ; xlabel="Original Image")
+plotObs = plot(x ; xlabel="Observed Image")
+plotRes = plot(ru; xlabel="Restored Image")
+plot(plotOrg, plotObs, plotRes; aspect_ratio=:equal, layout=(1,3))
+# atmimshow(msnsolt.filterBank)
+# imshow(ru)

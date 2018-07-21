@@ -14,23 +14,16 @@ cconv(x::Array, h::Array) = cconv(promote(x,h)...)
 function upsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szx = size(x)
     output = zeros(T, szx .* factor)
-    # for idx = 1:prod(szx)
-    foreach(1:prod(szx)) do idx
-        sub = ind2sub(szx,idx)
-        output[((sub .- 1) .* factor .+ 1 .+ offset)...] = x[sub...]
+    foreach(CartesianRange(szx)) do cr
+        output[((cr.I .- 1) .* factor .+ 1 .+ offset)...] = x[cr.I...]
     end
     output
 end
 
 function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
-    szout = fld.(size(x), factor)
-    output = zeros(T, szout)
-    # for idx = 1:prod(szout)
-    foreach(1:prod(szout)) do idx
-        sub = ind2sub(szout,idx)
-        output[sub...] = x[((sub .-1) .* factor .+ 1 .+ offset)...]
+    map(CartesianRange(fld.(size(x), factor))) do cr
+        x[((cr.I .- 1) .* factor .+ 1 .+ offset)...]
     end
-    output
 end
 
 # matrix-formed CDFT operator for D-dimensional signal

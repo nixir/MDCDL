@@ -4,8 +4,8 @@ ImageView 0.6.0
 TestImages 0.2.0
 ImageMagick 0.5.2
 ImageFiltering 0.3.0
+Plots 0.17.3
 OffsetArrays 0.6.0
-Gtk 0.14.0
 Conda 0.8.1
 FFTW 0.0.4
 JSON 0.17.2

@@ -4,42 +4,23 @@ using OffsetArrays
 analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
-#
-analyze(fb::FilterBank, x; kwargs...) = analyze(fb, x, 1; kwargs...)[1]
-
 # Filter bank with polyphase representation
 function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 end
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, level::Integer; outputMode=:reshaped) where {TF,TX,D}
-    function subanalyze(sx::PolyphaseVector{TS,D}, k::Integer) where TS
-        sy = multipleAnalysisBank(fb, sx)
-        if k <= 1
-            return [ sy ]
-        else
-            nondcs = PolyphaseVector(sy.data[2:end,:], sy.nBlocks)
-
-            # reshape Low-pass MD filter
-            dcData = reshape(sy.data[1,:], sy.nBlocks)
-            nsx = mdarray2polyphase(dcData, fb.decimationFactor)
-            [ nondcs, subanalyze(nsx, k-1)... ]
-        end
-    end
-
-    y = subanalyze(x,level)
+function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+    y = multipleAnalysisBank(fb, x)
 
     if outputMode == :polyphase
         y
     elseif outputMode == :reshaped
-        map(y) do py
-            map(1:size(py.data,1)) do p
-                reshape(py.data[p,:], py.nBlocks)
-            end
-        end
+        [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
     elseif outputMode == :augumented
-        polyphase2mdarray.(y)
+        polyphase2mdarray(y)
+    elseif outputMode == :vector
+        vec(transpose(y.data))
     end
 end
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
@@ -209,18 +190,31 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     offset = df .- 1
     region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
 
+    y = map(pfb.analysisFilters) do f
+        ker = reflect(OffsetArray(f, region...))
+        fltimg = imfilter(x, ker, "circular", ImageFiltering.FIR())
+        downsample(fltimg, df, offset)
+    end
+
+    if outputMode == :reshaped
+        y
+    elseif outputMode == :augumented
+        cat(D+1, y...)
+    elseif outputMode == :vector
+        vcat(vec.(y)...)
+    end
+end
+adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
+
+function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        sy = map(pfb.analysisFilters) do f
-            ker = reflect(OffsetArray(f, region...))
-            fltimg = imfilter(sx, ker, "circular", ImageFiltering.FIR())
-            downsample(fltimg, df, offset)
-        end
+        sy = analyze(msfb.filterBank, sx; outputMode=:reshaped)
         if k <= 1
             return [ sy ]
         else
@@ -228,6 +222,18 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}, level::Integer) where {T
         end
     end
 
-    subanalyze(x,level)
+    y = subanalyze(x, msfb.treeLevel)
+    if outputMode == :reshaped
+        y
+    elseif outputMode == :augumented
+        map(y) do sy
+            cat(D+1, sy...)
+        end
+    elseif outputMode == :vector
+        vty = map(y) do sy
+            vcat(vec.(sy)...)
+        end
+        vcat(vty...)
+    end
 end
-adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pdf, x, args...; kwargs...)
+adjoint_synthesize(msfb::Multiscale{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
