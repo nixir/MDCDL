@@ -14,7 +14,7 @@ cconv(x::Array, h::Array) = cconv(promote(x,h)...)
 function upsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szx = size(x)
     output = zeros(T, szx .* factor)
-    Threads.@threads for idx = 1:prod(szx)
+    for idx = 1:prod(szx)
         sub = ind2sub(szx, idx)
         output[((sub .- 1) .* factor .+ 1 .+ offset)...] = x[sub...]
     end
@@ -24,7 +24,7 @@ end
 function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szout = fld.(size(x), factor)
     output = Array{T,D}(szout...)
-    Threads.@threads for idx = 1:prod(szout)
+    for idx = 1:prod(szout)
         output[idx] = x[((ind2sub(szout,idx) .- 1) .* factor .+ 1 .+ offset)...]
     end
     output

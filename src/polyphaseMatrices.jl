@@ -271,7 +271,7 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
     primeBlock = colon.(1, szBlock)
 
     data = Matrix{TX}(prod(szBlock),prod(nBlocks))
-    Threads.@threads for idx = 1:prod(nBlocks)
+    for idx = 1:prod(nBlocks)
         data[:,idx] = vec(x[ ((ind2sub(nBlocks, idx) .- 1) .* szBlock .+ primeBlock)... ])
     end
     PolyphaseVector(data, nBlocks)
@@ -279,7 +279,7 @@ end
 
 function mdarray2polyphase(x::Array{T,D}) where {T,D}
     data = Matrix{T}(size(x,D),prod(size(x)[1:D-1]))
-    Threads.@threads for p = 1:size(x,D)
+    for p = 1:size(x,D)
         data[p,:] = transpose(vec( x[fill(:,D-1)..., p] ))
     end
     nBlocks = size(x)[1:D-1]
@@ -293,7 +293,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
 
     primeBlock = colon.(1, szBlock)
     out = similar(x.data, (x.nBlocks .* szBlock)...)
-    Threads.@threads for idx = 1:prod(x.nBlocks)
+    for idx = 1:prod(x.nBlocks)
         subOut = (ind2sub(x.nBlocks,idx) .- 1) .* szBlock .+ primeBlock
         out[subOut...] = reshape(x.data[:,idx], szBlock...)
     end
@@ -304,7 +304,7 @@ function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
     P = size(x.data,1)
     output = Array{T,D+1}(x.nBlocks..., P)
 
-    Threads.@threads for p = 1:P
+    for p = 1:P
         output[fill(:,D)...,p] = reshape(x.data[p,:], x.nBlocks)
     end
     output
@@ -313,7 +313,7 @@ end
 function permutedims(x::PolyphaseVector{T,D}) where {T,D}
     S = fld(size(x.data,2), x.nBlocks[1])
     data = similar(x.data)
-    Threads.@threads for idx = 0:x.nBlocks[1]-1
+    for idx = 0:x.nBlocks[1]-1
         data[:,(1:S)+idx*S] = x.data[:, (1:x.nBlocks[1]:end) + idx]
     end
     nBlocks = tuple(circshift(collect(x.nBlocks),-1)...)
@@ -324,7 +324,7 @@ end
 function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
     S = fld(size(x.data,2), x.nBlocks[end])
     data = similar(x.data)
-    Threads.@threads for idx = 0:S-1
+    for idx = 0:S-1
         data[:,(1:x.nBlocks[end]) + idx*x.nBlocks[end]] = x.data[:, (1:S:end) + idx]
     end
     nBlocks = tuple(circshift(collect(x.nBlocks),1)...)
