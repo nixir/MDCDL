@@ -42,9 +42,8 @@ function multipleSynthesisBank(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) w
     P = cc.nChannels
 
     uy = concatenateAtoms(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks))
-    y = uy.data
 
-    py = (cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ])' *  y
+    py = (cc.initMatrices[1] * eye(Complex{TF},P,M))' * uy.data
 
     py .= ctranspose(cc.matrixF) * py
 
@@ -131,8 +130,8 @@ function multipleSynthesisBank(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) w
     uy = concatenateAtoms(cc, pvy)
     y = uy.data
 
-    W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
-    U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
+    W0 = cc.initMatrices[1] * eye(TF, P[1], cM)
+    U0 = cc.initMatrices[2] * eye(TF, P[2], fM)
     ty = vcat(W0' * y[1:P[1],:], U0' * y[P[1]+1:end,:])
 
     ty .= cc.matrixC' * ty

@@ -32,7 +32,7 @@ function multipleAnalysisBank(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) wh
     x = pvx.data
     tx = cc.matrixF * flipdim(x, 1)
 
-    V0 = cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ]
+    V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
     ux = V0 * tx
 
     extx = extendAtoms(cc, PolyphaseVector(ux,pvx.nBlocks))
@@ -117,8 +117,8 @@ function multipleAnalysisBank(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) wh
 
     tx = cc.matrixC * flipdim(x, 1)
 
-    W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
-    U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
+    W0 = cc.initMatrices[1] * eye(TF, P[1], cM)
+    U0 = cc.initMatrices[1] * eye(TF, p[2], fM)
 
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
 
