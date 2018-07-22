@@ -45,10 +45,10 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bounda
     for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
-        x = pvx.data
         # submatrices
-        xu = view(x, 1:fld(P, 2), :)
-        xl = view(x, (fld(P, 2)+1):P, :)
+        x = view(pvx.data, colon.(1,size(pvx.data))...)
+        xu = view(pvx.data, 1:fld(P, 2), :)
+        xl = view(pvx.data, (fld(P, 2)+1):P, :)
         for k = 1:cc.polyphaseOrder[d]
             B = getMatrixB(P, cc.paramAngles[d][k])
 
@@ -63,7 +63,6 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bounda
             xu .= cc.propMatrices[d][2*k-1] * xu
             xl .= cc.propMatrices[d][2*k]   * xl
         end
-        pvx.data .= x
     end
     return pvx
 end
@@ -75,13 +74,12 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
-        x = pvx.data
         # submatrices
-        xe  = view(x, 1:P-1, :)
-        xu1 = view(x, 1:fld(P,2), :)
-        xl1 = view(x, (fld(P,2)+1):(P-1), :)
-        xu2 = view(x, 1:cld(P,2), :)
-        xl2 = view(x, cld(P,2):P, :)
+        xe  = view(pvx.data, 1:P-1, :)
+        xu1 = view(pvx.data, 1:fld(P,2), :)
+        xl1 = view(pvx.data, (fld(P,2)+1):(P-1), :)
+        xu2 = view(pvx.data, 1:cld(P,2), :)
+        xl2 = view(pvx.data, cld(P,2):P, :)
         for k = 1:nStages[d]
             # first step
             B = getMatrixB(P, cc.paramAngles[d][2*k-1])
@@ -103,7 +101,6 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
             xl2 .= cc.propMatrices[d][4*k]   * xl2
             xu2 .= cc.propMatrices[d][4*k-1] * xu2
         end
-        pvx.data .= x
     end
     return pvx
 end
@@ -131,10 +128,10 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, bounda
     for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
-        x = pvx.data
         # submatrices
-        xu = view(x, 1:hP, :)
-        xl = view(x, (1:hP)+hP, :)
+        x  = view(pvx.data, colon.(1,size(pvx.data))...)
+        xu = view(pvx.data, 1:hP, :)
+        xl = view(pvx.data, (1:hP)+hP, :)
         for k = 1:cc.polyphaseOrder[d]
             x .= butterfly(x, hP)
 
@@ -147,7 +144,6 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, bounda
 
             xl .= cc.propMatrices[d][k] * xl
         end
-        pvx.data .= x
     end
     return pvx
 end
@@ -164,12 +160,12 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
-        x = pvx.data
         # submatrices
-        xs1 = view(x, minP+1:P, :)
-        xs2 = view(x, 1:maxP, :)
-        xmj = view(x, chMajor, :)
-        xmn = view(x, chMinor, :)
+        x   = view(pvx.data, colon.(1,size(pvx.data))...)
+        xs1 = view(pvx.data, minP+1:P, :)
+        xs2 = view(pvx.data, 1:maxP, :)
+        xmj = view(pvx.data, chMajor, :)
+        xmn = view(pvx.data, chMinor, :)
         for k = 1:nStages[d]
             # first step
             x   .= butterfly(x, minP)
@@ -185,7 +181,6 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
 
             xmj .= cc.propMatrices[d][2*k] * xmj
         end
-        pvx.data .= x
     end
     return pvx
 end

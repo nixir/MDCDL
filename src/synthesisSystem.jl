@@ -42,9 +42,7 @@ function multipleSynthesisBank(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) w
     P = cc.nChannels
 
     uy = concatenateAtoms(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks))
-    # y = uy.data
 
-    # py = (cc.initMatrices[1] * [ eye(Complex{TF},M) ; zeros(Complex{TF},P-M,M) ])' *  y
     py = (cc.initMatrices[1] * eye(Complex{TF},P,M))' * uy.data
 
     py .= ctranspose(cc.matrixF) * py
@@ -57,10 +55,10 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
-        y = pvy.data
         # submatrices
-        yu = view(y, 1:fld(P,2), :)
-        yl = view(y, (fld(P,2)+1):P, :)
+        y  = view(pvy.data, colon.(1,size(pvx.data))...)
+        yu = view(pvy.data, 1:fld(P,2), :)
+        yl = view(pvy.data, (fld(P,2)+1):P, :)
         for k = cc.polyphaseOrder[d]:-1:1
             yu .= cc.propMatrices[d][2*k-1]' * yu
             yl .= cc.propMatrices[d][2*k]'   * yl
@@ -75,7 +73,6 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
             end
             y .= B * y
         end
-        pvy.data .= y
         pvy = ipermutedims(pvy)
     end
     return pvy
@@ -89,13 +86,12 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
-        y = pvy.data
         # submatrices
-        ye  = view(y, 1:P-1, :)
-        yu1 = view(y, 1:fld(P,2), :)
-        yl1 = view(y, (fld(P,2)+1):(P-1), :)
-        yu2 = view(y, 1:cld(P,2), :)
-        yl2 = view(y, cld(P,2):P, :)
+        ye  = view(pvy.data, 1:P-1, :)
+        yu1 = view(pvy.data, 1:fld(P,2), :)
+        yl1 = view(pvy.data, (fld(P,2)+1):(P-1), :)
+        yu2 = view(pvy.data, 1:cld(P,2), :)
+        yl2 = view(pvy.data, cld(P,2):P, :)
         for k = nStages[d]:-1:1
             # second step
 
@@ -117,7 +113,6 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
             yl1 .= circshift(yl1, (0, -nShift))
             ye  .= B * ye
         end
-        pvy.data .= y
         pvy = ipermutedims(pvy)
     end
     return pvy
@@ -132,8 +127,6 @@ function multipleSynthesisBank(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}) w
     uy = concatenateAtoms(cc, pvy)
     y = uy.data
 
-    # W0 = cc.initMatrices[1] * vcat(eye(TF, cM), zeros(TF, P[1] - cM, cM))
-    # U0 = cc.initMatrices[2] * vcat(eye(TF, fM), zeros(TF, P[2] - fM, fM))
     W0 = cc.initMatrices[1] * eye(TF, P[1], cM)
     U0 = cc.initMatrices[2] * eye(TF, P[2], fM)
     ty = vcat(W0' * y[1:P[1],:], U0' * y[P[1]+1:end,:])
@@ -148,10 +141,10 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}) w
 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
-        y = pvy.data
         # submatrices
-        yu = view(y, 1:hP, :)
-        yl = view(y, (1:hP)+hP, :)
+        y  = view(pvy.data, colon.(1,size(pvy.data))...)
+        yu = view(pvy.data, 1:hP, :)
+        yl = view(pvy.data, (1:hP)+hP, :)
         for k = cc.polyphaseOrder[d]:-1:1
             yl .= cc.propMatrices[d][k]' * yl
 
@@ -163,7 +156,6 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}) w
             end
             y .= butterfly(y, hP)
         end
-        pvy.data .= y
         pvy = ipermutedims(pvy)
     end
     return pvy
@@ -180,12 +172,12 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
-        y = pvy.data
         # submatrices
-        ys1 = view(y, minP+1:P, :)
-        ys2 = view(y, 1:maxP, :)
-        ymj = view(y, chMajor, :)
-        ymn = view(y, chMinor, :)
+        y   = view(pvy.data, colon(1,size(pvy.data))...)
+        ys1 = view(pvy.data, minP+1:P, :)
+        ys2 = view(pvy.data, 1:maxP, :)
+        ymj = view(pvy.data, chMajor, :)
+        ymn = view(pvy.data, chMinor, :)
         for k = nStages[d]:-1:1
             # second step
             ymj .= cc.propMatrices[d][2*k]' * ymj
@@ -201,7 +193,6 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
             ys1 .= circshift(ys1, (0, -nShift))
             y   .= butterfly(y, minP)
         end
-        pvy.data .= y
         pvy = ipermutedims(pvy)
     end
     return pvy
