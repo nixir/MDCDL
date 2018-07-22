@@ -110,13 +110,11 @@ function multipleAnalysisBank(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) wh
     cM = cld(M,2)
     fM = fld(M,2)
     P = cc.nChannels
-    x = pvx.data
-
-    tx = cc.matrixC * flipdim(x, 1)
 
     W0 = cc.initMatrices[1] * eye(TF, P[1], cM)
     U0 = cc.initMatrices[2] * eye(TF, P[2], fM)
 
+    tx = cc.matrixC * flipdim(pvx.data, 1)
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
 
     extendAtoms(cc, ux)

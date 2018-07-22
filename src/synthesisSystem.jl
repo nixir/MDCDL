@@ -26,7 +26,7 @@ end
 
 # outputMode = :vector
 function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{TY}, szdata::NTuple{D}; kwargs...) where {TF, TY, D}
-    yaug = reshape(y, fld(szdata, fb.decimationFactor)..., p);
+    yaug = reshape(y, fld.(szdata, fb.decimationFactor)..., sum(fb.nChannels));
     synthesize(fb, yaug; kwargs...)
 end
 
@@ -56,7 +56,7 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
-        y  = view(pvy.data, colon.(1,size(pvx.data))...)
+        y  = view(pvy.data, colon.(1,size(pvy.data))...)
         yu = view(pvy.data, 1:fld(P,2), :)
         yl = view(pvy.data, (fld(P,2)+1):P, :)
         for k = cc.polyphaseOrder[d]:-1:1
@@ -173,7 +173,7 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
-        y   = view(pvy.data, colon(1,size(pvy.data))...)
+        y   = view(pvy.data, colon.(1,size(pvy.data))...)
         ys1 = view(pvy.data, minP+1:P, :)
         ys2 = view(pvy.data, 1:maxP, :)
         ymj = view(pvy.data, chMajor, :)
