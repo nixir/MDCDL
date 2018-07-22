@@ -10,23 +10,13 @@ function getMatrixB(P::Integer, angs::Vector{T}) where T
     cs = cos.(psangs)
     ss = sin.(psangs)
 
-    subMatFcn = (x) -> sparse([1,1,2,2], [1,2,1,2], x)
+    LC = [[ (-1im*cs[n]) (-1im*ss[n]); (cs[n]) (-ss[n]) ] for n in 1:fld(hP,2) ]
+    LS = [[ (ss[n]) (cs[n]); (1im*ss[n]) (-1im*cs[n]) ] for n in 1:fld(hP,2) ]
 
-    LC = [
-        subMatFcn(
-            [ -1im*cs[n], -1im*ss[n], cs[n], -ss[n] ]
-        )
-    for n in 1:fld(hP,2) ]
-    LS = [
-        subMatFcn(
-            [ ss[n], cs[n], 1im*ss[n], -1im*cs[n] ]
-        )
-    for n in 1:fld(hP,2) ]
-
-    C, S = if hP % 2 == 0
-        (Array(blkdiag(LC...)), Array(blkdiag(LS...)))
+    C, S = if iseven(hP)
+        (cat([1,2],LC...), cat([1,2],LS...))
     else
-        (Array(blkdiag(LC...,sparse([1],[1],[1]))), Array(blkdiag(LS...,sparse([1],[1],[1im]))))
+        (cat([1,2],LC...,1), cat([1,2],LS...,1im))
     end
 
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
