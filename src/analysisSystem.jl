@@ -5,17 +5,10 @@ analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
 # Filter bank with polyphase representation
-function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D}
-    analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
-end
-adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
+function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+    y = analyze(fb, mdarray2polyphase(x, fb.decimationFactor))
 
-function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}; outputMode=:reshaped) where {TF,TX,D}
-    y = multipleAnalysisBank(fb, x)
-
-    if outputMode == :polyphase
-        y
-    elseif outputMode == :reshaped
+    if outputMode == :reshaped
         [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
     elseif outputMode == :augumented
         polyphase2mdarray(y)
@@ -23,9 +16,11 @@ function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}; outputMode=:re
         vec(transpose(y.data))
     end
 end
+adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
+
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function multipleAnalysisBank(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
@@ -105,7 +100,7 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function multipleAnalysisBank(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)

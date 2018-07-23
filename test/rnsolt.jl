@@ -73,7 +73,7 @@ using MDCDL
 
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
-        oms = [ :polyphase, :reshaped, :augumented ]
+        oms = [ :reshaped, :augumented ]
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
