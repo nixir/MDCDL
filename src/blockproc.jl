@@ -1,24 +1,16 @@
-function blockproc(A::Array{T,D}, blockSize::NTuple{D, Integer}, fun::Function) where {T,D}
-    nBlocks = div.(size(A),blockSize)
-    primeBlock = colon.(1,blockSize)
-
-    out = simular(A)
-    foreach(CartesianRange(nBlocks)) do cr
-        block = (cr.I .- 1) .* blockSize .+ primeBlock
-        out[block...] = fun(A[block...])
-    end
-    out
+function blockproc(fun::Function, A::AbstractArray{T,D}, blockSize::NTuple{D, Integer}) where {T,D}
+     blockproc!(fun, similar(A), A, blockSize)
 end
 
-function blockproc!(A::Array{T,D}, blockSize::NTuple{D, Integer}, fun::Function) where {T,D}
-    nBlocks = div.(size(A),blockSize)
+function blockproc!(fun::Function, dst::AbstractArray{T,D}, src::AbstractArray{T,D}, blockSize::NTuple{D, Integer}, ) where {T,D}
+    nBlocks = div.(size(src), blockSize)
     primeBlock = colon.(1,blockSize)
 
-    foreach(CartesianRange(nBlocks)) do cr
-        block = (cr.I .- 1) .* blockSize .+ primeBlock
-        fun(A[block...])
+    for idx = 1:prod(nBlocks)
+        block = (ind2sub(nBlocks, idx) .- 1) .* blockSize .+ primeBlock
+        dst[block...] = fun(src[block...])
     end
-    A
+    dst
 end
 
 function butterfly(x::AbstractArray{T,2}, p::Integer) where T
