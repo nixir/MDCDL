@@ -21,6 +21,6 @@ function blockproc!(A::Array{T,D}, blockSize::NTuple{D, Integer}, fun::Function)
     A
 end
 
-function butterfly(x::Matrix, p::Integer)
+function butterfly(x::AbstractArray{T,2}, p::Integer) where T
     vcat((x[1:p,:] + x[end-(p-1):end,:])/sqrt(2), x[p+1:end-p,:] ,(x[1:p,:] - x[end-(p-1):end,:])/sqrt(2))
 end

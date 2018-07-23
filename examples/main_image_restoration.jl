@@ -54,13 +54,14 @@ hy = MDCDL.fista(gradOfLossFcn, proxFcn, 1.0, y0; maxIterations=400, viewFunctio
 # restored image
 ru = synthesize(mlpfb, hy, size(x))
 
+psnr = (a, ref) -> 10*log10(1/(vecnorm(a-ref)^2/length(a)))
 errx = vecnorm(ru - u)
 
 println("error: $errx")
 
-plotOrg = plot(u ; xlabel="Original Image")
-plotObs = plot(x ; xlabel="Observed Image")
-plotRes = plot(ru; xlabel="Restored Image")
+plotOrg = plot(u ; xlabel=string("Original Image"), aspect_ratio=:equal)
+plotObs = plot(x ; xlabel=string("Observed Image\nPSNR=",trunc(psnr(x,u),3)), aspect_ratio=:equal)
+plotRes = plot(ru; xlabel=string("Restored Image\nPSNR=",trunc(psnr(ru,u),3)), aspect_ratio=:equal)
 plot(plotOrg, plotObs, plotRes; aspect_ratio=:equal, layout=(1,3))
 # atmimshow(msnsolt.filterBank)
 # imshow(ru)
