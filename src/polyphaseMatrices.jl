@@ -243,6 +243,9 @@ function getSynthesisFilters(rc::MDCDL.Rnsolt)
     end
 end
 
+getAnalysisFilters(pfb::ParallelFB) = pfb.analysisFilters
+getSynthesisFilters(pfb::ParallelFB) = pfb.synthesisFilters
+
 # function convert(::Type{Array}, x::PolyphaseVector{T,D}) where {T,D}
 #     primeBlock = colon.(1, x.szBlock)
 #     output = Array{T,D}((x.szBlock .* x.nBlocks)...)
