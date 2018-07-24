@@ -20,7 +20,7 @@ adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) wh
 
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
@@ -30,7 +30,7 @@ function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,
     V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
     ux = V0 * tx
 
-    extx = extendAtoms(cc, PolyphaseVector(ux,pvx.nBlocks))
+    extx = extendAtoms(cc, PolyphaseVector(ux,pvx.nBlocks); kwargs...)
     PolyphaseVector(cc.symmetry*extx.data, extx.nBlocks)
 end
 
@@ -100,7 +100,7 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
@@ -112,7 +112,7 @@ function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,
     tx = cc.matrixC * flipdim(pvx.data, 1)
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
 
-    extendAtoms(cc, ux)
+    extendAtoms(cc, ux; kwargs...)
 end
 
 function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}

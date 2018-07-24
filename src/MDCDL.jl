@@ -38,14 +38,12 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Tuple{Int,Int}
 
-    nVanishingMoment::Int
-
     initMatrices::Array{Matrix{T},1}
     propMatrices::Array{Array{Matrix{T},1},1}
 
     matrixC::Matrix{T}
 
-    function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int, Int}; vanishingMoment::Int = 0) where {T,D}
+    function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int, Int}) where {T,D}
         P = sum(nChs)
         M = prod(df)
         if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
@@ -53,9 +51,6 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
         end
         if nChs[1] != nChs[2] && any(isodd.(ppo))
             throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet. received values: decimationFactor=$df, nChannels=$nChs, polyphaseOrder = $ppo"))
-        end
-        if vanishingMoment != 0 && vanishingMoment != 1
-            throw(ArgumentError("The number of vanishing moments must be 0 or 1."))
         end
 
         if nChs[1] == nChs[2]
@@ -86,7 +81,7 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
 
         mtxc = flipdim(MDCDL.permdctmtx(df...),2)
 
-        new{T,D,S}(df, ppo, nChs, vanishingMoment, initMts, propMts, mtxc)
+        new{T,D,S}(df, ppo, nChs, initMts, propMts, mtxc)
     end
     Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
 end
@@ -105,7 +100,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
     matrixF::Matrix{Complex{T}}
 
     # constructor
-    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; vanishingMoment::Int = 0) where {T,D}
+    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
         if prod(df) > nChs
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
