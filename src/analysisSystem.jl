@@ -115,7 +115,7 @@ function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     extendAtoms(cc, ux; kwargs...)
 end
 
-function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     hP = cc.nChannels[1]
 
     for d = 1:D
@@ -157,7 +157,7 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
         # submatrices
         xu  = view(pvx.data, 1:minP, :)
         xl  = view(pvx.data, (P-minP+1):P, :)
-        xs1 = view(pvx.data, minP+1:P, :)
+        xs1 = view(pvx.data, (minP+1):P, :)
         xs2 = view(pvx.data, 1:maxP, :)
         xmj = view(pvx.data, chMajor, :)
         xmn = view(pvx.data, chMinor, :)

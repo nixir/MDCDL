@@ -171,7 +171,7 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
         # submatrices
         yu  = view(pvy.data, 1:minP, :)
         yl  = view(pvy.data, (P-minP+1):P, :)
-        ys1 = view(pvy.data, minP+1:P, :)
+        ys1 = view(pvy.data, (minP+1):P, :)
         ys2 = view(pvy.data, 1:maxP, :)
         ymj = view(pvy.data, chMajor, :)
         ymn = view(pvy.data, chMinor, :)
