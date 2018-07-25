@@ -122,18 +122,19 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, bounda
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
-        x  = view(pvx.data, colon.(1, size(pvx.data))...)
         xu = view(pvx.data, 1:hP, :)
         xl = view(pvx.data, (1:hP)+hP, :)
         for k = 1:cc.polyphaseOrder[d]
-            x .= butterfly(x, hP)
+            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            xu .= tu; xl .= tl
 
             if isodd(k)
                 xl .= circshift(xl, (0, nShift))
             else
                 xu .= circshift(xu, (0, -nShift))
             end
-            x .= butterfly(x, hP)
+            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            xu .= tu; xl .= tl
 
             xl .= cc.propMatrices[d][k] * xl
         end
@@ -154,23 +155,32 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
-        x   = view(pvx.data, colon.(1, size(pvx.data))...)
+        xu  = view(pvx.data, 1:minP, :)
+        xl  = view(pvx.data, (P-minP+1):P, :)
         xs1 = view(pvx.data, minP+1:P, :)
         xs2 = view(pvx.data, 1:maxP, :)
         xmj = view(pvx.data, chMajor, :)
         xmn = view(pvx.data, chMinor, :)
         for k = 1:nStages[d]
             # first step
-            x   .= butterfly(x, minP)
+            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            xu .= tu; xl .= tl
+
             xs1 .= circshift(xs1, (0, nShift))
-            x   .= butterfly(x, minP)
+
+            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            xu .= tu; xl .= tl
 
             xmn .= cc.propMatrices[d][2*k-1] * xmn
 
             # second step
-            x   .= butterfly(x, minP)
+            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            xu .= tu; xl .= tl
+
             xs2 .= circshift(xs2, (0, -nShift))
-            x   .= butterfly(x, minP)
+
+            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            xu .= tu; xl .= tl
 
             xmj .= cc.propMatrices[d][2*k] * xmj
         end
@@ -203,7 +213,11 @@ adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) wh
 function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
     function subanalyze(sx::Array{TS,D}, k::Integer) where TS
         sy = analyze(msfb.filterBank, sx; outputMode=:reshaped)
-        ifelse(k <= 1, [sy], [sy[2:end], subanalyze(sy[1], k-1)...])
+        if k <= 1
+            [sy]
+        else
+            [sy[2:end], subanalyze(sy[1], k-1)...]
+        end
     end
 
     y = subanalyze(x, msfb.treeLevel)

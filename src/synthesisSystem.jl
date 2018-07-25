@@ -137,19 +137,20 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
-        y  = view(pvy.data, colon.(1,size(pvy.data))...)
         yu = view(pvy.data, 1:hP, :)
         yl = view(pvy.data, (1:hP)+hP, :)
         for k = cc.polyphaseOrder[d]:-1:1
             yl .= cc.propMatrices[d][k]' * yl
 
-            y  .= butterfly(y, hP)
+            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            yu .= tu; yl .= tl
             if isodd(k)
                 yl .= circshift(yl, (0, -nShift))
             else
                 yu .= circshift(yu, (0, nShift))
             end
-            y .= butterfly(y, hP)
+            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            yu .= tu; yl .= tl
         end
         pvy = ipermutedims(pvy)
     end
@@ -168,7 +169,8 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
-        y   = view(pvy.data, colon.(1,size(pvy.data))...)
+        yu  = view(pvy.data, 1:minP, :)
+        yl  = view(pvy.data, (P-minP+1):P, :)
         ys1 = view(pvy.data, minP+1:P, :)
         ys2 = view(pvy.data, 1:maxP, :)
         ymj = view(pvy.data, chMajor, :)
@@ -177,16 +179,24 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
             # second step
             ymj .= cc.propMatrices[d][2*k]' * ymj
 
-            y   .= butterfly(y, minP)
+            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            yu .= tu; yl .= tl
+
             ys2 .= circshift(ys2, (0, nShift))
-            y   .= butterfly(y, minP)
+
+            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            yu .= tu; yl .= tl
 
             # first step
             ymn .= cc.propMatrices[d][2*k-1]' * ymn
 
-            y   .= butterfly(y, minP)
+            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            yu .= tu; yl .= tl
+
             ys1 .= circshift(ys1, (0, -nShift))
-            y   .= butterfly(y, minP)
+
+            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            yu .= tu; yl .= tl
         end
         pvy = ipermutedims(pvy)
     end
@@ -209,7 +219,11 @@ end
 # outputMode= :reshaped
 function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) where {TF,TY,D}
     function subsynthesize(sy::Vector, k::Integer)
-        ya = ifelse(k <= 1, sy[1], [ subsynthesize(sy[2:end], k-1), sy[1]... ])
+        ya = if k <= 1
+            sy[1]
+        else
+            [ subsynthesize(sy[2:end], k-1), sy[1]... ]
+        end
         synthesize(msfb.filterBank, ya)
     end
     subsynthesize(y, msfb.treeLevel)
