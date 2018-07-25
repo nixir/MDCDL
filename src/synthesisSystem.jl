@@ -209,11 +209,7 @@ end
 # outputMode= :reshaped
 function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) where {TF,TY,D}
     function subsynthesize(sy::Vector, k::Integer)
-        ya = if k <= 1
-            sy[1]
-        else
-            [ subsynthesize(sy[2:end], k-1), sy[1]... ]
-        end
+        ya = ifelse(k <= 1, sy[1], [ subsynthesize(sy[2:end], k-1), sy[1]... ])
         synthesize(msfb.filterBank, ya)
     end
     subsynthesize(y, msfb.treeLevel)
