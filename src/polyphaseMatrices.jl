@@ -143,9 +143,11 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
             U = propMats[k]
 
             # B Λ(z_d) B'
-            ppm = MDCDL.butterfly(ppm, nch[1])
+            # ppm = MDCDL.butterfly(ppm, nch[1])
+            butterfly!(ppm, nch[1])
             ppm[rngLower...] = circshift(ppm[rngLower...],(0, nStride))
-            ppm = MDCDL.butterfly(ppm, nch[1])
+            butterfly!(ppm, nch[1])
+            # ppm = MDCDL.butterfly(ppm, nch[1])
 
             ppm[rngLower...] = U * ppm[rngLower...]
         end
@@ -186,9 +188,9 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
             U = propMats[2*k-1]
 
             # B Λ(z_d) B'
-            ppm = butterfly(ppm, minP)
+            butterfly!(ppm, minP)
             ppm[minP+1:end,:] = circshift(ppm[minP+1:end,:],(0, nStride))
-            ppm = butterfly(ppm, minP)
+            butterfly!(ppm, minP)
 
             ppm[chMinor,:] = U * ppm[chMinor,:]
 
@@ -196,9 +198,9 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
             W = propMats[2*k]
 
             # B Λ(z_d) B'
-            ppm = butterfly(ppm, minP)
+            butterfly!(ppm, minP)
             ppm[maxP+1:end,:] = circshift(ppm[maxP+1:end,:],(0, nStride))
-            ppm = butterfly(ppm, minP)
+            butterfly!(ppm, minP)
 
             ppm[chMajor,:] = W * ppm[chMajor,:]
         end
@@ -345,3 +347,11 @@ function setindex!(A::PolyphaseVector, v, I::Vararg{Int, 2})
 end
 
 copy(A::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(A.data, A.nBlocks)
+
+function butterfly!(x::AbstractArray{T,2}, p::Integer) where T
+    xu = x[1:p,:]
+    xl = x[end-(p-1):end,:]
+
+    x[1:p,:]           .= (xu + xl) / sqrt(2)
+    x[end-(p-1):end,:] .= (xu - xl) / sqrt(2)
+end
