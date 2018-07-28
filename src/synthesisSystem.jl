@@ -51,7 +51,7 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
-        y  = view(pvy.data, colon.(1,size(pvy.data))...)
+        y  = view(pvy.data, colon.(1, size(pvy.data))...)
         yu = view(pvy.data, 1:fld(P,2), :)
         yl = view(pvy.data, (fld(P,2)+1):P, :)
         for k = cc.polyphaseOrder[d]:-1:1
@@ -218,15 +218,16 @@ end
 
 # outputMode= :reshaped
 function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) where {TF,TY,D}
-    function subsynthesize(sy::Vector, k::Integer)
-        ya = if k <= 1
-            sy[1]
-        else
-            [ subsynthesize(sy[2:end], k-1), sy[1]... ]
-        end
-        synthesize(msfb.filterBank, ya)
+    subsynthesize(msfb.filterBank, y, msfb.treeLevel)
+end
+
+function subsynthesize(fb::FilterBank, sy::Vector, k::Integer)
+    ya = if k <= 1
+        sy[1]
+    else
+        [ subsynthesize(fb, sy[2:end], k-1), sy[1]... ]
     end
-    subsynthesize(y, msfb.treeLevel)
+    synthesize(fb, ya)
 end
 
 # outputMode = :augumented
