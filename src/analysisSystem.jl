@@ -104,10 +104,10 @@ function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
-    P = cc.nChannels
+    nch = cc.nChannels
 
-    W0 = cc.initMatrices[1] * eye(TF, P[1], cM)
-    U0 = cc.initMatrices[2] * eye(TF, P[2], fM)
+    W0 = cc.initMatrices[1] * eye(TF, nch[1], cM)
+    U0 = cc.initMatrices[2] * eye(TF, nch[2], fM)
 
     tx = cc.matrixC * flipdim(pvx.data, 1)
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
@@ -125,7 +125,7 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bounda
         xu = view(pvx.data, 1:hP, :)
         xl = view(pvx.data, (1:hP)+hP, :)
         for k = 1:cc.polyphaseOrder[d]
-            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
             if isodd(k)
@@ -133,7 +133,7 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bounda
             else
                 xu .= circshift(xu, (0, -nShift))
             end
-            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
             xl .= cc.propMatrices[d][k] * xl
@@ -163,23 +163,23 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
         xmn = view(pvx.data, chMinor, :)
         for k = 1:nStages[d]
             # first step
-            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
             xs1 .= circshift(xs1, (0, nShift))
 
-            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
             xmn .= cc.propMatrices[d][2*k-1] * xmn
 
             # second step
-            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
             xs2 .= circshift(xs2, (0, -nShift))
 
-            tu, tl = (xu + xl)/sqrt(2), (xu - xl)/sqrt(2)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
             xmj .= cc.propMatrices[d][2*k] * xmj

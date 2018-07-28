@@ -117,14 +117,14 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
-    P = cc.nChannels
+    nch = cc.nChannels
 
     uy = concatenateAtoms(cc, pvy; kwargs...)
     y = uy.data
 
-    W0 = cc.initMatrices[1] * eye(TF, P[1], cM)
-    U0 = cc.initMatrices[2] * eye(TF, P[2], fM)
-    ty = vcat(W0' * y[1:P[1],:], U0' * y[P[1]+1:end,:])
+    W0 = cc.initMatrices[1] * eye(TF, nch[1], cM)
+    U0 = cc.initMatrices[2] * eye(TF, nch[2], fM)
+    ty = vcat(W0' * y[1:nch[1],:], U0' * y[nch[1]+1:end,:])
 
     ty .= cc.matrixC' * ty
 
@@ -142,14 +142,14 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
         for k = cc.polyphaseOrder[d]:-1:1
             yl .= cc.propMatrices[d][k]' * yl
 
-            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
             if isodd(k)
                 yl .= circshift(yl, (0, -nShift))
             else
                 yu .= circshift(yu, (0, nShift))
             end
-            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
         end
         pvy = ipermutedims(pvy)
@@ -179,23 +179,23 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
             # second step
             ymj .= cc.propMatrices[d][2*k]' * ymj
 
-            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
             ys2 .= circshift(ys2, (0, nShift))
 
-            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
             # first step
             ymn .= cc.propMatrices[d][2*k-1]' * ymn
 
-            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
             ys1 .= circshift(ys1, (0, -nShift))
 
-            tu, tl = (yu + yl)/sqrt(2), (yu - yl)/sqrt(2)
+            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
         end
         pvy = ipermutedims(pvy)
