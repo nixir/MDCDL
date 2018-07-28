@@ -20,7 +20,7 @@ nch = (4,4)
 # tree level
 lv = 3
 
-szSubData = tuple(fill(32,D)...)
+szSubData = tuple(fill(8,D)...)
 nSubData = 64
 nEpoch = 10
 
@@ -30,9 +30,9 @@ include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
 msnsolt = Multiscale(nsolt, lv)
 
 orgImg = Array{RGB{Float64}}(testimage("lena"))
-trainingSet = [ orgImg[(colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData)))...] for nsd in 1:nSubData ]
+trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
 
-y0 = analyze(msnsolt, trainingSet[1]; outputMode=:vector)
+y0 = analyze(msnsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
 sparsity = fld(length(y0),4)
 
 angs0, mus0 = getAngleParameters(msnsolt.filterBank)
@@ -50,7 +50,8 @@ maxeval!(opt,400)
 
 # (minf, minx, ret) = optimize(opt, [1.234, 5.678])
 y = y0
-for idx = 1:nEpoch, x in trainingSet
+for idx = 1:nEpoch, subx in trainingIds
+    x = orgImg[subx...]
     hy = MDCDL.iht(msnsolt, x, y, sparsity; maxIterations=400, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
     count = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
