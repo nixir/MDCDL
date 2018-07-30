@@ -58,10 +58,10 @@ function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{
 
         ty1 = sig[idx1]*(-s * y[sub1...] + c * y[sub2...])
         ty2 = sig[idx2]*(-c * y[sub1...] - s * y[sub2...])
-        output[nr] = dot(x[sub1...], ty1) + dot(x[sub2...], ty2)
+        output[nr] = vecdot(x[sub1...], ty1) + vecdot(x[sub2...], ty2)
         nr += 1
     end
     output
 end
 
-scalarGradOfOrthonormalMatrix(x::AbstractVector, y::AbstractVector, A::AbstractMatrix) = scalarGradOfOrthonormalMatrix(x, y, mat2rotasions...)
+scalarGradOfOrthonormalMatrix(x::AbstractArray, y::AbstractArray, A::AbstractMatrix) = scalarGradOfOrthonormalMatrix(x, y, mat2rotations(A)...)
