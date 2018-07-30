@@ -20,7 +20,7 @@ adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) wh
 
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
@@ -30,7 +30,7 @@ function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,
     V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
     ux = V0 * tx
 
-    extx = extendAtoms(cc, PolyphaseVector(ux,pvx.nBlocks))
+    extx = extendAtoms(cc, PolyphaseVector(ux,pvx.nBlocks); kwargs...)
     PolyphaseVector(cc.symmetry*extx.data, extx.nBlocks)
 end
 
@@ -41,7 +41,7 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bounda
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
-        x = view(pvx.data, colon.(1,size(pvx.data))...)
+        x = view(pvx.data, colon.(1, size(pvx.data))...)
         xu = view(pvx.data, 1:fld(P, 2), :)
         xl = view(pvx.data, (fld(P, 2)+1):P, :)
         for k = 1:cc.polyphaseOrder[d]
@@ -100,40 +100,41 @@ function extendAtoms(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}) where {TF,TX,D,S}
+function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
-    P = cc.nChannels
+    nch = cc.nChannels
 
-    W0 = cc.initMatrices[1] * eye(TF, P[1], cM)
-    U0 = cc.initMatrices[2] * eye(TF, P[2], fM)
+    W0 = cc.initMatrices[1] * eye(TF, nch[1], cM)
+    U0 = cc.initMatrices[2] * eye(TF, nch[2], fM)
 
     tx = cc.matrixC * flipdim(pvx.data, 1)
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
 
-    extendAtoms(cc, ux)
+    extendAtoms(cc, ux; kwargs...)
 end
 
-function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}, boundary=:circular) where {TF,TX,D}
+function extendAtoms(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
     hP = cc.nChannels[1]
 
     for d = 1:D
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
-        x  = view(pvx.data, colon.(1,size(pvx.data))...)
         xu = view(pvx.data, 1:hP, :)
         xl = view(pvx.data, (1:hP)+hP, :)
         for k = 1:cc.polyphaseOrder[d]
-            x .= butterfly(x, hP)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+            xu .= tu; xl .= tl
 
             if isodd(k)
                 xl .= circshift(xl, (0, nShift))
             else
                 xu .= circshift(xu, (0, -nShift))
             end
-            x .= butterfly(x, hP)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+            xu .= tu; xl .= tl
 
             xl .= cc.propMatrices[d][k] * xl
         end
@@ -154,23 +155,32 @@ function extendAtoms(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bound
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
-        x   = view(pvx.data, colon.(1,size(pvx.data))...)
-        xs1 = view(pvx.data, minP+1:P, :)
+        xu  = view(pvx.data, 1:minP, :)
+        xl  = view(pvx.data, (P-minP+1):P, :)
+        xs1 = view(pvx.data, (minP+1):P, :)
         xs2 = view(pvx.data, 1:maxP, :)
         xmj = view(pvx.data, chMajor, :)
         xmn = view(pvx.data, chMinor, :)
         for k = 1:nStages[d]
             # first step
-            x   .= butterfly(x, minP)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+            xu .= tu; xl .= tl
+
             xs1 .= circshift(xs1, (0, nShift))
-            x   .= butterfly(x, minP)
+
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+            xu .= tu; xl .= tl
 
             xmn .= cc.propMatrices[d][2*k-1] * xmn
 
             # second step
-            x   .= butterfly(x, minP)
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+            xu .= tu; xl .= tl
+
             xs2 .= circshift(xs2, (0, -nShift))
-            x   .= butterfly(x, minP)
+
+            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+            xu .= tu; xl .= tl
 
             xmj .= cc.propMatrices[d][2*k] * xmj
         end
@@ -201,16 +211,7 @@ end
 adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
 
 function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
-    function subanalyze(sx::Array{TS,D}, k::Integer) where TS
-        sy = analyze(msfb.filterBank, sx; outputMode=:reshaped)
-        if k <= 1
-            return [ sy ]
-        else
-            [ sy[2:end], subanalyze(sy[1], k-1)... ]
-        end
-    end
-
-    y = subanalyze(x, msfb.treeLevel)
+    y = subanalyze(msfb.filterBank, x, msfb.treeLevel)
     if outputMode == :reshaped
         y
     elseif outputMode == :augumented
@@ -225,3 +226,12 @@ function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) w
     end
 end
 adjoint_synthesize(msfb::Multiscale{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
+
+function subanalyze(fb::FilterBank{TF,D}, sx::Array{TS,D}, k::Integer; kwargs...) where {TF,TS,D}
+    sy = analyze(fb, sx; outputMode=:reshaped)
+    if k <= 1
+        [sy]
+    else
+        [sy[2:end], subanalyze(fb, sy[1], k-1)...]
+    end
+end
