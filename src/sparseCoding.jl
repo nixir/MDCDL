@@ -12,7 +12,7 @@ function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; maxIt
         xprev = x
         x = prox(x - stepSize*gradOfLossFcn(x), stepSize)
 
-        errx = vecnorm(x-xprev)
+        errx = vecnorm(x-xprev)^2
 
         viewFunction(nItr, x, errx)
 
@@ -37,7 +37,7 @@ function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; maxI
         t = (1 + sqrt(1+4*t^2)) / 2
         y = x + (tprev-1)/t * (x - xprev)
 
-        errx = vecnorm(x-xprev)
+        errx = vecnorm(x-xprev)^2
 
         viewFunction(nItr, x, errx)
 
@@ -69,7 +69,7 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
         x = p
         v = q
 
-        errx = vecnorm(x - xprev)
+        errx = vecnorm(x - xprev)^2
         viewFunction(nItr, x, errx)
     end
 end
@@ -86,7 +86,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; 
         y = hardshrink(y + adjointSynthesisFunc(x - recx), K; lt=lt)
         recx = synthesisFunc(y)
 
-        errx = vecnorm(x - recx)^2/len
+        errx = vecnorm(x - recx)^2
         # erry = vecnorm(y - yprev)^2
 
         if viewStatus
