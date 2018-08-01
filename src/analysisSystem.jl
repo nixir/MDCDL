@@ -20,7 +20,7 @@ adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) wh
 
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
-# function analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze!(fb, PolyphaseVector(copy(x.data), x.nBlocks))
+analyze(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze!(fb, PolyphaseVector(copy(x.data), x.nBlocks))
 
 function analyze!(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)

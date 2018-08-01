@@ -32,7 +32,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{TY}, szdata::NTuple{D}; kwa
     synthesize(fb, yaug; kwargs...)
 end
 
-# synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = synthesize!(fb, PolyphaseVector(copy(pvy.data), pvy.nBlocks); kwargs...)
+synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = synthesize!(fb, PolyphaseVector(copy(pvy.data), pvy.nBlocks); kwargs...)
 
 function synthesize!(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
