@@ -31,29 +31,31 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
 end
 
 # matrix-formed CDFT operator for D-dimensional signal
-function cdftmtx(sz::Integer...)
+function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     len = prod(sz)
 
     imps = map(1:len) do idx
-        u = zeros(sz)
+        u = zeros(T, sz)
         u[idx] = 1
         vec(fft(u))
     end
     mtx = hcat(imps...)
 
-    rm = Diagonal([ exp(-1im*angle(mtx[n,end])/2) for n in 1:len ])
+    rm = Diagonal(Complex{T}[ exp(-1im*angle(mtx[n,end])/2) for n in 1:len ])
 
-    rm * mtx / sqrt(len)
+    rm * mtx / sqrt(T(len))
 end
 
-function permdctmtx(sz::Integer...)
+cdftmtx(sz::Integer...) = cdftmtx(Float64, sz...)
+
+function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     if prod(sz) == 1
-        return ones(1,1)
+        return ones(T,1,1)
     end
     len = prod(sz)
 
     imps = map(1:len) do idx
-        u = zeros(sz)
+        u = zeros(T, sz)
         u[idx] = 1
         vec(dct(u))
     end
@@ -67,3 +69,5 @@ function permdctmtx(sz::Integer...)
 
     vcat(transpose(evenMtx), transpose(oddMtx))
 end
+
+permdctmtx(sz::Integer...) = permdctmtx(Float64, sz...)

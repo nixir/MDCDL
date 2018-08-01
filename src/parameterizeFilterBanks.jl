@@ -14,11 +14,11 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
     # Angles ang MUS
     angsInit, musInit = MDCDL.mat2rotations(cc.initMatrices[1])
 
-    angsPropsSet = [ zeros(npk) for npk in nParamsProps ]
-    musPropsSet = [ zeros(npk) for npk in nParamsProps ]
+    angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
+    musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
-        angsPropPerDim = Array{Vector}(ord[d])
-        musPropPerDim = Array{Vector}(ord[d])
+        angsPropPerDim = Array{Vector{T}}(ord[d])
+        musPropPerDim = Array{Vector{T}}(ord[d])
         for k = 1:ord[d]
             (apw, mpw) = MDCDL.mat2rotations(cc.propMatrices[d][2*k-1])
             (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][2*k])
@@ -102,12 +102,12 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
     # Angles ang MUS
     angsInit, musInit = MDCDL.mat2rotations(cc.initMatrices[1])
 
-    angsPropsSet = [ zeros(npk) for npk in nParamsProps ]
-    musPropsSet = [ zeros(npk) for npk in nParamsProps ]
+    angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
+    musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
         nStages = fld(ord[d],2)
-        angsPropPerDim = Array{Vector}(nStages)
-        musPropPerDim = Array{Vector}(nStages)
+        angsPropPerDim = Array{Vector{T}}(nStages)
+        musPropPerDim = Array{Vector{T}}(nStages)
         for k = 1:nStages
             (apw1, mpw1) = MDCDL.mat2rotations(cc.propMatrices[d][4*k-3])
             (apu1, mpu1) = MDCDL.mat2rotations(cc.propMatrices[d][4*k-2])
@@ -212,11 +212,11 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
     angsInit = vcat(angsInitW, angsInitU)
     musInit = vcat(musInitW, musInitU)
 
-    angsPropsSet = [ zeros(npk) for npk in nParamsProps ]
-    musPropsSet = [ zeros(npk) for npk in nParamsProps ]
+    angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
+    musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
-        angsPropPerDim = Array{Vector}(ord[d])
-        musPropPerDim = Array{Vector}(ord[d])
+        angsPropPerDim = Array{Vector{T}}(ord[d])
+        musPropPerDim = Array{Vector{T}}(ord[d])
         for k = 1:ord[d]
             (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][k])
 
@@ -299,12 +299,12 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
     angsInit = vcat(angsInitW, angsInitU)
     musInit = vcat(musInitW, musInitU)
 
-    angsPropsSet = [ zeros(npk) for npk in nParamsProps ]
-    musPropsSet = [ zeros(npk) for npk in nParamsProps ]
+    angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
+    musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
         nStages = fld(ord[d],2)
-        angsPropPerDim = Array{Vector}(nStages)
-        musPropPerDim = Array{Vector}(nStages)
+        angsPropPerDim = Array{Vector{T}}(nStages)
+        musPropPerDim = Array{Vector{T}}(nStages)
         for k = 1:nStages
             (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][2*k-1])
             (apw, mpw) = MDCDL.mat2rotations(cc.propMatrices[d][2*k])

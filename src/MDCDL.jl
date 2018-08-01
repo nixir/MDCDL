@@ -79,7 +79,7 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
             end
         end
 
-        mtxc = flipdim(MDCDL.permdctmtx(df...),2)
+        mtxc = flipdim(MDCDL.permdctmtx(T, df...),2)
 
         new{T,D,S}(df, ppo, nChs, initMts, propMts, mtxc)
     end
@@ -131,7 +131,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
             Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ]
         for pd in 1:D ]
         sym = Diagonal{Complex{T}}(ones(nChs))
-        mtxf = flipdim(MDCDL.cdftmtx(df...),2)
+        mtxf = flipdim(MDCDL.cdftmtx(T, df...),2)
 
         new{T,D,S}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end

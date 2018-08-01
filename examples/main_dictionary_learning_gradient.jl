@@ -18,31 +18,33 @@ ord = (4,4)
 # number of symmetric/antisymmetric channel
 nch = (4,4)
 
+dt = Float64
+
 η = 1e-8
 
-szSubData = tuple(fill(64,D)...)
-nSubData = 64
+szSubData = tuple(fill(32,D)...)
+nSubData = 32
 nEpoch = 10
 
-nsolt = Rnsolt(df, ord, nch)
+nsolt = Rnsolt(dt, df, ord, nch)
 include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-randomInit!(nsolt)
+# randomInit!(nsolt)
 
-orgImg = Array{Float64}(testimage("cameraman"))
+orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
 
 y0 = analyze(nsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
-sparsity = fld(length(y0),4)
+sparsity = fld(length(y0), 8)
 
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
 
-# opt = Opt(:LN_COBYLA, length(angs0s))
-opt = Opt(:LD_MMA, length(angs0s))
+opt = Opt(:LN_COBYLA, length(angs0s))
+# opt = Opt(:LD_CCSAQ, length(angs0s))
 # lower_bounds!(opt, -1*pi*ones(size(angs0s)))
 # upper_bounds!(opt,  1*pi*ones(size(angs0s)))
 xtol_rel!(opt,1e-4)
-maxeval!(opt,400)
+maxeval!(opt,2000)
 
 # inequality_constraint!(opt, (x,g) -> myconstraint(x,g,2,0), 1e-8)
 # inequality_constraint!(opt, (x,g) -> myconstraint(x,g,-1,1), 1e-8)
@@ -51,16 +53,18 @@ maxeval!(opt,400)
 y = y0
 for idx = 1:nEpoch, subx in trainingIds
     x = orgImg[subx...]
-    hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
+    hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=500, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
     cnt = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
         global cnt
         cnt::Int += 1
 
-        angsvm1 = vcat(zeros(sum(nch)-1), angs)
+        # println(typeof(angs))
+        angsvm1 = vcat(zeros(dt, sum(nch)-1), angs)
+        # println(typeof(angsvm1))
         ###########################
 
-        tfb = Rnsolt(df, ord, nch)
+        tfb = Rnsolt(dt, df, ord, nch)
         setAngleParameters!(tfb, angsvm1, mus0)
         rx = synthesize(tfb, hy, size(x))
 
@@ -77,8 +81,8 @@ for idx = 1:nEpoch, subx in trainingIds
         M = prod(df)
         cM, fM = cld(M,2), fld(M,2)
 
-        Pu, Pl = eye(nch[1], cM), eye(nch[2], fM)
-        P = zeros(sum(nch), M)
+        Pu, Pl = eye(dt, nch[1], cM), eye(dt, nch[2], fM)
+        P = zeros(dt, sum(nch), M)
         P[1:nch[1],1:cM] = Pu
         P[nch[1]+1:end,cM+1:end] = Pl
 
@@ -104,7 +108,7 @@ for idx = 1:nEpoch, subx in trainingIds
         hP = tfb.nChannels[1]
 
         L = fld(nch[2]*(nch[2]-1),2)
-        gdudk = [ fill(zeros(Float64,L), o) for o in ord ]
+        gdudk = [ fill(zeros(dt,L), o) for o in ord ]
         for d = 1:D
             nShift = fld(size(pet,2), nBlocks[1])
             # pvx = permutedims(pvx)
@@ -139,7 +143,7 @@ for idx = 1:nEpoch, subx in trainingIds
             end
         end
 
-        grad .= vcat(gdw[nch[1]:end], gdu, vcat(vcat.(gdudk...)...))
+        # grad .= vcat(gdw[nch[1]:end], gdu, vcat(vcat.(gdudk...)...))
         # println(typeof(vcat(vcat.(gdudk)...)))
 
         # println(size(hoge))
@@ -148,14 +152,14 @@ for idx = 1:nEpoch, subx in trainingIds
         dist = x .- synthesize(nsolt, hy, size(x))
         cst = vecnorm(dist)^2
 
-        println("f_$(cnt): cost=$(cst)")
+        println("f_$(cnt):\t cost = $(cst),\t |grad| = $(vecnorm(grad))")
 
         cst
     end
     min_objective!(opt, objfunc)
     (minf, minx, ret) = optimize(opt, angs0s)
 
-    minxt = vcat(zeros(sum(nch)-1), minx);
+    minxt = vcat(zeros(dt, sum(nch)-1), minx);
     setAngleParameters!(nsolt, minxt, mus0)
     y = analyze(nsolt, x; outputMode=:vector)
     println("Iterations $idx finished.")
