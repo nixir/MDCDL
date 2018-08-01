@@ -11,7 +11,7 @@ include("basicComplexDSP.jl")
 export PolyphaseVector
 export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export Multiscale, MultiLayerCsc
-export analyze, synthesize, adjoint_synthesize
+export analyze, analyze!, synthesize, sinthesize!, adjoint_synthesize
 # export cconv
 export upsample, downsample
 export atmimshow

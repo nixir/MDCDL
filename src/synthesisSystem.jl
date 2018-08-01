@@ -12,7 +12,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) wh
     # end
     pvy = PolyphaseVector( transpose(hcat(map(vec, y)...)), nBlocks)
     # end
-    pvx = synthesize(fb, pvy; kwargs...)
+    pvx = synthesize!(fb, pvy; kwargs...)
     polyphase2mdarray(pvx, fb.decimationFactor)
 end
 
@@ -22,7 +22,7 @@ function synthesize(fb::PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {T
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
     end
 
-    pvx = synthesize(fb, mdarray2polyphase(y); kwargs...)
+    pvx = synthesize!(fb, mdarray2polyphase(y); kwargs...)
     polyphase2mdarray(pvx, fb.decimationFactor)
 end
 
@@ -32,11 +32,13 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{TY}, szdata::NTuple{D}; kwa
     synthesize(fb, yaug; kwargs...)
 end
 
-function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
+# synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = synthesize!(fb, PolyphaseVector(copy(pvy.data), pvy.nBlocks); kwargs...)
+
+function synthesize!(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
-    uy = concatenateAtoms(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks); kwargs...)
+    uy = concatenateAtoms!(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks); kwargs...)
 
     py = (cc.initMatrices[1] * eye(Complex{TF},P,M))' * uy.data
 
@@ -45,7 +47,7 @@ function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     PolyphaseVector(flipdim(py, 1), pvy.nBlocks)
 end
 
-function concatenateAtoms(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     P = cc.nChannels
 
     for d = D:-1:1
@@ -74,7 +76,7 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
 end
 
 
-function concatenateAtoms(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = cc.nChannels
     chEven = 1:P-1
@@ -113,13 +115,13 @@ function concatenateAtoms(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; 
     return pvy
 end
 
-function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
+function synthesize!(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
     nch = cc.nChannels
 
-    uy = concatenateAtoms(cc, pvy; kwargs...)
+    uy = concatenateAtoms!(cc, pvy; kwargs...)
     y = uy.data
 
     W0 = cc.initMatrices[1] * eye(TF, nch[1], cM)
@@ -131,7 +133,7 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     PolyphaseVector(flipdim(ty, 1), uy.nBlocks)
 end
 
-function concatenateAtoms(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     hP = cc.nChannels[1]
 
     for d = D:-1:1
@@ -157,7 +159,7 @@ function concatenateAtoms(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; b
     return pvy
 end
 
-function concatenateAtoms(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = sum(cc.nChannels)
     maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
