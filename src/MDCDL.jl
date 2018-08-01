@@ -197,10 +197,10 @@ include("synthesisSystem.jl")
 
 include("parameterizeFilterBanks.jl")
 
-include("view.jl")
-
+include("dictionaryLearning.jl")
 include("mlcsc.jl")
 
+include("view.jl")
 include("io.jl")
 
 end
