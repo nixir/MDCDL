@@ -14,13 +14,13 @@ D = 2
 # decimation factor
 df = (2,2)
 # polyphase order
-ord = (4,4)
+ord = (2,2)
 # number of symmetric/antisymmetric channel
 nch = (4,4)
 
 dt = Float64
 
-η = 1e-8
+# η = 1e-5
 
 szSubData = tuple(fill(32,D)...)
 nSubData = 32
@@ -28,7 +28,7 @@ nEpoch = 10
 
 nsolt = Rnsolt(dt, df, ord, nch)
 include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-# randomInit!(nsolt)
+randomInit!(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
@@ -39,8 +39,8 @@ sparsity = fld(length(y0), 8)
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
 
-opt = Opt(:LN_COBYLA, length(angs0s))
-# opt = Opt(:LD_CCSAQ, length(angs0s))
+# opt = Opt(:LN_COBYLA, length(angs0s))
+opt = Opt(:LD_CCSAQ, length(angs0s))
 # lower_bounds!(opt, -1*pi*ones(size(angs0s)))
 # upper_bounds!(opt,  1*pi*ones(size(angs0s)))
 xtol_rel!(opt,1e-4)
@@ -135,7 +135,7 @@ for idx = 1:nEpoch, subx in trainingIds
 
                 angsu, musu = MDCDL.mat2rotations(tfb.propMatrices[d][k])
                 hoge = -MDCDL.scalarGradOfOrthonormalMatrix(yt[nch[1]+1:end,:], xl, angsu, musu)
-                gdudk[d][k]  .= hoge
+                gdudk[d][k]  .= hoge /vecnorm(x)
                 # tfb.propMatrices[d][k] .= MDCDL.rotations2mat(angsu - η*gdudk[d][k], musu)
                 # println(gdu)
 
@@ -143,7 +143,7 @@ for idx = 1:nEpoch, subx in trainingIds
             end
         end
 
-        # grad .= vcat(gdw[nch[1]:end], gdu, vcat(vcat.(gdudk...)...))
+        grad .= vcat(gdw[nch[1]:end], gdu, vcat(vcat.(gdudk...)...))
         # println(typeof(vcat(vcat.(gdudk)...)))
 
         # println(size(hoge))
@@ -153,7 +153,7 @@ for idx = 1:nEpoch, subx in trainingIds
         cst = vecnorm(dist)^2
 
         println("f_$(cnt):\t cost = $(cst),\t |grad| = $(vecnorm(grad))")
-
+        sleep(0.2)
         cst
     end
     min_objective!(opt, objfunc)

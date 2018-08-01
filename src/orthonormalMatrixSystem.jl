@@ -46,22 +46,48 @@ end
 
 # ∂(x'*A(θ)*y)/∂θ
 function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, angs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
-    L = length(angs)
-    P = round(Integer, (1 + sqrt(1+8*L)) / 2)
-
-    output = zeros(TA, L)
-    nr = 1
-    for idx1 = 1:P-1, idx2 = (idx1+1):P
-        c, s = cos(angs[nr]), sin(angs[nr])
-        sub1 = (idx1,fill(:,D-1)...)
-        sub2 = (idx2,fill(:,D-1)...)
-
-        ty1 = sig[idx1]*(-s * y[sub1...] + c * y[sub2...])
-        ty2 = sig[idx2]*(-c * y[sub1...] - s * y[sub2...])
-        output[nr] = vecdot(x[sub1...], ty1) + vecdot(x[sub2...], ty2)
-        nr += 1
-    end
-    output
+    scalarGradOfOrthonormalMatrix_reference(x, y, angs, sig)
 end
 
 scalarGradOfOrthonormalMatrix(x::AbstractArray, y::AbstractArray, A::AbstractMatrix) = scalarGradOfOrthonormalMatrix(x, y, mat2rotations(A)...)
+
+function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, angs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
+    L = length(angs)
+    P = round(Integer, (1 + sqrt(1+8*L)) / 2)
+
+    ids = filter((a) -> a[1] < a[2], vec([(i1, i2) for i2 = 1:P, i1 = 1:P]))
+
+    rots = map(1:length(ids)) do nr
+        i1, i2 = ids[nr][1], ids[nr][2]
+        c, s = cos(angs[nr]), sin(angs[nr])
+
+        rtm = eye(TA,P)
+        rtm[i1, i1] =  c
+        rtm[i1, i2] = -s
+        rtm[i2, i1] =  s
+        rtm[i2, i2] =  c
+
+        rtm
+    end
+
+    grots = map(1:length(ids)) do nr
+        i1, i2 = ids[nr][1], ids[nr][2]
+        c, s = cos(angs[nr]), sin(angs[nr])
+
+        grtm = zeros(TA,P,P)
+        grtm[i1, i1] = -s
+        grtm[i1, i2] = -c
+        grtm[i2, i1] =  c
+        grtm[i2, i2] = -s
+
+        grtm
+    end
+
+    erots = [ eye(TA,P), rots..., eye(TA,P) ]
+
+    map(1:length(ids)) do nr
+        vecdot(x, prod(erots[1:nr]) * grots[nr] * prod(erots[(nr+2):end]) * diagm(sig) * y)
+    end
+end
+
+scalarGradOfOrthonormalMatrix_reference(x::AbstractArray, y::AbstractArray, A::AbstractMatrix) = scalarGradOfOrthonormalMatrix_reference(x, y, mat2rotations(A)...)

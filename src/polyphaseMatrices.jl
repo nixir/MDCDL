@@ -346,7 +346,7 @@ function setindex!(A::PolyphaseVector, v, I::Vararg{Int, 2})
     A
 end
 
-copy(A::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(A.data, A.nBlocks)
+# copy(A::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(A.data, A.nBlocks)
 
 function butterfly!(x::AbstractArray{T,2}, p::Integer) where T
     xu = x[1:p,:]
