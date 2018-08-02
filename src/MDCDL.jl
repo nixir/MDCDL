@@ -1,6 +1,5 @@
 module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
-
 using LinearAlgebra
 
 import Base.promote_rule

@@ -29,7 +29,8 @@ function analyze!(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) whe
     x = pvx.data
     tx = cc.matrixF * flipdim(x, 1)
 
-    V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
+    # V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
+    V0 = cc.initMatrices[1] * Matrix{Complex{TF}}(I, P, M)
     ux = V0 * tx
 
     extx = extendAtoms!(cc, PolyphaseVector(ux, pvx.nBlocks); kwargs...)
@@ -108,8 +109,8 @@ function analyze!(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) whe
     fM = fld(M,2)
     nch = cc.nChannels
 
-    W0 = cc.initMatrices[1] * eye(TF, nch[1], cM)
-    U0 = cc.initMatrices[2] * eye(TF, nch[2], fM)
+    W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)
+    U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
 
     tx = cc.matrixC * flipdim(pvx.data, 1)
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)

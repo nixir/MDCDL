@@ -40,7 +40,7 @@ function synthesize!(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) 
 
     uy = concatenateAtoms!(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks); kwargs...)
 
-    py = (cc.initMatrices[1] * eye(Complex{TF},P,M))' * uy.data
+    py = (cc.initMatrices[1] * Matrix{Complex{TF}}(I,P,M))' * uy.data
 
     py .= ctranspose(cc.matrixF) * py
 
@@ -124,8 +124,8 @@ function synthesize!(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) 
     uy = concatenateAtoms!(cc, pvy; kwargs...)
     y = uy.data
 
-    W0 = cc.initMatrices[1] * eye(TF, nch[1], cM)
-    U0 = cc.initMatrices[2] * eye(TF, nch[2], fM)
+    W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)
+    U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
     ty = vcat(W0' * y[1:nch[1],:], U0' * y[nch[1]+1:end,:])
 
     ty .= cc.matrixC' * ty

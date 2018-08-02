@@ -22,7 +22,7 @@ function gradSqrdError(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::Po
     M = prod(df)
     cM, fM = cld(M,2), fld(M,2)
 
-    Pu, Pl = eye(T, nch[1], cM), eye(T, nch[2], fM)
+    Pu, Pl = Matrix{T}(I, nch[1], cM), Matrix{T}(I, nch[2], fM)
     P = zeros(T, sum(nch), M)
     P[1:nch[1],1:cM] = Pu
     P[nch[1]+1:end,cM+1:end] = Pl
