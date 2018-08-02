@@ -62,8 +62,8 @@ function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     end
     mtx = hcat(imps...)
 
-    evenIds = find(x -> iseven(sum(ind2sub(sz,x) .- 1)), 1:len)
-    oddIds = find(x -> isodd(sum(ind2sub(sz,x) .- 1)), 1:len)
+    evenIds = findall(x -> iseven(sum(CartesianIndices(sz)[x] .- 1)), 1:len)
+    oddIds = findall(x -> isodd(sum(CartesianIndices(sz)[x] .- 1)), 1:len)
 
     evenMtx = hcat([ mtx[idx,:] for idx in evenIds]...)
     oddMtx = hcat([ mtx[idx,:] for idx in oddIds]...)

@@ -53,31 +53,31 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
 
         if nChs[1] == nChs[2]
             S = :TypeI
-            initMts = Array[ eye(T, p) for p in nChs ]
+            initMts = Array[ Matrix{T}(I, p, p) for p in nChs ]
             propMts = Array[
                 Array[
-                    (iseven(n) ? 1 : -1) * eye(T, nChs[1])
+                    (iseven(n) ? 1 : -1) * Matrix{T}(I, nChs[1], nChs[1])
                 for n in 1:ppo[pd] ]
             for pd in 1:D ]
         else
             S = :TypeII
-            initMts = Array[ eye(T, p) for p in nChs ]
+            initMts = Array[ Matrix{T}(I, p, p) for p in nChs ]
             propMts = if nChs[1] > nChs[2]
                 [
                     vcat(
-                        fill(Array[-eye(T,nChs[2]), eye(T,nChs[1]) ], fld(ppo[pd],2))...
+                        fill(Array[-Matrix{T}(I,nChs[2],nChs[2]), Matrix{T}(I,nChs[1],nChs[2]) ], fld(ppo[pd],2))...
                     )
                 for pd in 1:D]
             else
                 [
                     vcat(
-                        fill(Array[ eye(T,nChs[1]), -eye(T,nChs[2]) ], fld(ppo[pd],2))...
+                        fill(Array[ Matrix{T}(I,nChs[1],nChs[1]), -Matrix{T}(I,nChs[2],nChs[2]) ], fld(ppo[pd],2))...
                     )
                 for pd in 1:D]
             end
         end
 
-        mtxc = flipdim(MDCDL.permdctmtx(T, df...),2)
+        mtxc = reverse(MDCDL.permdctmtx(T, df...); dims=2)
 
         new{T,D,S}(df, ppo, nChs, initMts, propMts, mtxc)
     end
@@ -105,10 +105,10 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
 
         if iseven(nChs)
             S = :TypeI
-            initMts = Array[ eye(T,nChs) ]
+            initMts = Array[ Matrix{T}(I,nChs,nChs) ]
             propMts = Array[
                 Array[
-                    (iseven(n) ? -1 : 1) * eye(T,fld(nChs,2))
+                    (iseven(n) ? -1 : 1) * Matrix{T}(I,fld(nChs,2),fld(nchs,2))
                 for n in 1:2*ppo[pd] ]
             for pd in 1:D ]
         else
@@ -118,10 +118,10 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
             cch = cld(nChs, 2)
             fch = fld(nChs, 2)
             S = :TypeII
-            initMts = Array[ eye(T, nChs) ]
+            initMts = Array[ Matrix{T}(I, nChs, nChs) ]
             propMts = [
                 vcat(fill(Array[
-                    eye(T,fch), -eye(T,fch), eye(T,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1)))
+                    Matrix{T}(I,fch,fch), -Matrix{T}(I,fch,fch), Matrix{T}(I,cch,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1)))
                 ], fld(ppo[pd],2))...)
             for pd in 1:D]
         end
@@ -129,7 +129,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
             Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ]
         for pd in 1:D ]
         sym = Diagonal{Complex{T}}(ones(nChs))
-        mtxf = flipdim(MDCDL.cdftmtx(T, df...),2)
+        mtxf = reverse(MDCDL.cdftmtx(T, df...); dims=2)
 
         new{T,D,S}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end

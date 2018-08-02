@@ -221,7 +221,7 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
         out = Array{T}(df .* ordm )
 
         foreach(1:prod(ordm)) do idx
-            sub = ind2sub(ordm, idx)
+            sub = CartesianIndices(ordm)[idx]
             subaf = primeBlock .+ (sub .- 1) .* df
             subfb = (1:prod(df)) + (idx-1) * prod(df)
 
@@ -234,14 +234,14 @@ end
 function getSynthesisFilters(cc::MDCDL.Cnsolt)
     map(getAnalysisFilters(cc)) do af
         sz = size(af)
-        reshape(flipdim(vec(conj.(af)),1),sz)
+        reshape(reverse(vec(conj.(af));dims=1),sz)
     end
 end
 
 function getSynthesisFilters(rc::MDCDL.Rnsolt)
     map(getAnalysisFilters(rc)) do af
         sz = size(af)
-        reshape(flipdim(vec(af),1),sz)
+        reshape(reverse(vec(af);dims=1),sz)
     end
 end
 
@@ -265,15 +265,15 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
     end
     primeBlock = colon.(1, szBlock)
 
-    data = Matrix{TX}(prod(szBlock),prod(nBlocks))
+    data = Matrix{TX}(undef, prod(szBlock),prod(nBlocks))
     for idx = 1:prod(nBlocks)
-        data[:,idx] = vec(x[ ((ind2sub(nBlocks, idx) .- 1) .* szBlock .+ primeBlock)... ])
+        data[:,idx] = vec(x[ ((CartesianIndices(nBlocks)[idx] .- 1) .* szBlock .+ primeBlock)... ])
     end
     PolyphaseVector(data, nBlocks)
 end
 
 function mdarray2polyphase(x::Array{T,D}) where {T,D}
-    data = Matrix{T}(size(x,D),prod(size(x)[1:D-1]))
+    data = Matrix{T}(undef, size(x,D),prod(size(x)[1:D-1]))
     for p = 1:size(x,D)
         data[p,:] = transpose(vec( x[fill(:,D-1)..., p] ))
     end
@@ -289,7 +289,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
     primeBlock = colon.(1, szBlock)
     out = similar(x.data, (x.nBlocks .* szBlock)...)
     for idx = 1:prod(x.nBlocks)
-        subOut = (ind2sub(x.nBlocks,idx) .- 1) .* szBlock .+ primeBlock
+        subOut = (CartesianIndices(x.nBlocks)[idx] .- 1) .* szBlock .+ primeBlock
         out[subOut...] = reshape(x.data[:,idx], szBlock...)
     end
     out
@@ -297,7 +297,7 @@ end
 
 function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
     P = size(x.data,1)
-    output = Array{T,D+1}(x.nBlocks..., P)
+    output = Array{T,D+1}(undef, x.nBlocks..., P)
 
     for p = 1:P
         output[fill(:,D)...,p] = reshape(x.data[p,:], x.nBlocks)
