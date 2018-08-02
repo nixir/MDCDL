@@ -108,7 +108,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
             initMts = Array[ Matrix{T}(I,nChs,nChs) ]
             propMts = Array[
                 Array[
-                    (iseven(n) ? -1 : 1) * Matrix{T}(I,fld(nChs,2),fld(nchs,2))
+                    (iseven(n) ? -1 : 1) * Matrix{T}(I,fld(nChs,2),fld(nChs,2))
                 for n in 1:2*ppo[pd] ]
             for pd in 1:D ]
         else

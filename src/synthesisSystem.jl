@@ -44,7 +44,7 @@ function synthesize!(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) 
 
     py .= ctranspose(cc.matrixF) * py
 
-    PolyphaseVector(flipdim(py, 1), pvy.nBlocks)
+    PolyphaseVector(reverse(py; dims=1), pvy.nBlocks)
 end
 
 function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
@@ -130,7 +130,7 @@ function synthesize!(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) 
 
     ty .= cc.matrixC' * ty
 
-    PolyphaseVector(flipdim(ty, 1), uy.nBlocks)
+    PolyphaseVector(reverse(ty; dims=1), uy.nBlocks)
 end
 
 function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
