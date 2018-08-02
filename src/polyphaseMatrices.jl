@@ -221,7 +221,7 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
         out = Array{T}(df .* ordm )
 
         foreach(1:prod(ordm)) do idx
-            sub = CartesianIndices(ordm)[idx]
+            sub = CartesianIndices(ordm)[idx].I
             subaf = primeBlock .+ (sub .- 1) .* df
             subfb = (1:prod(df)) + (idx-1) * prod(df)
 
@@ -267,7 +267,7 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
 
     data = Matrix{TX}(undef, prod(szBlock),prod(nBlocks))
     for idx = 1:prod(nBlocks)
-        data[:,idx] = vec(x[ ((CartesianIndices(nBlocks)[idx] .- 1) .* szBlock .+ primeBlock)... ])
+        data[:,idx] = vec(x[ ((CartesianIndices(nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock)... ])
     end
     PolyphaseVector(data, nBlocks)
 end
@@ -289,7 +289,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
     primeBlock = colon.(1, szBlock)
     out = similar(x.data, (x.nBlocks .* szBlock)...)
     for idx = 1:prod(x.nBlocks)
-        subOut = (CartesianIndices(x.nBlocks)[idx] .- 1) .* szBlock .+ primeBlock
+        subOut = (CartesianIndices(x.nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock
         out[subOut...] = reshape(x.data[:,idx], szBlock...)
     end
     out

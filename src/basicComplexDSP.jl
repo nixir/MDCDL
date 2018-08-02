@@ -16,7 +16,7 @@ function upsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(ze
     szx = size(x)
     output = zeros(T, szx .* factor)
     for idx = 1:prod(szx)
-        sub = ind2sub(szx, idx)
+        sub = CartesianIndices(szx)[idx].I
         output[((sub .- 1) .* factor .+ 1 .+ offset)...] = x[sub...]
     end
     output
@@ -26,7 +26,7 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
     szout = fld.(size(x), factor)
     output = Array{T,D}(szout...)
     for idx = 1:prod(szout)
-        output[idx] = x[((ind2sub(szout,idx) .- 1) .* factor .+ 1 .+ offset)...]
+        output[idx] = x[((CartesianIndices(szout)[idx].I .- 1) .* factor .+ 1 .+ offset)...]
     end
     output
 end
@@ -62,8 +62,8 @@ function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     end
     mtx = hcat(imps...)
 
-    evenIds = findall(x -> iseven(sum(CartesianIndices(sz)[x] .- 1)), 1:len)
-    oddIds = findall(x -> isodd(sum(CartesianIndices(sz)[x] .- 1)), 1:len)
+    evenIds = findall(x -> iseven(sum(CartesianIndices(sz)[x].I .- 1)), 1:len)
+    oddIds = findall(x -> isodd(sum(CartesianIndices(sz)[x].I .- 1)), 1:len)
 
     evenMtx = hcat([ mtx[idx,:] for idx in evenIds]...)
     oddMtx = hcat([ mtx[idx,:] for idx in oddIds]...)
