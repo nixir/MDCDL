@@ -121,7 +121,7 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
             initMts = Array[ Matrix{T}(I, nChs, nChs) ]
             propMts = [
                 vcat(fill(Array[
-                    Matrix{T}(I,fch,fch), -Matrix{T}(I,fch,fch), Matrix{T}(I,cch,cch), diagm(vcat(fill(T(-1), fld(nChs,2))..., T(1)))
+                    Matrix{T}(I,fch,fch), -Matrix{T}(I,fch,fch), Matrix{T}(I,cch,cch), Matrix(Diagonal(vcat(fill(T(-1), fld(nChs,2))..., T(1))))
                 ], fld(ppo[pd],2))...)
             for pd in 1:D]
         end

@@ -14,9 +14,9 @@ function getMatrixB(P::Integer, angs::Vector{T}) where T
     LS = [[ (ss[n]) (cs[n]); (1im*ss[n]) (-1im*cs[n]) ] for n in 1:fld(hP,2) ]
 
     C, S = if iseven(hP)
-        (cat([1,2],LC...), cat([1,2],LS...))
+        (cat(LC...; dims=[1,2]), cat(LS...; dims=[1,2]))
     else
-        (cat([1,2],LC...,1), cat([1,2],LS...,1im))
+        (cat(LC...,1; dims=[1,2]), cat(LS...,1im; dims=[1,2]))
     end
 
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
