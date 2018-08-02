@@ -86,7 +86,7 @@ function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::Abst
     erots = [ eye(TA,P), rots..., eye(TA,P) ]
 
     map(1:length(ids)) do nr
-        vecdot(x, prod(erots[1:nr]) * grots[nr] * prod(erots[(nr+2):end]) * diagm(sig) * y)
+        real(vecdot(x, prod(erots[1:nr]) * grots[nr] * prod(erots[(nr+2):end]) * diagm(sig) * y))
     end
 end
 
