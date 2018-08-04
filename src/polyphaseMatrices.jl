@@ -220,7 +220,7 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
     return map(1:P) do p
         out = Array{T}(df .* ordm )
 
-        foreach(1:prod(ordm)) do idx
+        for idx = 1:prod(ordm)
             sub = ind2sub(ordm, idx)
             subaf = primeBlock .+ (sub .- 1) .* df
             subfb = (1:prod(df)) + (idx-1) * prod(df)

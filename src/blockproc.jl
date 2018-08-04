@@ -6,8 +6,8 @@ function blockproc!(fun::Function, dst::AbstractArray{T,D}, src::AbstractArray{T
     nBlocks = div.(size(src), blockSize)
     primeBlock = colon.(1,blockSize)
 
-    for idx = 1:prod(nBlocks)
-        block = (ind2sub(nBlocks, idx) .- 1) .* blockSize .+ primeBlock
+    for cr = CartesianRange(nBlocks)
+        block = (cr.I .- 1) .* blockSize .+ primeBlock
         dst[block...] = fun(src[block...])
     end
     dst
