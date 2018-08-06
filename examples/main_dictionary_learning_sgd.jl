@@ -23,7 +23,7 @@ dt = Float64
 η = 1e-5
 
 szSubData = tuple(fill(64,D)...)
-nSubData = fld(prod(szSubData),4)
+nSubData = 32
 nEpoch = 1
 
 nsolt = Rnsolt(dt, df, ord, nch)
@@ -34,7 +34,7 @@ orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
 
 y0 = analyze(nsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
-sparsity = fld(length(y0), 8)
+sparsity = fld(length(y0), 4)
 
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
