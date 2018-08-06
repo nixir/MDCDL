@@ -86,8 +86,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; 
         y = hardshrink(y + adjointSynthesisFunc(x - recx), K; lt=lt)
         recx = synthesisFunc(y)
 
-        errx = vecnorm(x - recx)^2
-        # erry = vecnorm(y - yprev)^2
+        errx = vecnorm(x - recx)^2/2
 
         if viewStatus
             println("number of Iterations $itr: err = $errx ")

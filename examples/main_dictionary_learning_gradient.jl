@@ -14,9 +14,9 @@ D = 2
 # decimation factor
 df = (2,2)
 # polyphase order
-ord = (2,2)
+ord = (0,0)
 # number of symmetric/antisymmetric channel
-nch = (4,4)
+nch = (16,16)
 
 dt = Float64
 
@@ -49,10 +49,11 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
     pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
 
     cnt = 0
-    tfb = Rnsolt(dt, df, ord, nch)
+    # tfb = Rnsolt(dt, df, ord, nch)
     objfunc = (angs::Vector, grad::Vector) -> begin
         global cnt
         cnt::Int += 1
+        tfb = Rnsolt(dt, df, ord, nch)
 
         angsvm1 = vcat(zeros(dt, sum(nch)-1), angs)
         setAngleParameters!(tfb, angsvm1, mus0)
