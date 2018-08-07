@@ -43,19 +43,18 @@ y = y0
 for epoch = 1:nEpoch, nd in 1:length(trainingIds)
     subx = trainingIds[nd]
     x = orgImg[subx...]
-    hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=1000, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
+    hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
 
     pvx = mdarray2polyphase(x, df)
     pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
 
-    grad = MDCDL.gradSqrdError(nsolt, pvx, pvy)
+    grad = MDCDL.gradSqrdError_reference(nsolt, pvx, pvy)
     angs, mus = getAngleParameters(nsolt)
     angs = angs - η*grad
     setAngleParameters!(nsolt, angs, mus)
 
     y = analyze(nsolt, x; outputMode=:vector)
     println("Epoch: $epoch, No.: $nd, cost = $(vecnorm(x-synthesize(nsolt,hy,size(x)))^2/2)")
-    sleep(1)
 end
 
 atmimshow(nsolt)

@@ -46,11 +46,43 @@ end
 
 # ∂(x'*A(θ)*y)/∂θ
 function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, angs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
-    scalarGradOfOrthonormalMatrix_reference(x, y, angs, sig)
+    scalarGradOfOrthonormalMatrix(x, y, rotations2mat(angs, sig))
 end
 
-scalarGradOfOrthonormalMatrix(x::AbstractArray, y::AbstractArray, A::AbstractMatrix) = scalarGradOfOrthonormalMatrix(x, y, mat2rotations(A)...)
+function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, A::AbstractMatrix{TA}) where {D,TV,TA<:Real}
+    angs, mus = mat2rotations(A)
+    L = length(angs)
+    P = round(Integer, (1 + sqrt(1+8*L)) / 2)
 
+    gds = Vector{TA}(L)
+    ay = A*y
+
+    nr = 1
+    for idx1 = 1:P-1, idx2 = (idx1+1):P
+        c, s = cos(angs[nr]), sin(angs[nr])
+
+        rtmh = eye(TA,P)
+        rtmh[idx1, idx1] =  c
+        rtmh[idx1, idx2] =  s
+        rtmh[idx2, idx1] = -s
+        rtmh[idx2, idx2] =  c
+
+        grtm = zeros(TA,P,P)
+        grtm[idx1, idx1] = -s
+        grtm[idx1, idx2] = -c
+        grtm[idx2, idx1] =  c
+        grtm[idx2, idx2] = -s
+
+        ay = rtmh * ay
+        gds[nr] = vecdot(x, grtm * ay)
+        x = rtmh * x
+
+        nr += 1
+    end
+    gds
+end
+
+# reference implementation
 function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, angs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
     L = length(angs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)

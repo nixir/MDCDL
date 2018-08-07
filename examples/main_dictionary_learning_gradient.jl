@@ -37,7 +37,7 @@ y0 = analyze(nsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
 sparsity = fld(length(y0), 8)
 
 angs0, mus0 = getAngleParameters(nsolt)
-angs0s = angs0[nch[1]:end]
+# angs0s = angs0[nch[1]:end]
 
 y = y0
 for epoch = 1:nEpoch, nd in 1:length(trainingIds)
@@ -55,24 +55,25 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
         cnt::Int += 1
         tfb = Rnsolt(dt, df, ord, nch)
 
-        angsvm1 = vcat(zeros(dt, sum(nch)-1), angs)
-        setAngleParameters!(tfb, angsvm1, mus0)
+        # angsvm1 = vcat(zeros(dt, sum(nch)-1), angs)
+        setAngleParameters!(tfb, angs, mus0)
 
         grad .= MDCDL.gradSqrdError(tfb, pvx, pvy)
 
         dist = pvx.data - synthesize(tfb, pvy).data
         cst = vecnorm(dist)^2
 
-        println("f_$(cnt):\t cost = $(cst),\t |grad| = $(vecnorm(grad))")
+        # println("f_$(cnt):\t cost = $(cst),\t |grad| = $(vecnorm(grad))")
+        @printf("f_%4d): cost = %.6e, |grad| = %.6e\n", cnt, cst, vecnorm(grad))
         # sleep(0.2)
         cst
     end
 
     # opt = Opt(:LN_COBYLA, length(angs0s))
-    lopt = Opt(:LD_MMA, length(angs0s))
+    lopt = Opt(:LD_MMA, length(angs0))
     maxeval!(lopt,100)
     min_objective!(lopt, objfunc)
-    (minf, minx, ret) = optimize(lopt, angs0s)
+    (minf, minx, ret) = optimize(lopt, angs0)
 
     ##### global optimization #####
     # gopt = Opt(:GD_MLSL, length(angs0s))
@@ -83,10 +84,11 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
     # (minf, minx, ret) = optimize(gopt, angs0s)
     ##### #####
 
-    minxt = vcat(zeros(dt, sum(nch)-1), minx);
-    setAngleParameters!(nsolt, minxt, mus0)
+    # minxt = vcat(zeros(dt, sum(nch)-1), minx);
+    setAngleParameters!(nsolt, minx, mus0)
     y = analyze(nsolt, x; outputMode=:vector)
-    println("Epoch: $epoch, No.: $nd, cost = $(minf)")
+    # println("Epoch: $epoch, No.: $nd, cost = $(minf)")
+    @printf("Epoch: %4d, No.: %3d, cost = %.6e\n", epoch, nd, minf)
 end
 
 atmimshow(nsolt)
