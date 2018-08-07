@@ -16,15 +16,15 @@ df = (2,2)
 # polyphase order
 ord = (4,4)
 # number of symmetric/antisymmetric channel
-nch = (16,16)
+nch = (4,4)
 
 dt = Float64
 
 η = 1e-5
 
-szSubData = tuple(fill(64,D)...)
-nSubData = 32
-nEpoch = 1
+szSubData = tuple(fill(32,D)...)
+nSubData = 1024
+nEpoch = 100
 
 nsolt = Rnsolt(dt, df, ord, nch)
 include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
@@ -40,21 +40,28 @@ angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
 
 y = y0
-for epoch = 1:nEpoch, nd in 1:length(trainingIds)
-    subx = trainingIds[nd]
-    x = orgImg[subx...]
-    hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
+serrs = Vector{dt}(nEpoch)
+for epoch = 1:nEpoch
+    errt = Vector{dt}(length(trainingIds))
+    for nd in 1:length(trainingIds)
+        subx = trainingIds[nd]
+        x = orgImg[subx...]
+        hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
 
-    pvx = mdarray2polyphase(x, df)
-    pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
+        pvx = mdarray2polyphase(x, df)
+        pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
 
-    grad = MDCDL.gradSqrdError_reference(nsolt, pvx, pvy)
-    angs, mus = getAngleParameters(nsolt)
-    angs = angs - η*grad
-    setAngleParameters!(nsolt, angs, mus)
+        grad = MDCDL.gradSqrdError(nsolt, pvx, pvy)
+        angs, mus = getAngleParameters(nsolt)
+        angs = angs - η*grad
+        setAngleParameters!(nsolt, angs, mus)
 
-    y = analyze(nsolt, x; outputMode=:vector)
-    println("Epoch: $epoch, No.: $nd, cost = $(vecnorm(x-synthesize(nsolt,hy,size(x)))^2/2)")
+        y = analyze(nsolt, x; outputMode=:vector)
+        errt[nd] = vecnorm(x-synthesize(nsolt,hy,size(x)))^2/2
+        println("Epoch: $epoch, No.: $nd, cost = $(errt[nd])")
+    end
+    serrs[epoch] = sum(errt)
+    println("Epoch $epoch finished. sum(cost) = $(serrs[epoch])")
 end
 
 atmimshow(nsolt)
