@@ -116,7 +116,6 @@ function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
     cc.symmetry * ppm
 end
 
-
 function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
     df = rc.decimationFactor
     nch = rc.nChannels

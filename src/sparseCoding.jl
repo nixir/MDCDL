@@ -4,48 +4,48 @@ using ColorTypes
 # import Base.LinAlg.vecnormInf
 # iterative shrinkage/thresholding algorithm
 # solve a regularized convex optimization problem e.x. f(x) + g(x)
-function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; maxIterations::Integer=20, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)
-    x = x0
+function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; maxIterations::Integer=20, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)
+    xₖ = x₀
     errx = Inf
-    len = length(x0)
+    len = length(x₀)
     for nItr = 1:maxIterations
-        xprev = x
-        x = prox(x - stepSize*gradOfLossFcn(x), stepSize)
+        xₖ₋₁ = xₖ
+        xₖ = prox(xₖ - stepSize*gradOfLossFcn(xₖ), stepSize)
 
-        errx = vecnorm(x-xprev)^2
+        errx = vecnorm(xₖ - xₖ₋₁)^2 / 2
 
-        viewFunction(nItr, x, errx)
+        viewFunction(nItr, xₖ, errx)
 
         if errx <= absTol
             break
         end
     end
-    x
+    xₖ
 end
 
-function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; maxIterations::Integer=100, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)
-    x = x0
+function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; maxIterations::Integer=100, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)
+    xₖ = x₀
     errx = Inf
-    len = length(x0)
-    y = x0
-    t = 1
+    len = length(x₀)
+    y = x₀
+    tₖ = 1
     for nItr = 1:maxIterations
-        xprev = x
-        tprev = t
+        xₖ₋₁ = xₖ
+        tₖ₋₁ = tₖ
 
-        x = prox(y - stepSize*gradOfLossFcn(y), stepSize)
-        t = (1 + sqrt(1+4*t^2)) / 2
-        y = x + (tprev-1)/t * (x - xprev)
+        xₖ = prox(y - stepSize*gradOfLossFcn(y), stepSize)
+        tₖ = (1 + sqrt(1+4*tₖ^2)) / 2
+        y = xₖ + (tₖ₋₁ - 1) / tₖ * (xₖ - xₖ₋₁)
 
-        errx = vecnorm(x-xprev)^2
+        errx = vecnorm(xₖ - xₖ₋₁)^2
 
-        viewFunction(nItr, x, errx)
+        viewFunction(nItr, xₖ, errx)
 
         if errx <= absTol
             break
         end
     end
-    x
+    xₖ
 end
 
 
@@ -56,22 +56,22 @@ end
 # f() and g(): proxiable function
 # h(x): smooth convex function having a Lipschitzian gradient
 # L: linear operator
-function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOperator::Function, adjOfLinearOperator::Function, τ::Real, σ::Real, x0, v0=linearOperator(x0); maxIterations::Integer=100, absTol::Real=1e-10, viewFunction::Function=(itrs,tx,err)->nothing)
-    x = x0
+function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOperator::Function, adjOfLinearOperator::Function, τ::Real, σ::Real, x₀, v0=linearOperator(x₀); maxIterations::Integer=100, absTol::Real=1e-10, viewFunction::Function=(itrs,tx,err)->nothing)
+    xₖ = x₀
     v = v0
-    cproxG = (x, s) -> (x - proxG(x,s))
+    cproxG = (x_, s_) -> (x_ - proxG(x_,s_))
     for nItr = 1:maxIterations
-        xprev = x
-        p = proxF(x - τ*(gradOfLossFcn(x) + adjOfLinearOperator(v)), τ)
-        q = cproxG(v + linearOperator(2.0*p - xprev), σ^-1)
+        xₖ₋₁ = xₖ
+        p = proxF(xₖ - τ*(gradOfLossFcn(xₖ) + adjOfLinearOperator(v)), τ)
+        q = cproxG(v + linearOperator(2.0*p - xₖ₋₁), σ^-1)
 
         # (x, v) <- (x, v) + λ((p,q) - (x,v)) for　λ == 1
-        x = p
-        v = q
+        x, v = p, q
 
-        errx = vecnorm(x - xprev)^2
-        viewFunction(nItr, x, errx)
+        errx = vecnorm(xₖ - xₖ₋₁)^2
+        viewFunction(nItr, xₖ, errx)
     end
+    xₖ
 end
 
 function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false, lt::Function=isless)
@@ -143,7 +143,7 @@ end
 function hardshrink(x::AbstractArray, k::Integer; lt::Function=isless)
     nzids = sortperm(vec(x); lt=lt, rev=true)[1:k]
     output = zeros(x)
-    foreach(nzids) do idx
+    for idx in nzids
         output[idx] = x[idx]
     end
     output
