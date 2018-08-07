@@ -7,7 +7,7 @@ end
 # D: RNSOLT synthesizer
 function gradSqrdError(nsolt, x, y)
     errvec = PolyphaseVector(x.data - synthesize(nsolt, y).data, x.nBlocks)
-    - gradOfAnalyzer(nsolt, errvec, y)
+    return -gradOfAnalyzer(nsolt, errvec, y)
 end
 
 function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::PolyphaseVector{T,D}) where {T,D}
@@ -74,7 +74,9 @@ function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::P
     gdw = MDCDL.scalarGradOfOrthonormalMatrix(yt[1:nch[1],:], Iw * rts[1:cM,:], W0om)
     gdu = MDCDL.scalarGradOfOrthonormalMatrix(yt[nch[1]+1:end,:], Iu * rts[cM+1:end,:], U0om)
     # yts = vcat(W0' * yt[1:nch[1],:], U0' * yt[nch[1]+1:end,:])
-    # ty .= nsolt.matrixC' * ty
+    #
+    # rts .= nsolt.matrixC' * rts
+    # yts .= nsolt.matrixC' * yts
 
     vcat(gdw, gdu, vcat(vcat.(gdudk...)...))
 end
