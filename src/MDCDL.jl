@@ -188,7 +188,6 @@ end
 
 include("sparseCoding.jl")
 
-include("blockproc.jl")
 include("orthonormalMatrixSystem.jl")
 include("polyphaseMatrices.jl")
 
