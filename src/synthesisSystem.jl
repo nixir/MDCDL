@@ -119,7 +119,7 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     fM = fld(M,2)
     nch = cc.nChannels
 
-    cpvy = PolyphaseVector(copy(pvy.data), pvy.nBlocks)
+    cpvy = deepcopy(pvy)
     uy = concatenateAtoms!(cc, cpvy; kwargs...)
     y = uy.data
 
