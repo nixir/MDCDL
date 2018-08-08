@@ -66,7 +66,7 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
         q = cproxG(v + linearOperator(2.0*p - xₖ₋₁), σ^-1)
 
         # (x, v) <- (x, v) + λ((p,q) - (x,v)) for　λ == 1
-        x, v = p, q
+        xₖ, v = p, q
 
         errx = vecnorm(xₖ - xₖ₋₁)^2
         viewFunction(nItr, xₖ, errx)
@@ -75,8 +75,8 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
 end
 
 function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false, lt::Function=isless)
-    len = length(y0)
-    y = y0
+    len = length(y₀)
+    y = y₀
     errx = Inf
     erry = Inf
 
