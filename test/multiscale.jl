@@ -1,6 +1,7 @@
 using Base.Test
 using MDCDL
 using FFTW
+using Random
 
 @testset "Multiscale" begin
     include("testsetGenerator.jl")

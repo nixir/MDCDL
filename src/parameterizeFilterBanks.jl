@@ -344,8 +344,8 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::Vector{T}, mus
     # set Cnsolt.initMatrices
     angsInitW = angs[1:nParamsInit[1]]
     musInitW = mus[1:nch[1]]
-    angsInitU = angs[(1:nParamsInit[2])+nParamsInit[1]]
-    musInitU = mus[(1:nch[2])+nch[1]]
+    angsInitU = angs[(1:nParamsInit[2]) .+ nParamsInit[1]]
+    musInitU = mus[(1:nch[2]) .+ nch[1]]
 
     cc.initMatrices[1] = MDCDL.rotations2mat(angsInitW, musInitW)
     cc.initMatrices[2] = MDCDL.rotations2mat(angsInitU, musInitU)
@@ -364,10 +364,10 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::Vector{T}, mus
         subAngsDim = angs[ dimAngsRanges[d] ]
         subMusDim = mus[ dimMusRanges[d] ]
         for k = 1:nStages
-            subAngsOrd1 = subAngsDim[(1:nAngsu) + (k-1)*sum(nParamsPropPerDimsOrder)]
-            subMusOrd1 = subMusDim[(1:minP) + (k-1)*sum(nch)]
-            subAngsOrd2 = subAngsDim[(1:nAngsw) + (k-1)*sum(nParamsPropPerDimsOrder) + nAngsu]
-            subMusOrd2 = subMusDim[(1:maxP) + minP + (k-1)*sum(nch)]
+            subAngsOrd1 = subAngsDim[(1:nAngsu) .+ (k-1)*sum(nParamsPropPerDimsOrder)]
+            subMusOrd1 = subMusDim[(1:minP) .+ (k-1)*sum(nch)]
+            subAngsOrd2 = subAngsDim[(1:nAngsw) .+ (k-1)*sum(nParamsPropPerDimsOrder) + nAngsu]
+            subMusOrd2 = subMusDim[(1:maxP) .+ minP + (k-1)*sum(nch)]
 
             apu = subAngsOrd1[1:nAngsu]
             apw = subAngsOrd2[1:nAngsw]
