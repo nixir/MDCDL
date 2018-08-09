@@ -2,7 +2,7 @@ using MDCDL
 using NLopt
 using Images, ImageView, TestImages
 
-include(joinpath(Pkg.dir(),"MDCDL/test/randomInit.jl"))
+# include(joinpath(Pkg.dir(),"MDCDL/test/randomInit.jl"))
 Random.seed!(23485729)
 
 ##### configurations #####

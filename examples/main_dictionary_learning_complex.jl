@@ -4,6 +4,7 @@ using NLopt
 using MDCDL
 using TestImages, Images
 using Plots
+using Random
 count = 0
 
 # output file name

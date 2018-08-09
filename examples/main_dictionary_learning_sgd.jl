@@ -27,7 +27,7 @@ nSubData = 1024
 nEpoch = 100
 
 nsolt = Rnsolt(dt, df, ord, nch)
-include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
+# include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
 randomInit!(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))

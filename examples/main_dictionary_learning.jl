@@ -25,7 +25,7 @@ nSubData = 64
 nEpoch = 10
 
 nsolt = Rnsolt(df, ord, nch)
-include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
+# include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
 # randomInit!(nsolt)
 msnsolt = Multiscale(nsolt, lv)
 

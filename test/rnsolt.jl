@@ -5,7 +5,7 @@ using Random
 
 @testset "RNSOLT" begin
     include("testsetGenerator.jl")
-    include("randomInit.jl")
+    # include("randomInit.jl")
 
     rcsd1D = rnsoltValidConfigSet1D()
     rcsd2D = rnsoltValidConfigSet2D()
