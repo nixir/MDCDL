@@ -77,12 +77,12 @@ end
 function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = cc.nChannels
-    chEven = 1:P-1
+    chEven = 1:(P-1)
 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
-        ye  = view(pvy.data, 1:P-1, :)
+        ye  = view(pvy.data, 1:(P-1), :)
         yu1 = view(pvy.data, 1:fld(P,2), :)
         yl1 = view(pvy.data, (fld(P,2)+1):(P-1), :)
         yu2 = view(pvy.data, 1:cld(P,2), :)
@@ -125,7 +125,7 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
 
     W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)
     U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
-    ty = vcat(W0' * y[1:nch[1],:], U0' * y[nch[1]+1:end,:])
+    ty = vcat(W0' * y[1:nch[1],:], U0' * y[(nch[1]+1):end,:])
 
     ty .= cc.matrixC' * ty
 
@@ -139,7 +139,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
         yu = view(pvy.data, 1:hP, :)
-        yl = view(pvy.data, (1:hP)+hP, :)
+        yl = view(pvy.data, (1:hP) .+ hP, :)
         for k = cc.polyphaseOrder[d]:-1:1
             yl .= cc.propMatrices[d][k]' * yl
 
@@ -207,7 +207,7 @@ end
 function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
-    region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*fld.(ord,2) .- 1
+    region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*cld.(ord,2) .- 1
 
     sxs = map(y, pfb.synthesisFilters) do yp, sfp
         upimg = upsample(yp, df)
@@ -249,7 +249,7 @@ function synthesize(msfb::Multiscale{TF,D}, y::Vector{TY}, szdata::NTuple{D}) wh
     nCoefs = [ prod(fld.(szdata, df.^l)) * (l==msfb.treeLevel ? P : P-1) for l in 1:msfb.treeLevel ]
 
     augCoefs = map(1:msfb.treeLevel) do l
-        rang = (1:nCoefs[l]) + sum(nCoefs[1:l-1])
+        rang = (1:nCoefs[l]) + sum(nCoefs[1:(l-1)])
         reshape(y[rang], fld.(szdata, df.^l)..., (l==msfb.treeLevel ? P : P-1))
     end
     synthesize(msfb, augCoefs)

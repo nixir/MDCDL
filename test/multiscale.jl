@@ -45,7 +45,8 @@ using FFTW
 
                 myfilter = (A, h) -> begin
                     ha = zeros(A)
-                    ha[colon.(1,size(h))...] = h
+                    # ha[colon.(1,size(h))...] = h
+                    ha[[ 1:lh for lh in size(h) ]...] = h
                     if dt <: Real
                         real(ifft(fft(A).*fft(ha)))
                     else

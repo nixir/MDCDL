@@ -34,7 +34,7 @@ function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     ux = V0 * tx
 
     extx = extendAtoms!(cc, PolyphaseVector(ux, pvx.nBlocks); kwargs...)
-    PolyphaseVector(cc.symmetry*extx.data, extx.nBlocks)
+    PolyphaseVector(cc.symmetry * extx.data, extx.nBlocks)
 end
 
 function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
@@ -113,7 +113,7 @@ function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
 
     tx = cc.matrixC * reverse(pvx.data; dims=1)
-    ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
+    ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[(cM+1):end, :]), pvx.nBlocks)
 
     extendAtoms!(cc, ux; kwargs...)
 end
@@ -126,7 +126,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
         pvx = permutedims(pvx)
         # submatrices
         xu = view(pvx.data, 1:hP, :)
-        xl = view(pvx.data, (1:hP)+hP, :)
+        xl = view(pvx.data, (1:hP) .+ hP, :)
         for k = 1:cc.polyphaseOrder[d]
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl

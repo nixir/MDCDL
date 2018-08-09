@@ -148,8 +148,8 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
 
     function ParallelFB(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
         szFilters = df .* (ppo .+ 1)
-        afs = [ Array{T, D}(szFilters...) for p in 1:nChs ]
-        sfs = [ Array{T, D}(szFilters...) for p in 1:nChs ]
+        afs = [ Array{T, D}(undef, szFilters...) for p in 1:nChs ]
+        sfs = [ Array{T, D}(undef, szFilters...) for p in 1:nChs ]
         new{T, D}(df, ppo, nChs, afs, sfs)
     end
 
