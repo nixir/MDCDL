@@ -172,7 +172,7 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
     ppm = zeros(T, P, prod(df .* (ord .+ 1)))
     # ppm[1:M,1:M] = rc.matrixF
     ppm[1:cld(M,2), 1:M] = rc.matrixC[1:cld(M,2),:]
-    ppm[nch[1]+(1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
+    ppm[nch[1] .+ (1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
 
     # Initial matrix process
     ppm[1:nch[1],:] = rc.initMatrices[1] * ppm[1:nch[1],:]
@@ -188,7 +188,7 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
 
             # B Λ(z_d) B'
             butterfly!(ppm, minP)
-            ppm[minP+1:end,:] = circshift(ppm[minP+1:end,:],(0, nStride))
+            ppm[(minP+1):end,:] = circshift(ppm[(minP+1):end,:], (0, nStride))
             butterfly!(ppm, minP)
 
             ppm[chMinor,:] = U * ppm[chMinor,:]
@@ -198,7 +198,7 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
 
             # B Λ(z_d) B'
             butterfly!(ppm, minP)
-            ppm[maxP+1:end,:] = circshift(ppm[maxP+1:end,:],(0, nStride))
+            ppm[(maxP+1):end,:] = circshift(ppm[(maxP+1):end,:], (0, nStride))
             butterfly!(ppm, minP)
 
             ppm[chMajor,:] = W * ppm[chMajor,:]

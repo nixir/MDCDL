@@ -23,7 +23,7 @@ using FFTW
     @testset "ParallelFB" begin
         maxDims = 2
         for d in 1:maxDims, dt in [ Float64, Complex{Float64}]
-            cfgs = vec([ (crdf.I, crord.I .- 1, nch, lv) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(2+1,d)...)), nch in 2:10, lv in 1:3 ])
+            cfgs = vec([ (crdf.I, crord.I .- 1, nch, lv) for crdf in CartesianIndices(tuple(fill(4,d)...)), crord in CartesianIndices(tuple(fill(2+1,d)...)), nch in 2:10, lv in 1:3 ])
 
             subcfgs = randsubseq(cfgs, 30 / length(cfgs))
 

@@ -10,7 +10,7 @@ using FFTW
     @testset "Analysis" begin
         maxDims = 2
         for d in 1:maxDims, dt in [ Float64, Complex{Float64} ]
-            cfgs = vec([ (crdf.I, crord.I .- 1, nch) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(2+1,d)...)), nch in 2:10 ])
+            cfgs = vec([ (crdf.I, crord.I .- 1, nch) for crdf in CartesianIndices(tuple(fill(4,d)...)), crord in CartesianIndices(tuple(fill(2+1,d)...)), nch in 2:10 ])
 
             subcfgs = randsubseq(cfgs, 30 / length(cfgs))
 
@@ -53,7 +53,7 @@ using FFTW
     @testset "Synthesis" begin
         maxDims = 2
         for d in 1:maxDims, dt in [ Float64, Complex{Float64} ]
-            cfgs = vec([ (crdf.I, crord.I .- 1, nch) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(2+1,d)...)), nch in 2:10 ])
+            cfgs = vec([ (crdf.I, crord.I .- 1, nch) for crdf in CartesianIndices(tuple(fill(4,d)...)), crord in CartesianIndices(tuple(fill(2+1,d)...)), nch in 2:10 ])
 
             subcfgs = randsubseq(cfgs, 30 / length(cfgs))
 

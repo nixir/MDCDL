@@ -33,10 +33,10 @@ using FFTW
         maxDims = 3
         defaultType = Float64
 
-        # cfgset = [ (crdf.I, nch, crord.I .- 1) for crdf in CartesianRange(tuple(fill(4,d)...)), nch in 2:20, crord in CartesianRange(tuple(fill(6,d)...)) ]
+        # cfgset = [ (crdf.I, nch, crord.I .- 1) for crdf in CartesianIndices(tuple(fill(4,d)...)), nch in 2:20, crord in CartesianIndices(tuple(fill(6,d)...)) ]
 
         for d in 1:maxDims
-            allcfgset = [ (crdf.I, crord.I .- 1, nch) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(6+1,d)...)), nch in 2:20 ]
+            allcfgset = [ (crdf.I, crord.I .- 1, nch) for crdf in CartesianIndices(tuple(fill(4,d)...)), crord in CartesianIndices(tuple(fill(6+1,d)...)), nch in 2:20 ]
             cfgset = randsubseq(vec(allcfgset), 100 / length(allcfgset))
 
             for (df, ord, nch) in cfgset

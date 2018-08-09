@@ -20,7 +20,7 @@ using FFTW
         defaultType = Float64
 
         for d in 1:maxDims
-            allcfgset = [ (crdf.I, crord.I .- 1, crnch.I) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(6+1,d)...)), crnch in CartesianRange(tuple(fill(10,2)...)) ]
+            allcfgset = [ (crdf.I, crord.I .- 1, crnch.I) for crdf in CartesianIndices(tuple(fill(4,d)...)), crord in CartesianIndices(tuple(fill(6+1,d)...)), crnch in CartesianIndices(tuple(fill(10,2)...)) ]
             cfgsetTypeI  = filter(c -> c[3][1] == c[3][2], allcfgset)
             cfgsetTypeII = filter(c -> c[3][1] != c[3][2], allcfgset)
             cfgset = vcat(randsubseq(cfgsetTypeI, 50 / length(cfgsetTypeI))..., randsubseq(cfgsetTypeII, 50 / length(cfgsetTypeII))...)
