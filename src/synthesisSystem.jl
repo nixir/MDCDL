@@ -10,7 +10,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) wh
     # if any(size.(y) .!= nBlocks)
     #     throw(ArgumentError("size Error"))
     # end
-    pvy = PolyphaseVector( transpose(hcat(map(vec, y)...)), nBlocks)
+    pvy = PolyphaseVector( Matrix(transpose(hcat(map(vec, y)...))), nBlocks)
     # end
     pvx = synthesize(fb, pvy; kwargs...)
     polyphase2mdarray(pvx, fb.decimationFactor)
@@ -40,7 +40,7 @@ function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
 
     py = (cc.initMatrices[1] * Matrix{Complex{TF}}(I,P,M))' * uy.data
 
-    py .= ctranspose(cc.matrixF) * py
+    py .= cc.matrixF' * py
 
     PolyphaseVector(reverse(py; dims=1), pvy.nBlocks)
 end
@@ -51,7 +51,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
     for d = D:-1:1
         nShift = fld(size(pvy,2), pvy.nBlocks[end])
         # submatrices
-        y  = view(pvy.data, colon.(1, size(pvy.data))...)
+        y  = view(pvy.data, [1:r for r in size(pvy.data) ]...)
         yu = view(pvy.data, 1:fld(P,2), :)
         yl = view(pvy.data, (fld(P,2)+1):P, :)
         for k = cc.polyphaseOrder[d]:-1:1
@@ -207,7 +207,7 @@ end
 function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
-    region = colon.(1,df.*(ord.+1)) .- df.*cld.(ord,2) .- 1
+    region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*fld.(ord,2) .- 1
 
     sxs = map(y, pfb.synthesisFilters) do yp, sfp
         upimg = upsample(yp, df)
