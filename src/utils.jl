@@ -47,7 +47,7 @@ function rand!(rnsolt::MDCDL.Rnsolt{T,D,S}; isInitMat=true, isPropMat=true, isPr
 end
 
 function rand(cb::CodeBook; kwargs...)
-    rand!(deepcopy(cb); kwargs)
+    rand!(deepcopy(cb); kwargs...)
 end
 
 randomInit!(cb::CodeBook; kwargs...) = rand!(cb; kwargs...)
