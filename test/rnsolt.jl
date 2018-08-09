@@ -68,7 +68,7 @@ using FFTW
             afb = MDCDL.getAnalysisBank(nsolt)
             Γ = Diagonal(vcat(fill(1,nch[1]), fill(-1,nch[2])))
 
-            @test afb ≈ Γ * flipdim(afb,2)
+            @test afb ≈ Γ * reverse(afb; dims=2)
         end
     end
 

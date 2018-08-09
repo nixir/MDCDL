@@ -77,7 +77,7 @@ using FFTW
             afb = MDCDL.getAnalysisBank(nsolt)
             hsafb = nsolt.symmetry' * afb
 
-            @test hsafb ≈ conj(flipdim(hsafb,2))
+            @test hsafb ≈ conj(reverse(hsafb; dims=2))
         end
     end
 

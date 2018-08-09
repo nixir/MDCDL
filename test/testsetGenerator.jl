@@ -1,4 +1,5 @@
 # 1-D CNSOLT
+using Random
 
 function cnsoltValidConfigSet1D(seed = 610763893)
       rng = Random.seed!(seed)
