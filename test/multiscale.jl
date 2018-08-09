@@ -1,5 +1,6 @@
 using Base.Test
 using MDCDL
+using FFTW
 
 @testset "Multiscale" begin
     include("testsetGenerator.jl")
@@ -17,7 +18,7 @@ using MDCDL
 
     rcsd = [ rcsd1D, rcsd2D, rcsd3D ]
 
-    srand(3923528829)
+    Random.seed!(3923528829)
 
     @testset "ParallelFB" begin
         maxDims = 2

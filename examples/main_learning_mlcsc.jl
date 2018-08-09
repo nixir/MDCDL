@@ -3,7 +3,7 @@ using NLopt
 using Images, ImageView, TestImages
 
 include(joinpath(Pkg.dir(),"MDCDL/test/randomInit.jl"))
-srand(23485729)
+Random.seed!(23485729)
 
 ##### configurations #####
 D = 2

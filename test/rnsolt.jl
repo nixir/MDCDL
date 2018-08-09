@@ -1,5 +1,6 @@
 using Base.Test
 using MDCDL
+using FFTW
 
 @testset "RNSOLT" begin
     include("testsetGenerator.jl")

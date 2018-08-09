@@ -1,5 +1,6 @@
 using Base.Test
 using MDCDL
+using FFTW
 
 @testset "CNSOLT" begin
     include("testsetGenerator.jl")
@@ -11,7 +12,7 @@ using MDCDL
 
     ccsd = [ ccsd1D, ccsd2D, ccsd3D ]
 
-    srand(392875929)
+    Random.seed!(392875929)
 
     # @testset "TypeSystem" begin
     #     dataTypeSet = [Float16, Float32, Float64]
