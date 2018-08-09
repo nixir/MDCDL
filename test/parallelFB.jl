@@ -1,4 +1,4 @@
-using Base.Test
+using Test
 using MDCDL
 using FFTW
 using Random

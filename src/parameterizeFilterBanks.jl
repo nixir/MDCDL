@@ -70,15 +70,15 @@ function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeI}, angs::Vector{T}, mus)
         subAngsDim = angs[ dimAngsRanges[d] ]
         subMusDim = mus[ dimMusRanges[d] ]
         for k = 1:ord[d]
-            subAngsOrd = subAngsDim[(1:nParamsPropPerDimsOrder) + (k-1)*nParamsPropPerDimsOrder]
-            subMusOrd = subMusDim[(1:P) + (k-1)*P]
+            subAngsOrd = subAngsDim[(1:nParamsPropPerDimsOrder) .+ (k-1)*nParamsPropPerDimsOrder]
+            subMusOrd = subMusDim[(1:P) .+ (k-1)*P]
 
             apw = subAngsOrd[1:nAngswu]
-            apu = subAngsOrd[nAngswu+1:2*nAngswu]
-            apb = subAngsOrd[2*nAngswu+1:nParamsPropPerDimsOrder]
+            apu = subAngsOrd[(nAngswu+1):2*nAngswu]
+            apb = subAngsOrd[(2*nAngswu+1):nParamsPropPerDimsOrder]
 
             mpw = subMusOrd[1:nMuswu]
-            mpu = subMusOrd[nMuswu+1:2*nMuswu]
+            mpu = subMusOrd[(nMuswu+1):2*nMuswu]
 
             cc.propMatrices[d][2*k-1] = MDCDL.rotations2mat(apw, mpw)
             cc.propMatrices[d][2*k]   = MDCDL.rotations2mat(apu, mpu)
@@ -164,10 +164,10 @@ function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeII}, angs::Vector{T}, mus
         subAngsDim = angs[ dimAngsRanges[d] ]
         subMusDim = mus[ dimMusRanges[d] ]
         for k = 1:nStages
-            subAngsOrd1 = subAngsDim[(1:nParamsPropPerDimsOrder[1]) + (k-1)*sum(nParamsPropPerDimsOrder)]
-            subMusOrd1 = subMusDim[(1:P-1) + (k-1)*2*P]
-            subAngsOrd2 = subAngsDim[(1:nParamsPropPerDimsOrder[2]) + (k-1)*sum(nParamsPropPerDimsOrder) + nParamsPropPerDimsOrder[1]]
-            subMusOrd2 = subMusDim[(1:P+1) + (P-1) + (k-1)*2*P]
+            subAngsOrd1 = subAngsDim[(1:nParamsPropPerDimsOrder[1]) .+ (k-1)*sum(nParamsPropPerDimsOrder)]
+            subMusOrd1 = subMusDim[(1:P-1) .+ (k-1)*2*P]
+            subAngsOrd2 = subAngsDim[(1:nParamsPropPerDimsOrder[2]) .+ (k-1)*sum(nParamsPropPerDimsOrder) + nParamsPropPerDimsOrder[1]]
+            subMusOrd2 = subMusDim[(1:P+1) .+ ((P-1) + (k-1)*2*P)]
 
             apw1 = subAngsOrd1[1:nAngswu1]
             apu1 = subAngsOrd1[nAngswu1+1:2*nAngswu1]
@@ -366,8 +366,8 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::Vector{T}, mus
         for k = 1:nStages
             subAngsOrd1 = subAngsDim[(1:nAngsu) .+ (k-1)*sum(nParamsPropPerDimsOrder)]
             subMusOrd1 = subMusDim[(1:minP) .+ (k-1)*sum(nch)]
-            subAngsOrd2 = subAngsDim[(1:nAngsw) .+ (k-1)*sum(nParamsPropPerDimsOrder) + nAngsu]
-            subMusOrd2 = subMusDim[(1:maxP) .+ minP + (k-1)*sum(nch)]
+            subAngsOrd2 = subAngsDim[(1:nAngsw) .+ ((k-1)*sum(nParamsPropPerDimsOrder) + nAngsu)]
+            subMusOrd2 = subMusDim[(1:maxP) .+ (minP + (k-1)*sum(nch))]
 
             apu = subAngsOrd1[1:nAngsu]
             apw = subAngsOrd2[1:nAngsw]
