@@ -70,7 +70,7 @@ using FFTW
                 y = [ rand(dt, szy) for p in 1:sum(nch) ]
 
                 myfilter = (A, h) -> begin
-                    ha = zeros(A)
+                    ha = zero(A)
                     # ha[colon.(1,size(h))...] = h
                     ha[[ 1:lh for lh in size(h) ]...] = h
                     if dt <: Real

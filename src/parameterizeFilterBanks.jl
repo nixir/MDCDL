@@ -17,8 +17,8 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
     angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
-        angsPropPerDim = Array{Vector{T}}(ord[d])
-        musPropPerDim = Array{Vector{T}}(ord[d])
+        angsPropPerDim = Array{Vector{T}}(undef, ord[d])
+        musPropPerDim = Array{Vector{T}}(undef, ord[d])
         for k = 1:ord[d]
             (apw, mpw) = MDCDL.mat2rotations(cc.propMatrices[d][2*k-1])
             (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][2*k])
@@ -58,10 +58,10 @@ function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeI}, angs::Vector{T}, mus)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ colon(delimitersAngs[d]+1, delimitersAngs[d+1]) + nParamsInit for d in 1:D]
+    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ nParamsInit for d in 1:D]
 
     delimitersMus = cumsum([ 0, (ord .* P)... ])
-    dimMusRanges = [ colon(delimitersMus[d]+1, delimitersMus[d+1]) + P for d in 1:D]
+    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ P for d in 1:D]
 
     nAngswu = fld(P*(P-2),8)
     nAngsb = fld(P,4)
@@ -106,8 +106,8 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
     musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
         nStages = fld(ord[d],2)
-        angsPropPerDim = Array{Vector{T}}(nStages)
-        musPropPerDim = Array{Vector{T}}(nStages)
+        angsPropPerDim = Array{Vector{T}}(undef, nStages)
+        musPropPerDim = Array{Vector{T}}(undef, nStages)
         for k = 1:nStages
             (apw1, mpw1) = MDCDL.mat2rotations(cc.propMatrices[d][4*k-3])
             (apu1, mpu1) = MDCDL.mat2rotations(cc.propMatrices[d][4*k-2])
@@ -149,10 +149,10 @@ function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeII}, angs::Vector{T}, mus
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ colon(delimitersAngs[d]+1, delimitersAngs[d+1]) + nParamsInit for d in 1:D]
+    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ nParamsInit for d in 1:D]
 
     delimitersMus = cumsum([ 0, (ord .* P)... ])
-    dimMusRanges = [ colon(delimitersMus[d]+1, delimitersMus[d+1]) + P for d in 1:D]
+    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ P for d in 1:D]
 
     nAngswu1 = fld((P-1)*(P-3),8)
     nAngswu2 = fld((P+1)*(P-1),8)
@@ -215,8 +215,8 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
     angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
-        angsPropPerDim = Array{Vector{T}}(ord[d])
-        musPropPerDim = Array{Vector{T}}(ord[d])
+        angsPropPerDim = Array{Vector{T}}(undef, ord[d])
+        musPropPerDim = Array{Vector{T}}(undef, ord[d])
         for k = 1:ord[d]
             (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][k])
 
@@ -257,10 +257,10 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::Vector{T}, mus)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ colon(delimitersAngs[d]+1, delimitersAngs[d+1]) + nParamsInit for d in 1:D]
+    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ nParamsInit for d in 1:D]
 
     delimitersMus = cumsum([ 0, (ord .* fld(P,2))... ])
-    dimMusRanges = [ colon(delimitersMus[d]+1, delimitersMus[d+1]) + P for d in 1:D]
+    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ P for d in 1:D]
 
 
     nAngsu = fld(P*(P-2),8)
@@ -269,8 +269,8 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::Vector{T}, mus)
         subAngsDim = angs[ dimAngsRanges[d] ]
         subMusDim = mus[ dimMusRanges[d] ]
         for k = 1:ord[d]
-            subAngsOrd = subAngsDim[(1:nParamsPropPerDimsOrder) + (k-1)*nParamsPropPerDimsOrder]
-            subMusOrd = subMusDim[(1:fld(P,2)) + (k-1)*fld(P,2)]
+            subAngsOrd = subAngsDim[(1:nParamsPropPerDimsOrder) .+ (k-1)*nParamsPropPerDimsOrder]
+            subMusOrd = subMusDim[(1:fld(P,2)) .+ (k-1)*fld(P,2)]
 
             apu = subAngsOrd[1:nAngsu]
             mpu = subMusOrd[1:nMusu]
@@ -303,8 +303,8 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
     musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     for d = 1:D
         nStages = fld(ord[d],2)
-        angsPropPerDim = Array{Vector{T}}(nStages)
-        musPropPerDim = Array{Vector{T}}(nStages)
+        angsPropPerDim = Array{Vector{T}}(undef, nStages)
+        musPropPerDim = Array{Vector{T}}(undef, nStages)
         for k = 1:nStages
             (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][2*k-1])
             (apw, mpw) = MDCDL.mat2rotations(cc.propMatrices[d][2*k])
@@ -352,10 +352,10 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::Vector{T}, mus
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ colon(delimitersAngs[d]+1, delimitersAngs[d+1]) + sum(nParamsInit) for d in 1:D]
+    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ sum(nParamsInit) for d in 1:D]
 
     delimitersMus = cumsum([ 0, (fld.(ord,2) .* sum(nch))... ])
-    dimMusRanges = [ colon(delimitersMus[d]+1, delimitersMus[d+1]) + sum(nch) for d in 1:D]
+    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ sum(nch) for d in 1:D]
     nAngsu = fld(minP*(minP-1),2)
     nAngsw = fld(maxP*(maxP-1),2)
 

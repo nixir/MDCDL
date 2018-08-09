@@ -119,7 +119,7 @@ using FFTW
 
             afs = getAnalysisFilters(nsolt)
             myfilter = (A, h) -> begin
-                ha = zeros(A)
+                ha = zero(A)
                 # ha[colon.(1,size(h))...] = h
                 ha[[ 1:lh for lh in size(h) ]...] = h
                 ifft(fft(A).*fft(ha))
@@ -147,7 +147,7 @@ using FFTW
 
             sfs = getSynthesisFilters(nsolt)
             myfilter = (A, h) -> begin
-                ha = zeros(A)
+                ha = zero(A)
                 # ha[colon.(1,size(h))...] = h
                 ha[[ 1:lh for lh in size(h) ]...] = h
                 ifft(fft(A).*fft(ha))

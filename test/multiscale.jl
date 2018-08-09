@@ -44,7 +44,7 @@ using FFTW
                 y = analyze(mspfb, x)
 
                 myfilter = (A, h) -> begin
-                    ha = zeros(A)
+                    ha = zero(A)
                     # ha[colon.(1,size(h))...] = h
                     ha[[ 1:lh for lh in size(h) ]...] = h
                     if dt <: Real
