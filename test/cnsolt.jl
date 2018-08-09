@@ -73,7 +73,7 @@ using Random
     @testset "FilterSymmetry" begin
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
             nsolt = Cnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             afb = MDCDL.getAnalysisBank(nsolt)
             hsafb = nsolt.symmetry' * afb
@@ -88,7 +88,7 @@ using Random
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Cnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             x = rand(Complex{Float64}, szx...)
 
@@ -114,7 +114,7 @@ using Random
             x = rand(Complex{Float64}, szx)
 
             nsolt = Cnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             ya = analyze(nsolt, x; outputMode = :reshaped)
 
@@ -140,7 +140,7 @@ using Random
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
 
             nsolt = Cnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             y = [ rand(Complex{Float64},((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
@@ -166,7 +166,7 @@ using Random
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
             src = Cnsolt(df, ord, nch)
             dst = Cnsolt(df, ord, nch)
-            randomInit!(src)
+            rand!(src)
 
             (angs, mus) = getAngleParameters(src)
             setAngleParameters!(dst, angs, mus)

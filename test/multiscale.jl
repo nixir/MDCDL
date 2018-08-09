@@ -100,7 +100,7 @@ using Random
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             nsolt = Cnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
             msnsolt = Multiscale(nsolt, lv)
 
             x = rand(Complex{Float64}, szx...)
@@ -125,7 +125,7 @@ using Random
         for d in 1:length(ccsd), (df, ord, nch) in rcsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
             msnsolt = Multiscale(nsolt, lv)
 
             x = rand(Float64, szx...)

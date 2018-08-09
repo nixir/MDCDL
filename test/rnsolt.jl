@@ -64,7 +64,7 @@ using Random
     @testset "FilterSymmetry" begin
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             afb = MDCDL.getAnalysisBank(nsolt)
             Γ = Diagonal(vcat(fill(1,nch[1]), fill(-1,nch[2])))
@@ -79,7 +79,7 @@ using Random
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             x = rand(Float64, szx...)
 
@@ -105,7 +105,7 @@ using Random
             x = rand(Float64, szx)
 
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             ya = analyze(nsolt, x; outputMode = :reshaped)
 
@@ -131,7 +131,7 @@ using Random
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
 
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             y = [ rand(Float64,((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
@@ -157,7 +157,7 @@ using Random
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             src = Rnsolt(df, ord, nch)
             dst = Rnsolt(df, ord, nch)
-            randomInit!(src)
+            rand!(src)
 
             (angs, mus) = getAngleParameters(src)
             setAngleParameters!(dst, angs, mus)

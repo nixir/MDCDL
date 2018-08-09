@@ -36,7 +36,7 @@ for l = 1:nl
 
     # nsolt = Cnsolt(df, nch, ord, dataType=dt)
     nsolt = Rnsolt(dt, df, ord, nch)
-    randomInit!(nsolt; isSymmetry = false)
+    rand!(nsolt; isSymmetry = false)
     mlcsc.dictionaries[l] = nsolt
 end
 
