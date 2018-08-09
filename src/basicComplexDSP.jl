@@ -24,7 +24,7 @@ end
 
 function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szout = fld.(size(x), factor)
-    output = Array{T,D}(szout...)
+    output = Array{T,D}(undef, szout...)
     for idx = 1:prod(szout)
         output[idx] = x[((CartesianIndices(szout)[idx].I .- 1) .* factor .+ 1 .+ offset)...]
     end

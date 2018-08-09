@@ -11,7 +11,7 @@ using MDCDL
 
     rcsd = [ rcsd1D, rcsd2D, rcsd3D ]
 
-    srand(9387509284)
+    Random.seed!(9387509284)
 
     @testset "Constructor" begin
 

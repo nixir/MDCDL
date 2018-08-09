@@ -1,10 +1,11 @@
 using Base.Test
 using MDCDL
+using FFTW
 
 @testset "ParallelFB" begin
     include("testsetGenerator.jl")
 
-    srand(3923528829)
+    Random.seed!(3923528829)
 
     @testset "Analysis" begin
         maxDims = 2
@@ -28,7 +29,7 @@ using MDCDL
                 y = analyze(pfb, x)
 
                 myfilter = (A, h) -> begin
-                    ha = zeros(A)
+                    ha = zero(A)
                     ha[colon.(1,size(h))...] = h
                     if dt <: Real
                         real(ifft(fft(A).*fft(ha)))
