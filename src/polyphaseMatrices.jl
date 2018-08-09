@@ -129,7 +129,7 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
     # output
     ppm = zeros(T, P, prod(df .* (ord .+ 1)))
     ppm[1:cld(M,2), 1:M] = rc.matrixC[1:cld(M,2),:]
-    ppm[nch[1]+(1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
+    ppm[nch[1].+(1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
 
     # Initial matrix process
     ppm[rngUpper...] = rc.initMatrices[1] * ppm[rngUpper...]
@@ -213,16 +213,16 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
     P = sum(pfb.nChannels)
 
     afb = MDCDL.getAnalysisBank(pfb)
-    primeBlock = colon.(1,df)
+    primeBlock = ([ 1:m for m in df]...,)
     ordm = pfb.polyphaseOrder .+ 1
 
     return map(1:P) do p
-        out = Array{T}(df .* ordm )
+        out = Array{T}(undef, df .* ordm )
 
-        foreach(1:prod(ordm)) do idx
+        for idx = 1:prod(ordm)
             sub = CartesianIndices(ordm)[idx].I
             subaf = primeBlock .+ (sub .- 1) .* df
-            subfb = (1:prod(df)) + (idx-1) * prod(df)
+            subfb = (1:prod(df)) .+ ((idx-1) * prod(df))
 
             out[subaf...] = reshape(afb[ p, subfb ], df...)
         end
@@ -248,7 +248,7 @@ getAnalysisFilters(pfb::ParallelFB) = pfb.analysisFilters
 getSynthesisFilters(pfb::ParallelFB) = pfb.synthesisFilters
 
 # function convert(::Type{Array}, x::PolyphaseVector{T,D}) where {T,D}
-#     primeBlock = colon.(1, x.szBlock)
+#     primeBlock = ([ 1:blk for blk in  x.szBlock]...,)
 #     output = Array{T,D}((x.szBlock .* x.nBlocks)...)
 #     foreach(1:prod(x.nBlocks)) do idx
 #         block = (ind2sub(x.nBlocks, idx) .- 1) .* x.szBlock .+ primeBlock
@@ -262,9 +262,10 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
     if any(size(x) .% szBlock .!= 0)
         error("size error. input data: $(size(x)), block size: $(szBlock).")
     end
-    primeBlock = colon.(1, szBlock)
+    # primeBlock = ([ 1:blk for blk in  szBlock]...,)
+    primeBlock = ([ 1:blk for blk in szBlock]...,)
 
-    data = Matrix{TX}(undef, prod(szBlock),prod(nBlocks))
+    data = Matrix{TX}(undef, prod(szBlock), prod(nBlocks))
     for idx = 1:prod(nBlocks)
         data[:,idx] = vec(x[ ((CartesianIndices(nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock)... ])
     end
@@ -272,7 +273,7 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
 end
 
 function mdarray2polyphase(x::Array{T,D}) where {T,D}
-    data = Matrix{T}(undef, size(x,D),prod(size(x)[1:D-1]))
+    data = Matrix{T}(undef, size(x,D), prod(size(x)[1:D-1]))
     for p = 1:size(x,D)
         data[p,:] = transpose(vec( x[fill(:,D-1)..., p] ))
     end
@@ -285,7 +286,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
         throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
     end
 
-    primeBlock = colon.(1, szBlock)
+    primeBlock = ([ 1:blk for blk in szBlock]...,)
     out = similar(x.data, (x.nBlocks .* szBlock)...)
     for idx = 1:prod(x.nBlocks)
         subOut = (CartesianIndices(x.nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock
@@ -308,7 +309,7 @@ function permutedims(x::PolyphaseVector{T,D}) where {T,D}
     S = fld(size(x.data,2), x.nBlocks[1])
     data = similar(x.data)
     for idx = 0:x.nBlocks[1]-1
-        data[:,(1:S)+idx*S] = x.data[:, (1:x.nBlocks[1]:end) + idx]
+        data[:,(1:S) .+ idx*S] = x.data[:, (1:x.nBlocks[1]:end) .+ idx]
     end
     nBlocks = tuple(circshift(collect(x.nBlocks),-1)...)
 
@@ -319,7 +320,7 @@ function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
     S = fld(size(x.data,2), x.nBlocks[end])
     data = similar(x.data)
     for idx = 0:S-1
-        data[:,(1:x.nBlocks[end]) + idx*x.nBlocks[end]] = x.data[:, (1:S:end) + idx]
+        data[:,(1:x.nBlocks[end]) .+ idx*x.nBlocks[end]] = x.data[:, (1:S:end) .+ idx]
     end
     nBlocks = tuple(circshift(collect(x.nBlocks),1)...)
 

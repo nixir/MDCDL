@@ -1,10 +1,10 @@
-julia 0.6
+julia 0.7
 Images 0.14.0
 ImageView 0.6.0
 TestImages 0.2.0
 ImageMagick 0.5.2
 ImageFiltering 0.3.0
-ColorTypes 0.7.2
+ColorTypes 0.7.3
 Plots 0.17.3
 OffsetArrays 0.6.0
 Conda 0.8.1
