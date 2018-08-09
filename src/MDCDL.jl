@@ -9,7 +9,7 @@ include("basicComplexDSP.jl")
 export PolyphaseVector
 export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export Multiscale, MultiLayerCsc
-export analyze, analyze!, synthesize, sinthesize!, adjoint_synthesize
+export analyze, synthesize, adjoint_synthesize
 # export cconv
 export upsample, downsample
 export atmimshow
@@ -186,7 +186,6 @@ end
 
 include("sparseCoding.jl")
 
-include("blockproc.jl")
 include("orthonormalMatrixSystem.jl")
 include("polyphaseMatrices.jl")
 

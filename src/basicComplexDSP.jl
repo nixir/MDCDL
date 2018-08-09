@@ -28,7 +28,6 @@ function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(
     for idx = 1:prod(szout)
         output[idx] = x[((CartesianIndices(szout)[idx].I .- 1) .* factor .+ 1 .+ offset)...]
     end
-    output
 end
 
 # matrix-formed CDFT operator for D-dimensional signal

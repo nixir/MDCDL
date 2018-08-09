@@ -12,7 +12,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) wh
     # end
     pvy = PolyphaseVector( transpose(hcat(map(vec, y)...)), nBlocks)
     # end
-    pvx = synthesize!(fb, pvy; kwargs...)
+    pvx = synthesize(fb, pvy; kwargs...)
     polyphase2mdarray(pvx, fb.decimationFactor)
 end
 
@@ -22,7 +22,7 @@ function synthesize(fb::PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {T
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
     end
 
-    pvx = synthesize!(fb, mdarray2polyphase(y); kwargs...)
+    pvx = synthesize(fb, mdarray2polyphase(y); kwargs...)
     polyphase2mdarray(pvx, fb.decimationFactor)
 end
 
@@ -32,9 +32,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{TY}, szdata::NTuple{D}; kwa
     synthesize(fb, yaug; kwargs...)
 end
 
-synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = synthesize!(fb, PolyphaseVector(copy(pvy.data), pvy.nBlocks); kwargs...)
-
-function synthesize!(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
+function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
@@ -115,13 +113,14 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-function synthesize!(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
+function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
     nch = cc.nChannels
 
-    uy = concatenateAtoms!(cc, pvy; kwargs...)
+    cpvy = deepcopy(pvy)
+    uy = concatenateAtoms!(cc, cpvy; kwargs...)
     y = uy.data
 
     W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)

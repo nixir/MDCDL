@@ -12,32 +12,32 @@ function mat2rotations(mtx::Matrix{T}) where T <: Real
         res[nr] = atan2(g.s,g.c)
         nr += 1
 
-        rtm = eye(T,P)
-        rtm[g.i1, g.i1] =  g.c
-        rtm[g.i1, g.i2] =  g.s
-        rtm[g.i2, g.i1] = -g.s
-        rtm[g.i2, g.i2] =  g.c
-        mtx = rtm*mtx
+        R = eye(T,P)
+        R[g.i1, g.i1] =  g.c
+        R[g.i1, g.i2] =  g.s
+        R[g.i2, g.i1] = -g.s
+        R[g.i2, g.i2] =  g.c
+        mtx = R*mtx
     end
     (res, round.(diag(mtx)))
 end
 
-function rotations2mat(angs::Array{TA}, sig::Array{TS}) where {TA<:Real,TS<:Number}
-    L = length(angs)
+function rotations2mat(θs::Array{TA}, sig::Array{TS}) where {TA<:Real,TS<:Number}
+    L = length(θs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)
     mtx = eye(TA,P)
 
     nr = 1
     for idx1 = 1:P-1, idx2 = (idx1+1):P
-        c = cos(angs[nr])
-        s = sin(angs[nr])
+        c = cos(θs[nr])
+        s = sin(θs[nr])
 
-        rtm = eye(TA,P)
-        rtm[idx1, idx1] =  c
-        rtm[idx1, idx2] = -s
-        rtm[idx2, idx1] =  s
-        rtm[idx2, idx2] =  c
-        mtx = mtx*rtm
+        R = eye(TA,P)
+        R[idx1, idx1] =  c
+        R[idx1, idx2] = -s
+        R[idx2, idx1] =  s
+        R[idx2, idx2] =  c
+        mtx = mtx*R
 
         nr += 1
     end
@@ -45,42 +45,74 @@ function rotations2mat(angs::Array{TA}, sig::Array{TS}) where {TA<:Real,TS<:Numb
 end
 
 # ∂(x'*A(θ)*y)/∂θ
-function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, angs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
-    scalarGradOfOrthonormalMatrix_reference(x, y, angs, sig)
+function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, θs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
+    scalarGradOfOrthonormalMatrix(x, y, rotations2mat(θs, sig))
 end
 
-scalarGradOfOrthonormalMatrix(x::AbstractArray, y::AbstractArray, A::AbstractMatrix) = scalarGradOfOrthonormalMatrix(x, y, mat2rotations(A)...)
+function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, A::AbstractMatrix{TA}) where {D,TV,TA<:Real}
+    θs, mus = mat2rotations(A)
+    L = length(θs)
+    P = round(Integer, (1 + sqrt(1+8*L)) / 2)
 
-function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, angs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
-    L = length(angs)
+    ∇xᵀAy = Vector{TA}(L)
+    ay = A*y
+
+    nr = 1
+    for idx1 = 1:P-1, idx2 = (idx1+1):P
+        c, s = cos(θs[nr]), sin(θs[nr])
+
+        Rᵀ = eye(TA,P)
+        Rᵀ[idx1, idx1] =  c
+        Rᵀ[idx1, idx2] =  s
+        Rᵀ[idx2, idx1] = -s
+        Rᵀ[idx2, idx2] =  c
+
+        ∂R = zeros(TA,P,P)
+        ∂R[idx1, idx1] = -s
+        ∂R[idx1, idx2] = -c
+        ∂R[idx2, idx1] =  c
+        ∂R[idx2, idx2] = -s
+
+        ay = Rᵀ * ay
+        ∇xᵀAy[nr] = vecdot(x, ∂R * ay)
+        x = Rᵀ * x
+
+        nr += 1
+    end
+    ∇xᵀAy
+end
+
+# reference implementation
+function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, θs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
+    L = length(θs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)
 
     ids = filter((a) -> a[1] < a[2], vec([(i1, i2) for i2 = 1:P, i1 = 1:P]))
 
     rots = map(1:length(ids)) do nr
         i1, i2 = ids[nr][1], ids[nr][2]
-        c, s = cos(angs[nr]), sin(angs[nr])
+        c, s = cos(θs[nr]), sin(θs[nr])
 
-        rtm = eye(TA,P)
-        rtm[i1, i1] =  c
-        rtm[i1, i2] = -s
-        rtm[i2, i1] =  s
-        rtm[i2, i2] =  c
+        R = eye(TA,P)
+        R[i1, i1] =  c
+        R[i1, i2] = -s
+        R[i2, i1] =  s
+        R[i2, i2] =  c
 
-        rtm
+        R
     end
 
     grots = map(1:length(ids)) do nr
         i1, i2 = ids[nr][1], ids[nr][2]
-        c, s = cos(angs[nr]), sin(angs[nr])
+        c, s = cos(θs[nr]), sin(θs[nr])
 
-        grtm = zeros(TA,P,P)
-        grtm[i1, i1] = -s
-        grtm[i1, i2] = -c
-        grtm[i2, i1] =  c
-        grtm[i2, i2] = -s
+        ∂R = zeros(TA,P,P)
+        ∂R[i1, i1] = -s
+        ∂R[i1, i2] = -c
+        ∂R[i2, i1] =  c
+        ∂R[i2, i2] = -s
 
-        grtm
+        ∂R
     end
 
     erots = [ eye(TA,P), rots..., eye(TA,P) ]
