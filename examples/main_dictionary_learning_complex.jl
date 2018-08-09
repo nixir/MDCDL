@@ -5,7 +5,7 @@ using MDCDL
 using TestImages, Images
 using Plots
 using Random
-count = 0
+cnt = 0
 
 # output file name
 filename = ""
@@ -54,17 +54,17 @@ y = y0
 for idx = 1:nEpoch, subx in trainingIds
     x = orgImg[subx...]
     hy = MDCDL.iht(msnsolt, x, y, sparsity; maxIterations=400, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
-    count = 0
+    cnt = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
-        global count
-        count::Int += 1
+        global cnt
+        cnt::Int += 1
 
         angsvm1 = vcat(zeros(sum(nch)-1), angs)
         setAngleParameters!(msnsolt.filterBank, angsvm1, mus0)
         dist = x .- synthesize(msnsolt, hy, size(x))
         cst = vecnorm(dist)^2
 
-        println("f_$(count): cost=$(cst)")
+        println("f_$(cnt): cost=$(cst)")
 
         cst
     end

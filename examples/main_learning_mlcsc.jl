@@ -2,7 +2,6 @@ using MDCDL
 using NLopt
 using Images, ImageView, TestImages
 
-# include(joinpath(Pkg.dir(),"MDCDL/test/randomInit.jl"))
 Random.seed!(23485729)
 
 ##### configurations #####
@@ -59,9 +58,9 @@ for epoch = 1:nEpoch, k = 1:length(x)
         angles0, mus0 = MDCDL.getAngleParameters(submlcsc.dictionaries[l])
 
         nzk = fld(length(xk),16)
-        count = 0
+        cnt = 0
         objfunc = (angs, grad) -> begin
-            count += 1
+            cnt += 1
 
             setAngleParameters!(submlcsc.dictionaries[l], angs, mus0)
 
@@ -77,7 +76,7 @@ for epoch = 1:nEpoch, k = 1:length(x)
             diffx = xk - γ[1]
 
             cst = vecnorm(diffx)^2
-            println("f_$(count): cost=$(cst)")
+            println("f_$(cnt): cost=$(cst)")
 
             cst
         end

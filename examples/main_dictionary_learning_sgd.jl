@@ -2,8 +2,10 @@
 
 using NLopt
 using MDCDL
-using TestImages, Images
-using Plots
+using TestImages
+# using Images
+using ColorTypes
+# using Plots
 cnt = 0
 
 # output file name
@@ -64,7 +66,7 @@ for epoch = 1:nEpoch
     println("Epoch $epoch finished. sum(cost) = $(serrs[epoch])")
 end
 
-atmimshow(nsolt)
+# atmimshow(nsolt)
 
 if !isempty(filename)
     MDCDL.save(filename, nsolt)
