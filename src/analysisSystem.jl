@@ -188,7 +188,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, alg=ImageFiltering.FIR()) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     offset = df .- 1
@@ -196,7 +196,7 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) wh
 
     y = map(pfb.analysisFilters) do f
         ker = reflect(OffsetArray(f, region...))
-        fltimg = imfilter(x, ker, "circular", ImageFiltering.FIR())
+        fltimg = imfilter(x, ker, "circular", alg)
         downsample(fltimg, df, offset)
     end
 
