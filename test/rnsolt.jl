@@ -1,9 +1,11 @@
-using Base.Test
+using Test
 using MDCDL
+using FFTW
+using Random
 
 @testset "RNSOLT" begin
     include("testsetGenerator.jl")
-    include("randomInit.jl")
+    # include("randomInit.jl")
 
     rcsd1D = rnsoltValidConfigSet1D()
     rcsd2D = rnsoltValidConfigSet2D()
@@ -11,7 +13,7 @@ using MDCDL
 
     rcsd = [ rcsd1D, rcsd2D, rcsd3D ]
 
-    srand(9387509284)
+    Random.seed!(9387509284)
 
     @testset "Constructor" begin
 
@@ -19,7 +21,7 @@ using MDCDL
         defaultType = Float64
 
         for d in 1:maxDims
-            allcfgset = [ (crdf.I, crord.I .- 1, crnch.I) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(6+1,d)...)), crnch in CartesianRange(tuple(fill(10,2)...)) ]
+            allcfgset = [ (crdf.I, crord.I .- 1, crnch.I) for crdf in CartesianIndices(tuple(fill(4,d)...)), crord in CartesianIndices(tuple(fill(6+1,d)...)), crnch in CartesianIndices(tuple(fill(10,2)...)) ]
             cfgsetTypeI  = filter(c -> c[3][1] == c[3][2], allcfgset)
             cfgsetTypeII = filter(c -> c[3][1] != c[3][2], allcfgset)
             cfgset = vcat(randsubseq(cfgsetTypeI, 50 / length(cfgsetTypeI))..., randsubseq(cfgsetTypeII, 50 / length(cfgsetTypeII))...)
@@ -62,12 +64,12 @@ using MDCDL
     @testset "FilterSymmetry" begin
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             afb = MDCDL.getAnalysisBank(nsolt)
             Γ = Diagonal(vcat(fill(1,nch[1]), fill(-1,nch[2])))
 
-            @test afb ≈ Γ * flipdim(afb,2)
+            @test afb ≈ Γ * reverse(afb; dims=2)
         end
     end
 
@@ -77,7 +79,7 @@ using MDCDL
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             x = rand(Float64, szx...)
 
@@ -103,14 +105,15 @@ using MDCDL
             x = rand(Float64, szx)
 
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             ya = analyze(nsolt, x; outputMode = :reshaped)
 
             afs = getAnalysisFilters(nsolt)
             myfilter = (A, h) -> begin
-                ha = zeros(A)
-                ha[colon.(1,size(h))...] = h
+                ha = zero(A)
+                # ha[colon.(1,size(h))...] = h
+                ha[[ 1:lh for lh in size(h) ]...] = h
                 real(ifft(fft(A).*fft(ha)))
             end
             offset = df .- 1
@@ -128,7 +131,7 @@ using MDCDL
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
 
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
 
             y = [ rand(Float64,((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
@@ -136,8 +139,9 @@ using MDCDL
 
             sfs = getSynthesisFilters(nsolt)
             myfilter = (A, h) -> begin
-                ha = zeros(A)
-                ha[colon.(1,size(h))...] = h
+                ha = zero(A)
+                # ha[colon.(1,size(h))...] = h
+                ha[[ 1:lh for lh in size(h) ]...] = h
                 real(ifft(fft(A).*fft(ha)))
             end
             offset = df .- 1
@@ -153,7 +157,7 @@ using MDCDL
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             src = Rnsolt(df, ord, nch)
             dst = Rnsolt(df, ord, nch)
-            randomInit!(src)
+            rand!(src)
 
             (angs, mus) = getAngleParameters(src)
             setAngleParameters!(dst, angs, mus)

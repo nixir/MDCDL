@@ -4,7 +4,8 @@ using NLopt
 using MDCDL
 using TestImages, Images
 using Plots
-count = 0
+using Random
+cnt = 0
 
 # output file name
 filename = ""
@@ -26,7 +27,7 @@ nEpoch = 10
 
 nsolt = Cnsolt(df, ord, nch)
 include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-randomInit!(nsolt)
+rand!(nsolt)
 msnsolt = Multiscale(nsolt, lv)
 
 orgImg = Array{Float64}(testimage("cameraman"))
@@ -53,17 +54,17 @@ y = y0
 for idx = 1:nEpoch, subx in trainingIds
     x = orgImg[subx...]
     hy = MDCDL.iht(msnsolt, x, y, sparsity; maxIterations=400, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
-    count = 0
+    cnt = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
-        global count
-        count::Int += 1
+        global cnt
+        cnt::Int += 1
 
         angsvm1 = vcat(zeros(sum(nch)-1), angs)
         setAngleParameters!(msnsolt.filterBank, angsvm1, mus0)
         dist = x .- synthesize(msnsolt, hy, size(x))
         cst = vecnorm(dist)^2
 
-        println("f_$(count): cost=$(cst)")
+        println("f_$(cnt): cost=$(cst)")
 
         cst
     end

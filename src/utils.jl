@@ -1,7 +1,9 @@
 using LinearAlgebra
 using Random
+import Random.rand
+import Random.rand!
 
-function randomInit!(cnsolt::MDCDL.Cnsolt{T,D,S}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T}
+function rand!(cnsolt::MDCDL.Cnsolt{T,D,S}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T}
     P = sum(cnsolt.nChannels)
 
     if isSymmetry
@@ -22,9 +24,10 @@ function randomInit!(cnsolt::MDCDL.Cnsolt{T,D,S}; isInitMat=true, isPropMat=true
             @. cnsolt.paramAngles[d] = rand(T,size(cnsolt.paramAngles[d]))
         end
     end
+    cnsolt
 end
 
-function randomInit!(rnsolt::MDCDL.Rnsolt{T,D,S}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T} # "isPropAng" and "isSymmetry" are not used.
+function rand!(rnsolt::MDCDL.Rnsolt{T,D,S}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,S,T} # "isPropAng" and "isSymmetry" are not used.
     P = sum(rnsolt.nChannels)
     hP = fld(P,2)
 
@@ -40,4 +43,11 @@ function randomInit!(rnsolt::MDCDL.Rnsolt{T,D,S}; isInitMat=true, isPropMat=true
             end
         end
     end
+    rnsolt
 end
+
+function rand(cb::CodeBook; kwargs...)
+    MDCDL.rand!(deepcopy(cb); kwargs...)
+end
+
+randomInit!(cb::CodeBook; kwargs...) = rand!(cb; kwargs...)

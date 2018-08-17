@@ -1,9 +1,11 @@
-using Base.Test
+using Test
 using MDCDL
+using FFTW
+using Random
 
 @testset "Multiscale" begin
     include("testsetGenerator.jl")
-    include("randomInit.jl")
+    # include("randomInit.jl")
 
     ccsd1D = cnsoltValidConfigSet1D()
     ccsd2D = cnsoltValidConfigSet2D()
@@ -17,12 +19,12 @@ using MDCDL
 
     rcsd = [ rcsd1D, rcsd2D, rcsd3D ]
 
-    srand(3923528829)
+    Random.seed!(3923528829)
 
     @testset "ParallelFB" begin
         maxDims = 2
         for d in 1:maxDims, dt in [ Float64, Complex{Float64}]
-            cfgs = vec([ (crdf.I, crord.I .- 1, nch, lv) for crdf in CartesianRange(tuple(fill(4,d)...)), crord in CartesianRange(tuple(fill(2+1,d)...)), nch in 2:10, lv in 1:3 ])
+            cfgs = vec([ (crdf.I, crord.I .- 1, nch, lv) for crdf in CartesianIndices(tuple(fill(4,d)...)), crord in CartesianIndices(tuple(fill(2+1,d)...)), nch in 2:10, lv in 1:3 ])
 
             subcfgs = randsubseq(cfgs, 30 / length(cfgs))
 
@@ -43,8 +45,9 @@ using MDCDL
                 y = analyze(mspfb, x)
 
                 myfilter = (A, h) -> begin
-                    ha = zeros(A)
-                    ha[colon.(1,size(h))...] = h
+                    ha = zero(A)
+                    # ha[colon.(1,size(h))...] = h
+                    ha[[ 1:lh for lh in size(h) ]...] = h
                     if dt <: Real
                         real(ifft(fft(A).*fft(ha)))
                     else
@@ -97,7 +100,7 @@ using MDCDL
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             nsolt = Cnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
             msnsolt = Multiscale(nsolt, lv)
 
             x = rand(Complex{Float64}, szx...)
@@ -122,7 +125,7 @@ using MDCDL
         for d in 1:length(ccsd), (df, ord, nch) in rcsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
-            randomInit!(nsolt)
+            rand!(nsolt)
             msnsolt = Multiscale(nsolt, lv)
 
             x = rand(Float64, szx...)

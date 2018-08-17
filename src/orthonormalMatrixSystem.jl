@@ -2,17 +2,17 @@ function mat2rotations(mtx::Matrix{T}) where T <: Real
     sz = size(mtx)
     P = sz[1]
 
-    res = Array{T}(fld(P*(P-1),2))
+    res = Array{T}(undef, fld(P*(P-1),2))
 
     nr = 1
     for idx1 = 1:P-1, idx2 = (idx1+1):P
         a = givens(mtx, idx1, idx2, idx1)
         g = a[1]
 
-        res[nr] = atan2(g.s,g.c)
+        res[nr] = atan(g.s, g.c)
         nr += 1
 
-        R = eye(T,P)
+        R = Matrix{T}(I,P,P)
         R[g.i1, g.i1] =  g.c
         R[g.i1, g.i2] =  g.s
         R[g.i2, g.i1] = -g.s
@@ -25,14 +25,14 @@ end
 function rotations2mat(θs::Array{TA}, sig::Array{TS}) where {TA<:Real,TS<:Number}
     L = length(θs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)
-    mtx = eye(TA,P)
+    mtx = Matrix{TA}(I,P,P)
 
     nr = 1
     for idx1 = 1:P-1, idx2 = (idx1+1):P
         c = cos(θs[nr])
         s = sin(θs[nr])
 
-        R = eye(TA,P)
+        R = Matrix{TA}(I,P,P)
         R[idx1, idx1] =  c
         R[idx1, idx2] = -s
         R[idx2, idx1] =  s
@@ -41,7 +41,7 @@ function rotations2mat(θs::Array{TA}, sig::Array{TS}) where {TA<:Real,TS<:Numbe
 
         nr += 1
     end
-    mtx * diagm(sig)
+    mtx * diagm(0 => sig)
 end
 
 # ∂(x'*A(θ)*y)/∂θ
@@ -61,7 +61,7 @@ function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{
     for idx1 = 1:P-1, idx2 = (idx1+1):P
         c, s = cos(θs[nr]), sin(θs[nr])
 
-        Rᵀ = eye(TA,P)
+        Rᵀ = Matrix{TA}(I,P,P)
         Rᵀ[idx1, idx1] =  c
         Rᵀ[idx1, idx2] =  s
         Rᵀ[idx2, idx1] = -s
@@ -93,7 +93,7 @@ function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::Abst
         i1, i2 = ids[nr][1], ids[nr][2]
         c, s = cos(θs[nr]), sin(θs[nr])
 
-        R = eye(TA,P)
+        R = Matrix{TA}(I,P,P)
         R[i1, i1] =  c
         R[i1, i2] = -s
         R[i2, i1] =  s
@@ -115,10 +115,10 @@ function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::Abst
         ∂R
     end
 
-    erots = [ eye(TA,P), rots..., eye(TA,P) ]
+    erots = [ Matrix{TA}(I,P,P), rots..., Matrix{TA}(I,P,P) ]
 
     map(1:length(ids)) do nr
-        real(vecdot(x, prod(erots[1:nr]) * grots[nr] * prod(erots[(nr+2):end]) * diagm(sig) * y))
+        real(vecdot(x, prod(erots[1:nr]) * grots[nr] * prod(erots[(nr+2):end]) * diagm(0 => sig) * y))
     end
 end
 

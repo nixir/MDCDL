@@ -1,4 +1,5 @@
 # circular convolution
+using FFTW
 
 function cconv(x::Array{Complex{T},D}, h::Array{Complex{T},D}) where {T,D}
     ifft( fft(x) .* fft(h))
@@ -14,17 +15,20 @@ cconv(x::Array, h::Array) = cconv(promote(x,h)...)
 function upsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szx = size(x)
     output = zeros(T, szx .* factor)
-    for cr = CartesianRange(szx)
-        output[(( cr.I .- 1) .* factor .+ 1 .+ offset)...] = x[cr]
+    for idx = 1:prod(szx)
+        sub = CartesianIndices(szx)[idx].I
+        output[((sub .- 1) .* factor .+ 1 .+ offset)...] = x[sub...]
     end
     output
 end
 
 function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szout = fld.(size(x), factor)
-    map(CartesianRange(szout)) do cr
-        x[((cr.I .- 1) .* factor .+ 1 .+ offset)...]
+    output = Array{T,D}(undef, szout...)
+    for idx = 1:prod(szout)
+        output[idx] = x[((CartesianIndices(szout)[idx].I .- 1) .* factor .+ 1 .+ offset)...]
     end
+    output
 end
 
 # matrix-formed CDFT operator for D-dimensional signal
@@ -58,8 +62,8 @@ function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     end
     mtx = hcat(imps...)
 
-    evenIds = find(x -> iseven(sum(ind2sub(sz,x) .- 1)), 1:len)
-    oddIds = find(x -> isodd(sum(ind2sub(sz,x) .- 1)), 1:len)
+    evenIds = findall(x -> iseven(sum(CartesianIndices(sz)[x].I .- 1)), 1:len)
+    oddIds = findall(x -> isodd(sum(CartesianIndices(sz)[x].I .- 1)), 1:len)
 
     evenMtx = hcat([ mtx[idx,:] for idx in evenIds]...)
     oddMtx = hcat([ mtx[idx,:] for idx in oddIds]...)

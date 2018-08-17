@@ -27,8 +27,8 @@ nSubData = 32
 nEpoch = 10
 
 nsolt = Rnsolt(dt, df, ord, nch)
-include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-randomInit!(nsolt)
+# include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
+rand!(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]

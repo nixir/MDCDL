@@ -14,6 +14,8 @@ function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) wh
         polyphase2mdarray(y)
     elseif outputMode == :vector
         vec(transpose(y.data))
+    else
+        error("Invalid augument.")
     end
 end
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
@@ -25,13 +27,14 @@ function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     P = cc.nChannels
 
     x = pvx.data
-    tx = cc.matrixF * flipdim(x, 1)
+    tx = cc.matrixF * reverse(x; dims=1)
 
-    V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
+    # V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
+    V0 = cc.initMatrices[1] * Matrix{Complex{TF}}(I, P, M)
     ux = V0 * tx
 
     extx = extendAtoms!(cc, PolyphaseVector(ux, pvx.nBlocks); kwargs...)
-    PolyphaseVector(cc.symmetry*extx.data, extx.nBlocks)
+    PolyphaseVector(cc.symmetry * extx.data, extx.nBlocks)
 end
 
 function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
@@ -41,7 +44,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
         nShift = fld(size(pvx,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
-        x = view(pvx.data, colon.(1, size(pvx.data))...)
+        x = view(pvx.data, [ 1:r for r in size(pvx.data) ]...)
         xu = view(pvx.data, 1:fld(P, 2), :)
         xl = view(pvx.data, (fld(P, 2)+1):P, :)
         for k = 1:cc.polyphaseOrder[d]
@@ -106,11 +109,11 @@ function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     fM = fld(M,2)
     nch = cc.nChannels
 
-    W0 = cc.initMatrices[1] * eye(TF, nch[1], cM)
-    U0 = cc.initMatrices[2] * eye(TF, nch[2], fM)
+    W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)
+    U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
 
-    tx = cc.matrixC * flipdim(pvx.data, 1)
-    ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[cM+1:end, :]), pvx.nBlocks)
+    tx = cc.matrixC * reverse(pvx.data; dims=1)
+    ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[(cM+1):end, :]), pvx.nBlocks)
 
     extendAtoms!(cc, ux; kwargs...)
 end
@@ -123,7 +126,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
         pvx = permutedims(pvx)
         # submatrices
         xu = view(pvx.data, 1:hP, :)
-        xl = view(pvx.data, (1:hP)+hP, :)
+        xl = view(pvx.data, (1:hP) .+ hP, :)
         for k = 1:cc.polyphaseOrder[d]
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
@@ -192,7 +195,7 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, al
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     offset = df .- 1
-    region = colon.(1,df.*(ord.+1)) .- df.*fld.(ord,2) .- 1
+    region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*fld.(ord,2) .- 1
 
     y = map(pfb.analysisFilters) do f
         ker = reflect(OffsetArray(f, region...))
@@ -206,6 +209,8 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, al
         cat(D+1, y...)
     elseif outputMode == :vector
         vcat(vec.(y)...)
+    else
+        error("Invalid augument")
     end
 end
 adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)

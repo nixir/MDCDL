@@ -2,8 +2,10 @@
 
 using NLopt
 using MDCDL
-using TestImages, Images
-using Plots
+using TestImages
+# using Images
+using ColorTypes
+# using Plots
 cnt = 0
 
 # output file name
@@ -27,8 +29,8 @@ nSubData = 1024
 nEpoch = 100
 
 nsolt = Rnsolt(dt, df, ord, nch)
-include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-randomInit!(nsolt)
+# include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
+rand!(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
@@ -64,7 +66,7 @@ for epoch = 1:nEpoch
     println("Epoch $epoch finished. sum(cost) = $(serrs[epoch])")
 end
 
-atmimshow(nsolt)
+# atmimshow(nsolt)
 
 if !isempty(filename)
     MDCDL.save(filename, nsolt)

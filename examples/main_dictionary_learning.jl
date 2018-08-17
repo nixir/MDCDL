@@ -25,8 +25,8 @@ nSubData = 64
 nEpoch = 10
 
 nsolt = Rnsolt(df, ord, nch)
-include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-# randomInit!(nsolt)
+# include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
+# rand!(nsolt)
 msnsolt = Multiscale(nsolt, lv)
 
 orgImg = Array{RGB{Float64}}(testimage("lena"))
