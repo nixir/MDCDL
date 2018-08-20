@@ -1,4 +1,5 @@
-using Plots, Images
+using Plots: plot
+using ColorTypes
 
 function atmimshow(cc::MDCDL.Cnsolt{T,2,S}) where {S,T}
     P = cc.nChannels

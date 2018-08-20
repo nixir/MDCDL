@@ -1,5 +1,5 @@
-using ImageFiltering
-using OffsetArrays
+using ImageFiltering: imfilter, reflect, FIR
+using OffsetArrays: OffsetArray
 # Finit-dimensional lienar operator
 analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x

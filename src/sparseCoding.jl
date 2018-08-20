@@ -1,7 +1,5 @@
+using LinearAlgebra
 using ColorTypes
-# import Base.LinAlg.norm
-# import Base.LinAlg.vecnorm
-# import Base.LinAlg.vecnormInf
 # iterative shrinkage/thresholding algorithm
 # solve a regularized convex optimization problem e.x. f(x) + g(x)
 function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; maxIterations::Integer=20, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)

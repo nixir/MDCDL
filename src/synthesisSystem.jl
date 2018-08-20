@@ -1,5 +1,5 @@
-using ImageFiltering
-using OffsetArrays
+using ImageFiltering: imfilter, reflect, FIR
+using OffsetArrays: OffsetArray
 # Finit-dimensional linear operator
 synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 

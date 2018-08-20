@@ -1,4 +1,4 @@
-using TiledIteration
+using TiledIteration: TileIterator
 
 function getMatrixB(P::Integer, angs::Vector{T}) where T
     hP = fld(P,2)
