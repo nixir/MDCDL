@@ -214,23 +214,42 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
     P = sum(pfb.nChannels)
 
     afb = MDCDL.getAnalysisBank(pfb)
-    # primeBlock = ([ 1:m for m in df]...,)
-    primeBlock = (:).(1, df)
     ordm = pfb.polyphaseOrder .+ 1
 
     return map(1:P) do p
         out = Array{T}(undef, df .* ordm )
+        tilesout = collect(TileIterator(axes(out), df))
 
-        for idx = 1:prod(ordm)
-            sub = CartesianIndices(ordm)[idx].I
-            subaf = primeBlock .+ (sub .- 1) .* df
-            subfb = (1:prod(df)) .+ ((idx-1) * prod(df))
-
-            out[subaf...] = reshape(afb[ p, subfb ], df...)
+        for idx in LinearIndices(ordm)
+            sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
+            out[tilesout[idx]...] = reshape(afb[p, sub], df...)
         end
         out
     end
 end
+
+# function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
+#     df = pfb.decimationFactor
+#     P = sum(pfb.nChannels)
+#
+#     afb = MDCDL.getAnalysisBank(pfb)
+#     # primeBlock = ([ 1:m for m in df]...,)
+#     primeBlock = (:).(1, df)
+#     ordm = pfb.polyphaseOrder .+ 1
+#
+#     return map(1:P) do p
+#         out = Array{T}(undef, df .* ordm )
+#
+#         for idx = 1:prod(ordm)
+#             sub = CartesianIndices(ordm)[idx].I
+#             subaf = primeBlock .+ (sub .- 1) .* df
+#             subfb = (1:prod(df)) .+ ((idx-1) * prod(df))
+#
+#             out[subaf...] = reshape(afb[ p, subfb ], df...)
+#         end
+#         out
+#     end
+# end
 
 function getSynthesisFilters(cc::MDCDL.Cnsolt)
     map(getAnalysisFilters(cc)) do af

@@ -207,7 +207,10 @@ end
 function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}; alg=ImageFiltering.FIR()) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
-    region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*cld.(ord,2) .- 1
+    # region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*cld.(ord,2) .- 1
+
+    nShift = df .* cld.(ord, 2) .+ 1
+    region = (:).(1 .- nShift, df .* (ord .+ 1) .- nShift)
 
     sxs = map(y, pfb.synthesisFilters) do yp, sfp
         upimg = upsample(yp, df)

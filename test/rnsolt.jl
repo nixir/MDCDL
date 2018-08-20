@@ -2,6 +2,7 @@ using Test
 using MDCDL
 using FFTW
 using Random
+using LinearAlgebra
 
 @testset "RNSOLT" begin
     include("testsetGenerator.jl")
