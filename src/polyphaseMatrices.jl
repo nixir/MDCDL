@@ -302,8 +302,8 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
         throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
     end
 
-    tiles = collect(TileIterator(axes(out), szBlock))
     out = similar(x.data, (x.nBlocks .* szBlock)...)
+    tiles = collect(TileIterator(axes(out), szBlock))
     for idx in LinearIndices(x.nBlocks)
         out[tiles[idx]...] = reshape(x.data[:,idx], szBlock...)
     end
