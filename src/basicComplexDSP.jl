@@ -15,10 +15,8 @@ cconv(x::Array, h::Array) = cconv(promote(x,h)...)
 function upsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szx = size(x)
     output = zeros(T, szx .* factor)
-    ci = CartesianIndices(szx)
-    for idx in LinearIndices(szx)
-        sub = ci[idx].I
-        output[((sub .- 1) .* factor .+ 1 .+ offset)...] = x[sub...]
+    for ci in CartesianIndices(szx)
+        output[((ci.I .- 1) .* factor .+ 1 .+ offset)...] = x[ci]
     end
     output
 end

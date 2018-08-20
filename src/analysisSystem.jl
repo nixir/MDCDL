@@ -191,7 +191,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, alg=ImageFiltering.FIR()) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, alg=FIR()) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
 

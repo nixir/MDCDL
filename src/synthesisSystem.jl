@@ -204,7 +204,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}; alg=ImageFiltering.FIR()) where {TF,TY,D}
+function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}; alg=FIR()) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
     # region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*cld.(ord,2) .- 1
