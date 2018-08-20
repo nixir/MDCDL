@@ -3,6 +3,7 @@ import Base.*
 import Base.size
 import Base.getindex
 import Base.setindex!
+import TiledIteration
 
 function getMatrixB(P::Integer, angs::Vector{T}) where T
     hP = fld(P,2)
@@ -213,7 +214,8 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
     P = sum(pfb.nChannels)
 
     afb = MDCDL.getAnalysisBank(pfb)
-    primeBlock = ([ 1:m for m in df]...,)
+    # primeBlock = ([ 1:m for m in df]...,)
+    primeBlock = (:).(1, df)
     ordm = pfb.polyphaseOrder .+ 1
 
     return map(1:P) do p
@@ -262,15 +264,29 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
     if any(size(x) .% szBlock .!= 0)
         error("size error. input data: $(size(x)), block size: $(szBlock).")
     end
-    # primeBlock = ([ 1:blk for blk in  szBlock]...,)
-    primeBlock = ([ 1:blk for blk in szBlock]...,)
 
     data = Matrix{TX}(undef, prod(szBlock), prod(nBlocks))
-    for idx = 1:prod(nBlocks)
-        data[:,idx] = vec(x[ ((CartesianIndices(nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock)... ])
+    tiles = collect(TileIterator(axes(x), szBlock))
+    for idx in LinearIndices(nBlocks)
+        data[:,idx] = vec(x[tiles[idx]...])
     end
     PolyphaseVector(data, nBlocks)
 end
+
+# function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
+#     nBlocks = fld.(size(x), szBlock)
+#     if any(size(x) .% szBlock .!= 0)
+#         error("size error. input data: $(size(x)), block size: $(szBlock).")
+#     end
+#     # primeBlock = ([ 1:blk for blk in szBlock]...,)
+#     primeBlock = (:).(1, szBlock)
+#
+#     data = Matrix{TX}(undef, prod(szBlock), prod(nBlocks))
+#     for idx = 1:prod(nBlocks)
+#         data[:,idx] = vec(x[ ((CartesianIndices(nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock)... ])
+#     end
+#     PolyphaseVector(data, nBlocks)
+# end
 
 function mdarray2polyphase(x::Array{T,D}) where {T,D}
     data = Matrix{T}(undef, size(x,D), prod(size(x)[1:D-1]))
@@ -286,14 +302,28 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
         throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
     end
 
-    primeBlock = ([ 1:blk for blk in szBlock]...,)
+    tiles = collect(TileIterator(axes(out), szBlock))
     out = similar(x.data, (x.nBlocks .* szBlock)...)
-    for idx = 1:prod(x.nBlocks)
-        subOut = (CartesianIndices(x.nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock
-        out[subOut...] = reshape(x.data[:,idx], szBlock...)
+    for idx in LinearIndices(x.nBlocks)
+        out[tiles[idx]...] = reshape(x.data[:,idx], szBlock...)
     end
     out
 end
+
+# function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
+#     if size(x.data,1) != prod(szBlock)
+#         throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
+#     end
+#
+#     # primeBlock = ([ 1:blk for blk in szBlock]...,)
+#     primeBlock = (:).(1, szBlock)
+#     out = similar(x.data, (x.nBlocks .* szBlock)...)
+#     for idx = 1:prod(x.nBlocks)
+#         subOut = (CartesianIndices(x.nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock
+#         out[subOut...] = reshape(x.data[:,idx], szBlock...)
+#     end
+#     out
+# end
 
 function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
     P = size(x.data,1)
