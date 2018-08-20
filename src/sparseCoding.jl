@@ -74,7 +74,7 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
     xₖ
 end
 
-function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false, lt::Function=isless)
+function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y₀, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false, lt::Function=isless)
     len = length(y₀)
     y = y₀
     errx = Inf
