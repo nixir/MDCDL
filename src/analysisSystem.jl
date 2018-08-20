@@ -5,7 +5,7 @@ analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
 # Filter bank with polyphase representation
-function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}; outputMode=:reshaped) where {TF,TX,D}
     y = analyze(fb, mdarray2polyphase(x, fb.decimationFactor))
 
     if outputMode == :reshaped
@@ -18,7 +18,7 @@ function analyze(fb::PolyphaseFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped) wh
         error("Invalid augument.")
     end
 end
-adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
+adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
 adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
 
@@ -191,7 +191,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, alg=FIR()) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; outputMode=:reshaped, alg=FIR()) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
 
@@ -215,9 +215,9 @@ function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, al
         error("Invalid augument")
     end
 end
-adjoint_synthesize(pfb::ParallelFB{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
+adjoint_synthesize(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
 
-function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+function analyze(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}; outputMode=:reshaped) where {TF,TX,D}
     y = subanalyze(msfb.filterBank, x, msfb.treeLevel)
     if outputMode == :reshaped
         y
@@ -232,9 +232,9 @@ function analyze(msfb::Multiscale{TF,D}, x::Array{TX,D}; outputMode=:reshaped) w
         vcat(vty...)
     end
 end
-adjoint_synthesize(msfb::Multiscale{TF,D}, x::Array{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
+adjoint_synthesize(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
 
-function subanalyze(fb::FilterBank{TF,D}, sx::Array{TS,D}, k::Integer; kwargs...) where {TF,TS,D}
+function subanalyze(fb::FilterBank{TF,D}, sx::AbstractArray{TS,D}, k::Integer; kwargs...) where {TF,TS,D}
     sy = analyze(fb, sx; outputMode=:reshaped)
     if k <= 1
         [sy]

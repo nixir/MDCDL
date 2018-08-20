@@ -54,7 +54,7 @@ function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{
     L = length(θs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)
 
-    ∇xᵀAy = Vector{TA}(L)
+    ∇xᵀAy = Vector{TA}(undef, L)
     ay = A*y
 
     nr = 1
@@ -74,7 +74,7 @@ function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{
         ∂R[idx2, idx2] = -s
 
         ay = Rᵀ * ay
-        ∇xᵀAy[nr] = vecdot(x, ∂R * ay)
+        ∇xᵀAy[nr] = dot(x, ∂R * ay)
         x = Rᵀ * x
 
         nr += 1
@@ -118,7 +118,7 @@ function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::Abst
     erots = [ Matrix{TA}(I,P,P), rots..., Matrix{TA}(I,P,P) ]
 
     map(1:length(ids)) do nr
-        real(vecdot(x, prod(erots[1:nr]) * grots[nr] * prod(erots[(nr+2):end]) * diagm(0 => sig) * y))
+        real(dot(x, prod(erots[1:nr]) * grots[nr] * prod(erots[(nr+2):end]) * diagm(0 => sig) * y))
     end
 end
 

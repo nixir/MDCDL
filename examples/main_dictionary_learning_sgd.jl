@@ -1,6 +1,7 @@
 # RNSOLT dictionary learning with 1-vanishing moment
 
-using NLopt
+# using NLopt
+using LinearAlgebra
 using MDCDL
 using TestImages
 # using Images
@@ -25,15 +26,18 @@ dt = Float64
 η = 1e-5
 
 szSubData = tuple(fill(32,D)...)
-nSubData = 1024
-nEpoch = 100
+nSubData = 16
+nEpoch = 30
 
 nsolt = Rnsolt(dt, df, ord, nch)
 # include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-rand!(nsolt)
+MDCDL.rand!(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
-trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
+trainingIds = map(1:nSubData) do nsd
+        pos = rand.((:).(0,size(orgImg) .- szSubData))
+        (:).(1 .+ pos, szSubData .+ pos)
+end
 
 y0 = analyze(nsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
 sparsity = fld(length(y0), 4)
@@ -42,10 +46,11 @@ angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
 
 y = y0
-serrs = Vector{dt}(nEpoch)
+serrs = Vector{dt}(undef, nEpoch)
 for epoch = 1:nEpoch
-    errt = Vector{dt}(length(trainingIds))
+    errt = Vector{dt}(undef, length(trainingIds))
     for nd in 1:length(trainingIds)
+        global y
         subx = trainingIds[nd]
         x = orgImg[subx...]
         hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
@@ -59,7 +64,7 @@ for epoch = 1:nEpoch
         setAngleParameters!(nsolt, angs, mus)
 
         y = analyze(nsolt, x; outputMode=:vector)
-        errt[nd] = vecnorm(x-synthesize(nsolt,hy,size(x)))^2/2
+        errt[nd] = norm(x-synthesize(nsolt,hy,size(x)))^2/2
         println("Epoch: $epoch, No.: $nd, cost = $(errt[nd])")
     end
     serrs[epoch] = sum(errt)

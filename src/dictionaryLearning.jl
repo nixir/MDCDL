@@ -32,9 +32,9 @@ function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::P
         nShift = fld(size(rt,2), nBlocks[end])
         # submatrices
         yu = view(yt, 1:hP, :)
-        yl = view(yt, (1:hP)+hP, :)
+        yl = view(yt, (1:hP) .+ hP, :)
         ru = view(rt, 1:hP, :)
-        rl = view(rt, (1:hP)+hP, :)
+        rl = view(rt, (1:hP) .+ hP, :)
         for k = nsolt.polyphaseOrder[d]:-1:1
             Uk = nsolt.propMatrices[d][k]
             rl .= Uk' * rl
@@ -66,8 +66,8 @@ function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::P
 
     W0om = nsolt.initMatrices[1]
     U0om = nsolt.initMatrices[2]
-    Iw = eye(T, nch[1], cM)
-    Iu = eye(T, nch[2], fM)
+    Iw = Matrix{T}(I, nch[1], cM)
+    Iu = Matrix{T}(I, nch[2], fM)
     W0 = W0om * Iw
     U0 = U0om * Iu
     rts = vcat(W0' * rt[1:nch[1],:], U0' * rt[nch[1]+1:end,:])

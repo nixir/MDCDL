@@ -238,7 +238,7 @@ end
 getAnalysisFilters(pfb::ParallelFB) = pfb.analysisFilters
 getSynthesisFilters(pfb::ParallelFB) = pfb.synthesisFilters
 
-function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
+function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
     nBlocks = fld.(size(x), szBlock)
     if any(size(x) .% szBlock .!= 0)
         error("size error. input data: $(size(x)), block size: $(szBlock).")
@@ -252,7 +252,7 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
     PolyphaseVector(data, nBlocks)
 end
 
-function mdarray2polyphase(x::Array{T,D}) where {T,D}
+function mdarray2polyphase(x::AbstractArray{T,D}) where {T,D}
     data = Matrix{T}(undef, size(x,D), prod(size(x)[1:D-1]))
     for p = 1:size(x,D)
         data[p,:] = transpose(vec( x[fill(:,D-1)..., p] ))

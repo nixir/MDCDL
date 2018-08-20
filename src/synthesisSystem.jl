@@ -5,7 +5,7 @@ synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
 # Filter bank with polyphase representation
 # outputMode = :reshaped
-function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) where {TF,TY,D}
+function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{AbstractArray{TY,D}}; kwargs...) where {TF,TY,D}
     nBlocks = size(y[1])
     # if any(size.(y) .!= nBlocks)
     #     throw(ArgumentError("size Error"))
@@ -17,7 +17,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{Array{TY,D}}; kwargs...) wh
 end
 
 # outputMode = :augumented
-function synthesize(fb::PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {TF,TY,DF,DY}
+function synthesize(fb::PolyphaseFB{TF,DF}, y::AbstractArray{TY,DY}; kwargs...) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
     end
@@ -27,7 +27,7 @@ function synthesize(fb::PolyphaseFB{TF,DF}, y::Array{TY,DY}; kwargs...) where {T
 end
 
 # outputMode = :vector
-function synthesize(fb::PolyphaseFB{TF,D}, y::Vector{TY}, szdata::NTuple{D}; kwargs...) where {TF, TY, D}
+function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{TY}, szdata::NTuple{D}; kwargs...) where {TF, TY, D}
     yaug = reshape(y, fld.(szdata, fb.decimationFactor)..., sum(fb.nChannels));
     synthesize(fb, yaug; kwargs...)
 end
@@ -204,10 +204,9 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}; alg=FIR()) where {TF,TY,D}
+function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{AbstractArray{TY,D}}; alg=FIR()) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
-    # region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*cld.(ord,2) .- 1
 
     nShift = df .* cld.(ord, 2) .+ 1
     region = (:).(1 .- nShift, df .* (ord .+ 1) .- nShift)
@@ -221,11 +220,11 @@ function synthesize(pfb::ParallelFB{TF,D}, y::Vector{Array{TY,D}}; alg=FIR()) wh
 end
 
 # outputMode= :reshaped
-function synthesize(msfb::Multiscale{TF,D}, y::Vector{Vector{Array{TY,D}}}) where {TF,TY,D}
+function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{AbstractVector{AbstractArray{TY,D}}}) where {TF,TY,D}
     subsynthesize(msfb.filterBank, y, msfb.treeLevel)
 end
 
-function subsynthesize(fb::FilterBank, sy::Vector, k::Integer)
+function subsynthesize(fb::FilterBank, sy::AbstractVector, k::Integer)
     ya = if k <= 1
         sy[1]
     else
@@ -235,7 +234,7 @@ function subsynthesize(fb::FilterBank, sy::Vector, k::Integer)
 end
 
 # outputMode = :augumented
-function synthesize(msfb::Multiscale{TF,DF}, y::Vector{Array{TY,DY}}) where {TF,TY,DF,DY}
+function synthesize(msfb::Multiscale{TF,DF}, y::AbstractVector{AbstractArray{TY,DY}}) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
     end
@@ -246,7 +245,7 @@ function synthesize(msfb::Multiscale{TF,DF}, y::Vector{Array{TY,DY}}) where {TF,
 end
 
 # outputMode = :vector
-function synthesize(msfb::Multiscale{TF,D}, y::Vector{TY}, szdata::NTuple{D}) where {TF,TY,D}
+function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{TY}, szdata::NTuple{D}) where {TF,TY,D}
     df = msfb.filterBank.decimationFactor
     P = sum(msfb.filterBank.nChannels)
     nCoefs = [ prod(fld.(szdata, df.^l)) * (l==msfb.treeLevel ? P : P-1) for l in 1:msfb.treeLevel ]

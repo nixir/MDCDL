@@ -10,7 +10,7 @@ function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; max
         xₖ₋₁ = xₖ
         xₖ = prox(xₖ - stepSize*gradOfLossFcn(xₖ), stepSize)
 
-        errx = vecnorm(xₖ - xₖ₋₁)^2 / 2
+        errx = norm(xₖ - xₖ₋₁)^2 / 2
 
         viewFunction(nItr, xₖ, errx)
 
@@ -35,7 +35,7 @@ function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; ma
         tₖ = (1 + sqrt(1+4*tₖ^2)) / 2
         y = xₖ + (tₖ₋₁ - 1) / tₖ * (xₖ - xₖ₋₁)
 
-        errx = vecnorm(xₖ - xₖ₋₁)^2
+        errx = norm(xₖ - xₖ₋₁)^2
 
         viewFunction(nItr, xₖ, errx)
 
@@ -66,7 +66,7 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
         # (x, v) <- (x, v) + λ((p,q) - (x,v)) for　λ == 1
         xₖ, v = p, q
 
-        errx = vecnorm(xₖ - xₖ₋₁)^2
+        errx = norm(xₖ - xₖ₋₁)^2
         viewFunction(nItr, xₖ, errx)
     end
     xₖ
@@ -84,7 +84,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y₀, K
         y = hardshrink(y + adjointSynthesisFunc(x - recx), K; lt=lt)
         recx = synthesisFunc(y)
 
-        errx = vecnorm(x - recx)^2/2
+        errx = norm(x - recx)^2/2
 
         if viewStatus
             println("number of Iterations $itr: err = $errx ")
@@ -103,7 +103,7 @@ end
 
 # prox of l2-norm
 function proxOfL2(x, lambda::Real)
-    max(1.0 - lambda/vecnorm(x), 0) * x
+    max(1.0 - lambda/norm(x), 0) * x
 end
 
 # prox. of mixed l1- and l2- norm
@@ -128,7 +128,7 @@ function boxProj(x, lowerBound::Real, upperBound::Real)
 end
 
 function l2ballProj(x::T, radius::Real, centerVec::T) where T
-    dist = vecnorm(x - centerVec)
+    dist = norm(x - centerVec)
 
     if dist <= radius
         x
@@ -140,7 +140,7 @@ end
 # hardshrink(x::AbstractArray{AbstractArray}, ks; kwargs...) = hardshrink.(x, ks; kwargs...)
 function hardshrink(x::AbstractArray, k::Integer; lt::Function=isless)
     nzids = sortperm(vec(x); lt=lt, rev=true)[1:k]
-    output = zeros(x)
+    output = zero(x)
     for idx in nzids
         output[idx] = x[idx]
     end
