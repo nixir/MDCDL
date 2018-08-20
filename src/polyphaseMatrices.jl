@@ -143,11 +143,9 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
             U = propMats[k]
 
             # B Λ(z_d) B'
-            # ppm = MDCDL.butterfly(ppm, nch[1])
             butterfly!(ppm, nch[1])
             ppm[rngLower...] = circshift(ppm[rngLower...],(0, nStride))
             butterfly!(ppm, nch[1])
-            # ppm = MDCDL.butterfly(ppm, nch[1])
 
             ppm[rngLower...] = U * ppm[rngLower...]
         end
@@ -228,29 +226,6 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
     end
 end
 
-# function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
-#     df = pfb.decimationFactor
-#     P = sum(pfb.nChannels)
-#
-#     afb = MDCDL.getAnalysisBank(pfb)
-#     # primeBlock = ([ 1:m for m in df]...,)
-#     primeBlock = (:).(1, df)
-#     ordm = pfb.polyphaseOrder .+ 1
-#
-#     return map(1:P) do p
-#         out = Array{T}(undef, df .* ordm )
-#
-#         for idx = 1:prod(ordm)
-#             sub = CartesianIndices(ordm)[idx].I
-#             subaf = primeBlock .+ (sub .- 1) .* df
-#             subfb = (1:prod(df)) .+ ((idx-1) * prod(df))
-#
-#             out[subaf...] = reshape(afb[ p, subfb ], df...)
-#         end
-#         out
-#     end
-# end
-
 function getSynthesisFilters(cc::MDCDL.Cnsolt)
     map(getAnalysisFilters(cc)) do af
         sz = size(af)
@@ -268,16 +243,6 @@ end
 getAnalysisFilters(pfb::ParallelFB) = pfb.analysisFilters
 getSynthesisFilters(pfb::ParallelFB) = pfb.synthesisFilters
 
-# function convert(::Type{Array}, x::PolyphaseVector{T,D}) where {T,D}
-#     primeBlock = ([ 1:blk for blk in  x.szBlock]...,)
-#     output = Array{T,D}((x.szBlock .* x.nBlocks)...)
-#     foreach(1:prod(x.nBlocks)) do idx
-#         block = (ind2sub(x.nBlocks, idx) .- 1) .* x.szBlock .+ primeBlock
-#         output[block...] = reshape(x.data[:,idx], x.szBlock...)
-#     end
-#     output
-# end
-
 function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
     nBlocks = fld.(size(x), szBlock)
     if any(size(x) .% szBlock .!= 0)
@@ -291,21 +256,6 @@ function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS
     end
     PolyphaseVector(data, nBlocks)
 end
-
-# function mdarray2polyphase(x::Array{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
-#     nBlocks = fld.(size(x), szBlock)
-#     if any(size(x) .% szBlock .!= 0)
-#         error("size error. input data: $(size(x)), block size: $(szBlock).")
-#     end
-#     # primeBlock = ([ 1:blk for blk in szBlock]...,)
-#     primeBlock = (:).(1, szBlock)
-#
-#     data = Matrix{TX}(undef, prod(szBlock), prod(nBlocks))
-#     for idx = 1:prod(nBlocks)
-#         data[:,idx] = vec(x[ ((CartesianIndices(nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock)... ])
-#     end
-#     PolyphaseVector(data, nBlocks)
-# end
 
 function mdarray2polyphase(x::Array{T,D}) where {T,D}
     data = Matrix{T}(undef, size(x,D), prod(size(x)[1:D-1]))
@@ -328,21 +278,6 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
     end
     out
 end
-
-# function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
-#     if size(x.data,1) != prod(szBlock)
-#         throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
-#     end
-#
-#     # primeBlock = ([ 1:blk for blk in szBlock]...,)
-#     primeBlock = (:).(1, szBlock)
-#     out = similar(x.data, (x.nBlocks .* szBlock)...)
-#     for idx = 1:prod(x.nBlocks)
-#         subOut = (CartesianIndices(x.nBlocks)[idx].I .- 1) .* szBlock .+ primeBlock
-#         out[subOut...] = reshape(x.data[:,idx], szBlock...)
-#     end
-#     out
-# end
 
 function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
     P = size(x.data,1)
@@ -394,8 +329,6 @@ function setindex!(A::PolyphaseVector, v, I::Vararg{Int, 2})
     setindex!(A.data, v, I...)
     A
 end
-
-# copy(A::PolyphaseVector{T,D}) where {T,D} = PolyphaseVector(A.data, A.nBlocks)
 
 function butterfly!(x::AbstractArray{T,2}, p::Integer) where T
     xu = x[1:p,:]

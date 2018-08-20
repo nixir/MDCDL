@@ -15,8 +15,9 @@ cconv(x::Array, h::Array) = cconv(promote(x,h)...)
 function upsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szx = size(x)
     output = zeros(T, szx .* factor)
-    for idx = 1:prod(szx)
-        sub = CartesianIndices(szx)[idx].I
+    ci = CartesianIndices(szx)
+    for idx in LinearIndices(szx)
+        sub = ci[idx].I
         output[((sub .- 1) .* factor .+ 1 .+ offset)...] = x[sub...]
     end
     output
@@ -25,8 +26,9 @@ end
 function downsample(x::Array{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
     szout = fld.(size(x), factor)
     output = Array{T,D}(undef, szout...)
-    for idx = 1:prod(szout)
-        output[idx] = x[((CartesianIndices(szout)[idx].I .- 1) .* factor .+ 1 .+ offset)...]
+    ci = CartesianIndices(szout)
+    for idx = LinearIndices(szout)
+        output[idx] = x[((ci[idx].I .- 1) .* factor .+ 1 .+ offset)...]
     end
     output
 end

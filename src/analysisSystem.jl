@@ -194,7 +194,6 @@ end
 function analyze(pfb::ParallelFB{TF,D}, x::Array{TX,D}; outputMode=:reshaped, alg=ImageFiltering.FIR()) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
-    # region = ([ 1:r for r in df.*(ord.+1)]...,) .- df.*fld.(ord,2) .- 1
 
     nShift = df .* fld.(ord, 2) .+ 1
     region = (:).(1 .- nShift, df .* (ord .+ 1) .- nShift)
