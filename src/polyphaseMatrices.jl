@@ -3,7 +3,7 @@ import Base.*
 import Base.size
 import Base.getindex
 import Base.setindex!
-import TiledIteration
+using TiledIteration
 
 function getMatrixB(P::Integer, angs::Vector{T}) where T
     hP = fld(P,2)
