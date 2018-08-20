@@ -49,7 +49,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
     P = cc.nChannels
 
     for d = D:-1:1
-        nShift = fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy.data,2), pvy.nBlocks[end])
         # submatrices
         y  = view(pvy.data, [1:r for r in size(pvy.data) ]...)
         yu = view(pvy.data, 1:fld(P,2), :)
@@ -80,7 +80,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     chEven = 1:(P-1)
 
     for d = D:-1:1
-        nShift = fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy.data,2), pvy.nBlocks[end])
         # submatrices
         ye  = view(pvy.data, 1:(P-1), :)
         yu1 = view(pvy.data, 1:fld(P,2), :)
@@ -136,7 +136,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
     hP = cc.nChannels[1]
 
     for d = D:-1:1
-        nShift = fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy.data,2), pvy.nBlocks[end])
         # submatrices
         yu = view(pvy.data, 1:hP, :)
         yl = view(pvy.data, (1:hP) .+ hP, :)
@@ -168,7 +168,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     end
 
     for d = D:-1:1
-        nShift = fld(size(pvy,2), pvy.nBlocks[end])
+        nShift = fld(size(pvy.data,2), pvy.nBlocks[end])
         # submatrices
         yu  = view(pvy.data, 1:minP, :)
         yl  = view(pvy.data, (P-minP+1):P, :)

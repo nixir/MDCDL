@@ -10,7 +10,6 @@ export PolyphaseVector
 export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export Multiscale, MultiLayerCsc
 export analyze, synthesize, adjoint_synthesize
-# export cconv
 export upsample, downsample
 export atmimshow
 # export getAnalysisBank
@@ -20,7 +19,7 @@ export mdarray2polyphase, polyphase2mdarray
 export iht
 
 
-struct PolyphaseVector{T,D} <: AbstractArray{T,2}
+struct PolyphaseVector{T,D}
     data::Matrix{T}
     nBlocks::NTuple{D, Int}
 end

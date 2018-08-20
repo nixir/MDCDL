@@ -41,7 +41,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
     P = cc.nChannels
 
     for d = 1:D
-        nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        nShift = fld(size(pvx.data, 2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
         x = view(pvx.data, [ 1:r for r in size(pvx.data) ]...)
@@ -66,11 +66,11 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
 end
 
 function extendAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
-    nStages = fld.(cc.polyphaseOrder,2)
+    nStages = fld.(cc.polyphaseOrder, 2)
     P = cc.nChannels
 
     for d = 1:D
-        nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        nShift = fld(size(pvx.data, 2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
         xe  = view(pvx.data, 1:P-1, :)
@@ -122,7 +122,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
     hP = cc.nChannels[1]
 
     for d = 1:D
-        nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        nShift = fld(size(pvx.data, 2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
         xu = view(pvx.data, 1:hP, :)
@@ -155,7 +155,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
     end
 
     for d = 1:D
-        nShift = fld(size(pvx,2), pvx.nBlocks[1])
+        nShift = fld(size(pvx.data,2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
         xu  = view(pvx.data, 1:minP, :)

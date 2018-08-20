@@ -1,8 +1,3 @@
-import Base.convert
-import Base.*
-import Base.size
-import Base.getindex
-import Base.setindex!
 using TiledIteration
 
 function getMatrixB(P::Integer, angs::Vector{T}) where T
@@ -309,25 +304,6 @@ function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
     nBlocks = tuple(circshift(collect(x.nBlocks),1)...)
 
     PolyphaseVector(data,nBlocks)
-end
-
-# *(mtx::AbstractMatrix, pv::PolyphaseVector) = PolyphaseVector(mtx*pv.data, pv.nBlocks)
-# *(pv::PolyphaseVector, mtx::AbstractMatrix) = PolyphaseVector(pv.data*mtx, pv.nBlocks)
-
-size(A::PolyphaseVector) = size(A.data)
-
-getindex(A::PolyphaseVector, i::Int) = getindex(A.data, i)
-
-getindex(A::PolyphaseVector, I::Vararg{Int, 2}) = getindex(A.data, I...)
-
-function setindex!(A::PolyphaseVector, v, i::Int)
-    setindex!(A.data, v, i)
-    A
-end
-
-function setindex!(A::PolyphaseVector, v, I::Vararg{Int, 2})
-    setindex!(A.data, v, I...)
-    A
 end
 
 function butterfly!(x::AbstractArray{T,2}, p::Integer) where T
