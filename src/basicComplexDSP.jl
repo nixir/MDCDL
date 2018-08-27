@@ -50,25 +50,17 @@ end
 cdftmtx(sz::Integer...) = cdftmtx(Float64, sz...)
 
 function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
-    if prod(sz) == 1
-        return ones(T,1,1)
-    end
-    len = prod(sz)
+    isevenids = map(ci->iseven(sum(ci.I .- 1)), CartesianIndices(sz))
+    permids = sortperm(vec(isevenids); rev=true, alg=Base.DEFAULT_STABLE)
 
-    imps = map(1:len) do idx
+    imps = map(1:prod(sz)) do idx
         u = zeros(T, sz)
         u[idx] = 1
         vec(dct(u))
     end
     mtx = hcat(imps...)
 
-    evenIds = findall(x -> iseven(sum(CartesianIndices(sz)[x].I .- 1)), 1:len)
-    oddIds = findall(x -> isodd(sum(CartesianIndices(sz)[x].I .- 1)), 1:len)
-
-    evenMtx = hcat([ mtx[idx,:] for idx in evenIds]...)
-    oddMtx = hcat([ mtx[idx,:] for idx in oddIds]...)
-
-    vcat(transpose(evenMtx), transpose(oddMtx))
+    vcat([ transpose(mtx[pi,:]) for pi in permids ]...)
 end
 
 permdctmtx(sz::Integer...) = permdctmtx(Float64, sz...)

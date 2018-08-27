@@ -40,7 +40,7 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeI}, angs::Vector{T}, mus) where {D,T}
+function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeI}, angs::AbstractVector{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -131,7 +131,7 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
     (angs, mus)
 end
 
-function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeII}, angs::Vector{T}, mus) where {D,T}
+function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeII}, angs::AbstractVector{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -236,7 +236,7 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::Vector{T}, mus) where {D,T}
+function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::AbstractVector{T}, mus) where {D,T}
     # Initialization
     P = sum(cc.nChannels)
     df = cc.decimationFactor
@@ -324,7 +324,7 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
     (angs, mus)
 end
 
-function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::Vector{T}, mus) where {D,T}
+function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::AbstractVector{T}, mus) where {D,T}
     # Initialization
     nch = cc.nChannels
     df = cc.decimationFactor
