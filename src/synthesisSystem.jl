@@ -51,7 +51,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
     for d = D:-1:1
         nShift = fld(size(pvy.data,2), pvy.nBlocks[end])
         # submatrices
-        y  = view(pvy.data, [1:r for r in size(pvy.data) ]...)
+        y  = view(pvy.data, :, :)
         yu = view(pvy.data, 1:fld(P,2), :)
         yl = view(pvy.data, (fld(P,2)+1):P, :)
         for k = cc.polyphaseOrder[d]:-1:1

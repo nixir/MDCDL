@@ -44,7 +44,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
         nShift = fld(size(pvx.data, 2), pvx.nBlocks[1])
         pvx = permutedims(pvx)
         # submatrices
-        x = view(pvx.data, [ 1:r for r in size(pvx.data) ]...)
+        x  = view(pvx.data, :, :)
         xu = view(pvx.data, 1:fld(P, 2), :)
         xl = view(pvx.data, (fld(P, 2)+1):P, :)
         for k = 1:cc.polyphaseOrder[d]
