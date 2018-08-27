@@ -1,6 +1,6 @@
 using TiledIteration: TileIterator
 
-function getMatrixB(P::Integer, angs::Vector{T}) where T
+function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     hP = fld(P,2)
     psangs = (2 .* angs .+ pi) ./ 4
     cs = cos.(psangs)

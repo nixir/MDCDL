@@ -1,4 +1,4 @@
-function mat2rotations(mtx::Matrix{T}) where T <: Real
+function mat2rotations(mtx::AbstractMatrix{T}) where T <: Real
     sz = size(mtx)
     P = sz[1]
 
@@ -22,7 +22,7 @@ function mat2rotations(mtx::Matrix{T}) where T <: Real
     (res, round.(diag(mtx)))
 end
 
-function rotations2mat(θs::Array{TA}, sig::Array{TS}) where {TA<:Real,TS<:Number}
+function rotations2mat(θs::AbstractArray{TA}, sig::AbstractArray{TS}) where {TA<:Real,TS<:Number}
     L = length(θs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)
     mtx = Matrix{TA}(I,P,P)
@@ -45,7 +45,7 @@ function rotations2mat(θs::Array{TA}, sig::Array{TS}) where {TA<:Real,TS<:Numbe
 end
 
 # ∂(x'*A(θ)*y)/∂θ
-function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, θs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
+function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, θs::AbstractArray{TA}, sig::AbstractArray{TS}) where {D,TV,TA<:Real, TS<:Number}
     scalarGradOfOrthonormalMatrix(x, y, rotations2mat(θs, sig))
 end
 
@@ -83,7 +83,7 @@ function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{
 end
 
 # reference implementation
-function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, θs::Array{TA}, sig::Array{TS}) where {D,TV,TA<:Real, TS<:Number}
+function scalarGradOfOrthonormalMatrix_reference(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, θs::AbstractArray{TA}, sig::AbstractArray{TS}) where {D,TV,TA<:Real, TS<:Number}
     L = length(θs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)
 
