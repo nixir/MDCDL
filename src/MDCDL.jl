@@ -35,8 +35,8 @@ struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Tuple{Int,Int}
 
-    initMatrices::Array{Matrix{T},1}
-    propMatrices::Array{Array{Matrix{T},1},1}
+    initMatrices::Array{AbstractMatrix{T},1}
+    propMatrices::Array{Array{AbstractMatrix{T},1},1}
 
     matrixC::Matrix{T}
 
@@ -90,9 +90,9 @@ struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Int
 
-    initMatrices::Vector{Matrix{T}}
-    propMatrices::Vector{Vector{Matrix{T}}}
-    paramAngles::Vector{Vector{Vector{T}}}
+    initMatrices::Vector{AbstractMatrix{T}}
+    propMatrices::Vector{Vector{AbstractMatrix{T}}}
+    paramAngles::Vector{Vector{AbstractVector{T}}}
     symmetry::Diagonal{Complex{T}}
     matrixF::Matrix{Complex{T}}
 
@@ -142,8 +142,8 @@ struct ParallelFB{T,D} <: FilterBank{T,D}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Int
 
-    analysisFilters::Vector{Array{T,D}}
-    synthesisFilters::Vector{Array{T,D}}
+    analysisFilters::Vector{AbstractArray{T,D}}
+    synthesisFilters::Vector{AbstractArray{T,D}}
 
     function ParallelFB(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
         szFilters = df .* (ppo .+ 1)
