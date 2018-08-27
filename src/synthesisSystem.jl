@@ -5,7 +5,7 @@ synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
 # Filter bank with polyphase representation
 # outputMode = :reshaped
-function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{AbstractArray{TY,D}}; kwargs...) where {TF,TY,D}
+function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{Array{TY,D}}; kwargs...) where {TF,TY,D}
     nBlocks = size(y[1])
     # if any(size.(y) .!= nBlocks)
     #     throw(ArgumentError("size Error"))
@@ -204,12 +204,13 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{AbstractArray{TY,D}}; alg=FIR()) where {TF,TY,D}
+# function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{AbstractArray{TY,D}}; alg=FIR()) where {TF,TY,D}
+function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{Array{TY,D}}; alg=FIR()) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
 
     nShift = df .* cld.(ord, 2) .+ 1
-    region = (:).(1 .- nShift, df .* (ord .+ 1) .- nShift)
+    region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
 
     sxs = map(y, pfb.synthesisFilters) do yp, sfp
         upimg = upsample(yp, df)
@@ -220,7 +221,7 @@ function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{AbstractArray{TY,D}
 end
 
 # outputMode= :reshaped
-function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{AbstractVector{AbstractArray{TY,D}}}) where {TF,TY,D}
+function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{Vector{Array{TY,D}}}) where {TF,TY,D}
     subsynthesize(msfb.filterBank, y, msfb.treeLevel)
 end
 
@@ -234,7 +235,7 @@ function subsynthesize(fb::FilterBank, sy::AbstractVector, k::Integer)
 end
 
 # outputMode = :augumented
-function synthesize(msfb::Multiscale{TF,DF}, y::AbstractVector{AbstractArray{TY,DY}}) where {TF,TY,DF,DY}
+function synthesize(msfb::Multiscale{TF,DF}, y::AbstractVector{Array{TY,DY}}) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
     end

@@ -35,8 +35,8 @@ MDCDL.rand!(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = map(1:nSubData) do nsd
-        pos = rand.((:).(0,size(orgImg) .- szSubData))
-        (:).(1 .+ pos, szSubData .+ pos)
+        pos = rand.(UnitRange.(0,size(orgImg) .- szSubData))
+        UnitRange.(1 .+ pos, szSubData .+ pos)
 end
 
 y0 = analyze(nsolt, orgImg[trainingIds[1]...]; outputMode=:vector)

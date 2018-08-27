@@ -196,7 +196,7 @@ function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; outputMode=:resh
     ord = pfb.polyphaseOrder
 
     nShift = df .* fld.(ord, 2) .+ 1
-    region = (:).(1 .- nShift, df .* (ord .+ 1) .- nShift)
+    region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
 
     offset = df .- 1
     y = map(pfb.analysisFilters) do f
