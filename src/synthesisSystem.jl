@@ -39,10 +39,9 @@ function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     uy = concatenateAtoms!(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks); kwargs...)
 
     py = (cc.initMatrices[1] * Matrix{Complex{TF}}(I,P,M))' * uy.data
+    py .= reverse(cc.matrixF, dims=2)' * py
 
-    py .= cc.matrixF' * py
-
-    PolyphaseVector(reverse(py; dims=1), pvy.nBlocks)
+    PolyphaseVector(py, pvy.nBlocks)
 end
 
 function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
@@ -126,10 +125,9 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)
     U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
     ty = vcat(W0' * y[1:nch[1],:], U0' * y[(nch[1]+1):end,:])
-
-    ty .= cc.matrixC' * ty
-
-    PolyphaseVector(reverse(ty; dims=1), uy.nBlocks)
+    ty .= reverse(cc.matrixC, dims=2)' * ty
+    
+    PolyphaseVector(ty, uy.nBlocks)
 end
 
 function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}

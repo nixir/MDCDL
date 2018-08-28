@@ -20,7 +20,7 @@ export iht
 
 
 struct PolyphaseVector{T,D}
-    data::Matrix{T}
+    data::AbstractMatrix{T}
     nBlocks::NTuple{D, Int}
 end
 
