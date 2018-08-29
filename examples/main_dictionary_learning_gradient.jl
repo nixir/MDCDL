@@ -4,6 +4,7 @@ using NLopt
 using MDCDL
 using TestImages, Images
 using Plots
+using Base.Printf: @printf
 cnt = 0
 
 # output file name
@@ -28,10 +29,13 @@ nEpoch = 10
 
 nsolt = Rnsolt(dt, df, ord, nch)
 # include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-rand!(nsolt)
+MDCDL.rand!(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
-trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
+trainingIds = map(1:nSubData) do nsd
+        pos = rand.(UnitRange.(0,size(orgImg) .- szSubData))
+        UnitRange.(1 .+ pos, szSubData .+ pos)
+end
 
 y0 = analyze(nsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
 sparsity = fld(length(y0), 8)
@@ -41,6 +45,7 @@ angs0, mus0 = getAngleParameters(nsolt)
 
 y = y0
 for epoch = 1:nEpoch, nd in 1:length(trainingIds)
+    global y
     subx = trainingIds[nd]
     x = orgImg[subx...]
     hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
@@ -55,22 +60,22 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
         cnt::Int += 1
         tfb = Rnsolt(dt, df, ord, nch)
 
-        # angsvm1 = vcat(zeros(dt, sum(nch)-1), angs)
         setAngleParameters!(tfb, angs, mus0)
 
         grad .= MDCDL.gradSqrdError(tfb, pvx, pvy)
 
         dist = pvx.data - synthesize(tfb, pvy).data
+        println(dist)
         cst = vecnorm(dist)^2
 
         # println("f_$(cnt):\t cost = $(cst),\t |grad| = $(vecnorm(grad))")
-        @printf("f_%4d): cost = %.6e, |grad| = %.6e\n", cnt, cst, vecnorm(grad))
+        # @printf("f_%4d): cost = %.6e, |grad| = %.6e\n", cnt, cst, vecnorm(grad))
         # sleep(0.2)
         cst
     end
 
-    # opt = Opt(:LN_COBYLA, length(angs0s))
-    lopt = Opt(:LD_MMA, length(angs0))
+    lopt = Opt(:LN_COBYLA, length(angs0))
+    # lopt = Opt(:LD_MMA, length(angs0))
     maxeval!(lopt,100)
     min_objective!(lopt, objfunc)
     (minf, minx, ret) = optimize(lopt, angs0)
