@@ -84,7 +84,7 @@ using Random
 
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
-        oms = [ :reshaped, :augumented ]
+        oms = [ :normal, :augumented ]
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Cnsolt(df, ord, nch)
@@ -99,7 +99,7 @@ using Random
             @test rx ≈ x
 
             foreach(oms) do om
-                y = analyze(nsolt, x; outputMode = om)
+                y = analyze(nsolt, x; shape = om)
                 rx = synthesize(nsolt, y)
 
                 @test size(x) == size(rx)
@@ -116,7 +116,7 @@ using Random
             nsolt = Cnsolt(df, ord, nch)
             rand!(nsolt)
 
-            ya = analyze(nsolt, x; outputMode = :reshaped)
+            ya = analyze(nsolt, x; shape = :normal)
 
             afs = getAnalysisFilters(nsolt)
             myfilter = (A, h) -> begin

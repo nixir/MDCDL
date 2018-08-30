@@ -4,7 +4,7 @@ using OffsetArrays: OffsetArray
 synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
 # Filter bank with polyphase representation
-# outputMode = :reshaped
+# shape = :normal
 function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{Array{TY,D}}; kwargs...) where {TF,TY,D}
     nBlocks = size(y[1])
     # if any(size.(y) .!= nBlocks)
@@ -16,7 +16,7 @@ function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{Array{TY,D}}; kwarg
     polyphase2mdarray(pvx, fb.decimationFactor)
 end
 
-# outputMode = :augumented
+# shape = :augumented
 function synthesize(fb::PolyphaseFB{TF,DF}, y::AbstractArray{TY,DY}; kwargs...) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
@@ -26,7 +26,7 @@ function synthesize(fb::PolyphaseFB{TF,DF}, y::AbstractArray{TY,DY}; kwargs...) 
     polyphase2mdarray(pvx, fb.decimationFactor)
 end
 
-# outputMode = :vector
+# shape = :vector
 function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{TY}, szdata::NTuple{D}; kwargs...) where {TF, TY, D}
     yaug = reshape(y, fld.(szdata, fb.decimationFactor)..., sum(fb.nChannels));
     synthesize(fb, yaug; kwargs...)
@@ -126,7 +126,7 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
     ty = vcat(W0' * y[1:nch[1],:], U0' * y[(nch[1]+1):end,:])
     ty .= reverse(cc.matrixC, dims=2)' * ty
-    
+
     PolyphaseVector(ty, uy.nBlocks)
 end
 
@@ -218,7 +218,7 @@ function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{Array{TY,D}}; alg=F
     sum(sxs)
 end
 
-# outputMode= :reshaped
+# shape= :normal
 function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{Vector{Array{TY,D}}}) where {TF,TY,D}
     subsynthesize(msfb.filterBank, y, msfb.treeLevel)
 end
@@ -232,7 +232,7 @@ function subsynthesize(fb::FilterBank, sy::AbstractVector, k::Integer)
     synthesize(fb, ya)
 end
 
-# outputMode = :augumented
+# shape = :augumented
 function synthesize(msfb::Multiscale{TF,DF}, y::AbstractVector{Array{TY,DY}}) where {TF,TY,DF,DY}
     if DF != DY-1
         throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
@@ -243,7 +243,7 @@ function synthesize(msfb::Multiscale{TF,DF}, y::AbstractVector{Array{TY,DY}}) wh
     synthesize(msfb, yrd)
 end
 
-# outputMode = :vector
+# shape = :vector
 function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{TY}, szdata::NTuple{D}) where {TF,TY,D}
     df = msfb.filterBank.decimationFactor
     P = sum(msfb.filterBank.nChannels)

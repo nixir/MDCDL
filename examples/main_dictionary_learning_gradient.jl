@@ -37,7 +37,7 @@ trainingIds = map(1:nSubData) do nsd
         UnitRange.(1 .+ pos, szSubData .+ pos)
 end
 
-y0 = analyze(nsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
+y0 = analyze(nsolt, orgImg[trainingIds[1]...]; shape=:vector)
 sparsity = fld(length(y0), 8)
 
 angs0, mus0 = getAngleParameters(nsolt)
@@ -91,7 +91,7 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
 
     # minxt = vcat(zeros(dt, sum(nch)-1), minx);
     setAngleParameters!(nsolt, minx, mus0)
-    y = analyze(nsolt, x; outputMode=:vector)
+    y = analyze(nsolt, x; shape=:vector)
     # println("Epoch: $epoch, No.: $nd, cost = $(minf)")
     @printf("Epoch: %4d, No.: %3d, cost = %.6e\n", epoch, nd, minf)
 end

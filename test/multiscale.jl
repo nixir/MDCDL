@@ -96,7 +96,7 @@ using Random
 
     @testset "CNSOLT" begin
         # output mode options for analyzer
-        oms = [ :reshaped, :augumented ]
+        oms = [ :normal, :augumented ]
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             nsolt = Cnsolt(df, ord, nch)
@@ -111,7 +111,7 @@ using Random
             @test rx ≈ x
 
             foreach(oms) do om
-                y = analyze(nsolt, x; outputMode = om)
+                y = analyze(nsolt, x; shape = om)
                 rx = synthesize(nsolt, y)
 
                 @test size(x) == size(rx)
@@ -121,7 +121,7 @@ using Random
     end
     @testset "RNSOLT" begin
         # output mode options for analyzer
-        oms = [ :reshaped, :augumented ]
+        oms = [ :normal, :augumented ]
         for d in 1:length(ccsd), (df, ord, nch) in rcsd[d], lv in 1:3
             szx = (df.^lv) .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
@@ -136,7 +136,7 @@ using Random
             @test rx ≈ x
 
             foreach(oms) do om
-                y = analyze(nsolt, x; outputMode = om)
+                y = analyze(nsolt, x; shape = om)
                 rx = synthesize(nsolt, y)
 
                 @test size(x) == size(rx)

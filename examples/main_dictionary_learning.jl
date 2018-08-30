@@ -32,7 +32,7 @@ msnsolt = Multiscale(nsolt, lv)
 orgImg = Array{RGB{Float64}}(testimage("lena"))
 trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
 
-y0 = analyze(msnsolt, orgImg[trainingIds[1]...]; outputMode=:vector)
+y0 = analyze(msnsolt, orgImg[trainingIds[1]...]; shape=:vector)
 sparsity = fld(length(y0),4)
 
 angs0, mus0 = getAngleParameters(msnsolt.filterBank)
@@ -72,7 +72,7 @@ for idx = 1:nEpoch, subx in trainingIds
 
     minxt = vcat(zeros(sum(nch)-1), minx);
     setAngleParameters!(msnsolt.filterBank, minxt, mus0)
-    y = analyze(msnsolt, x; outputMode=:vector)
+    y = analyze(msnsolt, x; shape=:vector)
     println("Iterations $idx finished.")
 end
 

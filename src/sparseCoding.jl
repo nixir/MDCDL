@@ -98,7 +98,7 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y₀, K
 end
 
 function iht(cb::CodeBook, x, args...; kwargs...)
-    iht((ty) -> synthesize(cb, ty, size(x)), (tx) -> adjoint_synthesize(cb, tx; outputMode=:vector), x, args...; kwargs...)
+    iht((ty) -> synthesize(cb, ty, size(x)), (tx) -> adjoint_synthesize(cb, tx; shape=:vector), x, args...; kwargs...)
 end
 
 # prox of l2-norm

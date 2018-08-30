@@ -5,14 +5,14 @@ analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
 adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
 # Filter bank with polyphase representation
-function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}; shape=:normal) where {TF,TX,D}
     y = analyze(fb, mdarray2polyphase(x, fb.decimationFactor))
 
-    if outputMode == :reshaped
+    if shape == :normal
         [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
-    elseif outputMode == :augumented
+    elseif shape == :augumented
         polyphase2mdarray(y)
-    elseif outputMode == :vector
+    elseif shape == :vector
         vec(transpose(y.data))
     else
         error("Invalid augument.")
@@ -191,7 +191,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; outputMode=:reshaped, alg=FIR()) where {TF,TX,D}
+function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; shape=:normal, alg=FIR()) where {TF,TX,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
 
@@ -205,11 +205,11 @@ function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; outputMode=:resh
         downsample(fltimg, df, offset)
     end
 
-    if outputMode == :reshaped
+    if shape == :normal
         y
-    elseif outputMode == :augumented
+    elseif shape == :augumented
         cat(D+1, y...)
-    elseif outputMode == :vector
+    elseif shape == :vector
         vcat(vec.(y)...)
     else
         error("Invalid augument")
@@ -217,15 +217,15 @@ function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; outputMode=:resh
 end
 adjoint_synthesize(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
 
-function analyze(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}; outputMode=:reshaped) where {TF,TX,D}
+function analyze(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}; shape=:normal) where {TF,TX,D}
     y = subanalyze(msfb.filterBank, x, msfb.treeLevel)
-    if outputMode == :reshaped
+    if shape == :normal
         y
-    elseif outputMode == :augumented
+    elseif shape == :augumented
         map(y) do sy
             cat(D+1, sy...)
         end
-    elseif outputMode == :vector
+    elseif shape == :vector
         vty = map(y) do sy
             vcat(vec.(sy)...)
         end
@@ -235,7 +235,7 @@ end
 adjoint_synthesize(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
 
 function subanalyze(fb::FilterBank{TF,D}, sx::AbstractArray{TS,D}, k::Integer; kwargs...) where {TF,TS,D}
-    sy = analyze(fb, sx; outputMode=:reshaped)
+    sy = analyze(fb, sx; shape=:normal)
     if k <= 1
         [sy]
     else

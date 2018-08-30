@@ -39,10 +39,10 @@ atmimshow(nsolt)
 mlpfb = Multiscale(ParallelFB(nsolt), lv)
 
 # setup FISTA
-y0 = analyze(mlpfb, x; outputMode = :vector)
+y0 = analyze(mlpfb, x; shape = :vector)
 
 gradOfLossFcn = (ty) -> begin
-    - analyze(mlpfb, P.*(x - synthesize(mlpfb, ty, size(x))); outputMode = :vector)
+    - analyze(mlpfb, P.*(x - synthesize(mlpfb, ty, size(x))); shape = :vector)
 end
 proxFcn = (ty, η) -> MDCDL.softshrink(ty, λ*η)
 viewFcn = (itrs, ty, err) -> begin

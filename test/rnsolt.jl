@@ -75,7 +75,7 @@ using LinearAlgebra
 
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
-        oms = [ :reshaped, :augumented ]
+        oms = [ :normal, :augumented ]
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
@@ -90,7 +90,7 @@ using LinearAlgebra
             @test rx ≈ x
 
             foreach(oms) do om
-                y = analyze(nsolt, x; outputMode = om)
+                y = analyze(nsolt, x; shape = om)
                 rx = synthesize(nsolt, y)
 
                 @test size(x) == size(rx)
@@ -107,7 +107,7 @@ using LinearAlgebra
             nsolt = Rnsolt(df, ord, nch)
             rand!(nsolt)
 
-            ya = analyze(nsolt, x; outputMode = :reshaped)
+            ya = analyze(nsolt, x; shape = :normal)
 
             afs = getAnalysisFilters(nsolt)
             myfilter = (A, h) -> begin

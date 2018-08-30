@@ -1,12 +1,12 @@
 function analyze(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}) where {TC,TX,D}
     foldl(x, mlcsc.dictionaries) do tx, dic
-        analyze(dic, tx; outputMode=:augumented)
+        analyze(dic, tx; shape=:augumented)
     end
 end
 
 function adjoint_synthesize(mlcsc::MDCDL.MultiLayerCsc{TC,D}, x::Array{TX,D}) where {TC,TX,D}
     foldl(x, mlcsc.dictionaries) do tx, dic
-        adjoint_synthesize(dic, tx; outputMode=:augumented)
+        adjoint_synthesize(dic, tx; shape=:augumented)
     end
 end
 
@@ -19,7 +19,7 @@ end
 function mlista(mlcsc::MDCDL.MultiLayerCsc, x, λs::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     L = mlcsc.nLayers
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
-    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)
+    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; shape=:augumented)
 
     γ = [ x, accumulate((tx, l)->opDt(l,tx), x, 1:L)... ]
 
@@ -41,7 +41,7 @@ end
 function mlfista(mlcsc::MDCDL.MultiLayerCsc, x, λs::Vector{T}; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false) where T <: Real
     L = mlcsc.nLayers
     opD  = (l, v) -> synthesize(mlcsc.dictionaries[l], v)
-    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; outputMode=:augumented)
+    opDt = (l, v) -> adjoint_synthesize(mlcsc.dictionaries[l], v; shape=:augumented)
 
     γ = [ x, accumulate((tx, l)->opDt(l,tx), x, 1:L)... ]
 
