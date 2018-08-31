@@ -1,26 +1,26 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
-# Finit-dimensional lienar operator
-analyze(mtx::Matrix{T}, x) where T<:Number = mtx * x
-adjoint_synthesize(mtx::Matrix{T}, x) where T<:Number = mtx' * x
 
-# Filter bank with polyphase representation
-function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}; shape=:normal) where {TF,TX,D}
-    y = analyze(fb, mdarray2polyphase(x, fb.decimationFactor))
+# import Base.*
 
-    if shape == :normal
+function analyze(A::AbstractAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+    y = analyze(A.codebook, x)
+
+    if A.shape == :normal
         [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
-    elseif shape == :augumented
+    elseif A.shape == :augumented
         polyphase2mdarray(y)
-    elseif shape == :vector
+    elseif A.shape == :vector
         vec(transpose(y.data))
     else
         error("Invalid augument.")
     end
 end
-adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
+(ana::NsoltAnalyzer)(x::AbstractArray) = analyze(ana, x)
 
-adjoint_synthesize(fb::PolyphaseFB{TF,D}, x::PolyphaseVector{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, x, args...; kwargs...)
+function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D}
+    analyze(fb, mdarray2polyphase(x, fb.decimationFactor))
+end
 
 function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
     M = prod(cc.decimationFactor)
@@ -29,7 +29,6 @@ function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     x = pvx.data
     tx = reverse(cc.matrixF, dims=2) * x
 
-    # V0 = cc.initMatrices[1] * eye(Complex{TF}, P, M)
     V0 = cc.initMatrices[1] * Matrix{Complex{TF}}(I, P, M)
     ux = V0 * tx
 
@@ -37,7 +36,7 @@ function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     PolyphaseVector(cc.symmetry * extx.data, extx.nBlocks)
 end
 
-function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     P = cc.nChannels
 
     for d = 1:D
@@ -132,9 +131,9 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
             xu .= tu; xl .= tl
 
             if isodd(k)
-                xl .= circshift(xl, (0, nShift))
+                shiftForward!(Val{boundary}, xl, nShift)
             else
-                xu .= circshift(xu, (0, -nShift))
+                shiftBackward!(Val{boundary}, xu, nShift)
             end
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
@@ -169,7 +168,8 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
-            xs1 .= circshift(xs1, (0, nShift))
+            # xs1 .= circshift(xs1, (0, nShift))
+            shiftForward!(Val{boundary}, xs1, nShift)
 
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
@@ -180,7 +180,8 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
-            xs2 .= circshift(xs2, (0, -nShift))
+            # xs2 .= circshift(xs2, (0, -nShift))
+            shiftBackward!(Val{boundary}, xs2, nShift)
 
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl

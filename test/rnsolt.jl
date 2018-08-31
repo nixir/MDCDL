@@ -83,15 +83,12 @@ using LinearAlgebra
 
             x = rand(Float64, szx...)
 
-            y = analyze(nsolt, x)
-            rx = synthesize(nsolt, y)
-
-            @test size(x) == size(rx)
-            @test rx ≈ x
-
             foreach(oms) do om
-                y = analyze(nsolt, x; shape = om)
-                rx = synthesize(nsolt, y)
+                analyzer = NsoltAnalyzer(nsolt, x; shape=om)
+                synthesizer = analyzer'
+
+                y = analyzer(x)
+                rx = synthesizer(y)
 
                 @test size(x) == size(rx)
                 @test rx ≈ x
@@ -107,13 +104,14 @@ using LinearAlgebra
             nsolt = Rnsolt(df, ord, nch)
             rand!(nsolt)
 
-            ya = analyze(nsolt, x; shape = :normal)
+            analyzer = NsoltAnalyzer(nsolt, x; shape = :normal)
+            ya = analyzer(x)
 
             afs = getAnalysisFilters(nsolt)
-            myfilter = (A, h) -> begin
+            myfilter(A, h) = begin
                 ha = zero(A)
                 # ha[colon.(1,size(h))...] = h
-                ha[[ 1:lh for lh in size(h) ]...] = h
+                ha[UnitRange.(1, size(h))...] = h
                 real(ifft(fft(A).*fft(ha)))
             end
             offset = df .- 1
@@ -135,13 +133,13 @@ using LinearAlgebra
 
             y = [ rand(Float64,((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            x = synthesize(nsolt, y)
+            synthesizer = NsoltSynthesizer(nsolt, ord.+1)
+            x = synthesizer(y)
 
             sfs = getSynthesisFilters(nsolt)
-            myfilter = (A, h) -> begin
+            myfilter(A, h) = begin
                 ha = zero(A)
-                # ha[colon.(1,size(h))...] = h
-                ha[[ 1:lh for lh in size(h) ]...] = h
+                ha[UnitRange.(1, size(h))...] = h
                 real(ifft(fft(A).*fft(ha)))
             end
             offset = df .- 1

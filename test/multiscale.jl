@@ -44,10 +44,10 @@ using Random
 
                 y = analyze(mspfb, x)
 
-                myfilter = (A, h) -> begin
+                myfilter(A, h) = begin
                     ha = zero(A)
                     # ha[colon.(1,size(h))...] = h
-                    ha[[ 1:lh for lh in size(h) ]...] = h
+                    ha[UnitRange.(1, size(h))...] = h
                     if dt <: Real
                         real(ifft(fft(A).*fft(ha)))
                     else
@@ -94,56 +94,56 @@ using Random
         end
     end
 
-    @testset "CNSOLT" begin
-        # output mode options for analyzer
-        oms = [ :normal, :augumented ]
-        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
-            szx = (df.^lv) .* (ord .+ 1)
-            nsolt = Cnsolt(df, ord, nch)
-            rand!(nsolt)
-            msnsolt = Multiscale(nsolt, lv)
-
-            x = rand(Complex{Float64}, szx...)
-
-            y = analyze(msnsolt, x)
-            rx = synthesize(msnsolt, y)
-
-            @test rx ≈ x
-
-            foreach(oms) do om
-                y = analyze(nsolt, x; shape = om)
-                rx = synthesize(nsolt, y)
-
-                @test size(x) == size(rx)
-                @test rx ≈ x
-            end
-        end
-    end
-    @testset "RNSOLT" begin
-        # output mode options for analyzer
-        oms = [ :normal, :augumented ]
-        for d in 1:length(ccsd), (df, ord, nch) in rcsd[d], lv in 1:3
-            szx = (df.^lv) .* (ord .+ 1)
-            nsolt = Rnsolt(df, ord, nch)
-            rand!(nsolt)
-            msnsolt = Multiscale(nsolt, lv)
-
-            x = rand(Float64, szx...)
-
-            y = analyze(msnsolt, x)
-            rx = synthesize(msnsolt, y)
-
-            @test rx ≈ x
-
-            foreach(oms) do om
-                y = analyze(nsolt, x; shape = om)
-                rx = synthesize(nsolt, y)
-
-                @test size(x) == size(rx)
-                @test rx ≈ x
-            end
-        end
-    end
+    # @testset "CNSOLT" begin
+    #     # output mode options for analyzer
+    #     oms = [ :normal, :augumented ]
+    #     for d in 1:length(ccsd), (df, ord, nch) in ccsd[d], lv in 1:3
+    #         szx = (df.^lv) .* (ord .+ 1)
+    #         nsolt = Cnsolt(df, ord, nch)
+    #         rand!(nsolt)
+    #         msnsolt = Multiscale(nsolt, lv)
+    #
+    #         x = rand(Complex{Float64}, szx...)
+    #
+    #         y = analyze(msnsolt, x)
+    #         rx = synthesize(msnsolt, y)
+    #
+    #         @test rx ≈ x
+    #
+    #         foreach(oms) do om
+    #             y = analyze(nsolt, x; shape = om)
+    #             rx = synthesize(nsolt, y)
+    #
+    #             @test size(x) == size(rx)
+    #             @test rx ≈ x
+    #         end
+    #     end
+    # end
+    # @testset "RNSOLT" begin
+    #     # output mode options for analyzer
+    #     oms = [ :normal, :augumented ]
+    #     for d in 1:length(ccsd), (df, ord, nch) in rcsd[d], lv in 1:3
+    #         szx = (df.^lv) .* (ord .+ 1)
+    #         nsolt = Rnsolt(df, ord, nch)
+    #         rand!(nsolt)
+    #         msnsolt = Multiscale(nsolt, lv)
+    #
+    #         x = rand(Float64, szx...)
+    #
+    #         y = analyze(msnsolt, x)
+    #         rx = synthesize(msnsolt, y)
+    #
+    #         @test rx ≈ x
+    #
+    #         foreach(oms) do om
+    #             y = analyze(nsolt, x; shape = om)
+    #             rx = synthesize(nsolt, y)
+    #
+    #             @test size(x) == size(rx)
+    #             @test rx ≈ x
+    #         end
+    #     end
+    # end
 end
 
 

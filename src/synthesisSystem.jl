@@ -1,36 +1,25 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
-# Finit-dimensional linear operator
-synthesize(mtx::Matrix{T}, y) where {T<:Number} = mtx * y
 
-# Filter bank with polyphase representation
-# shape = :normal
-function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{Array{TY,D}}; kwargs...) where {TF,TY,D}
-    nBlocks = size(y[1])
-    # if any(size.(y) .!= nBlocks)
-    #     throw(ArgumentError("size Error"))
-    # end
-    pvy = PolyphaseVector( Matrix(transpose(hcat(map(vec, y)...))), nBlocks)
-    # end
-    pvx = synthesize(fb, pvy; kwargs...)
-    polyphase2mdarray(pvx, fb.decimationFactor)
-end
+# import Base.*
 
-# shape = :augumented
-function synthesize(fb::PolyphaseFB{TF,DF}, y::AbstractArray{TY,DY}; kwargs...) where {TF,TY,DF,DY}
-    if DF != DY-1
-        throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
+function synthesize(syn::AbstractSynthesizer{TF,D}, y::AbstractArray) where {TF,D}
+    pvy = if syn.shape == :normal
+        nBlocks = size(y[1])
+        PolyphaseVector( Matrix(transpose(hcat(map(vec, y)...))), nBlocks)
+    elseif syn.shape == :augumented
+        mdarray2polyphase(y)
+    elseif syn.shape == :vector
+        ty = reshape(y, fld.(syn.datasize, syn.codebook.decimationFactor)..., sum(syn.codebook.nChannels))
+        mdarray2polyphase(ty)
+    else
+        error("Invalid argument.")
     end
 
-    pvx = synthesize(fb, mdarray2polyphase(y); kwargs...)
-    polyphase2mdarray(pvx, fb.decimationFactor)
+    pvx = synthesize(syn.codebook, pvy)
+    polyphase2mdarray(pvx, syn.codebook.decimationFactor)
 end
-
-# shape = :vector
-function synthesize(fb::PolyphaseFB{TF,D}, y::AbstractVector{TY}, szdata::NTuple{D}; kwargs...) where {TF, TY, D}
-    yaug = reshape(y, fld.(szdata, fb.decimationFactor)..., sum(fb.nChannels));
-    synthesize(fb, yaug; kwargs...)
-end
+(syn::NsoltSynthesizer)(y::AbstractArray) = synthesize(syn, y)
 
 function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
@@ -144,9 +133,11 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
             if isodd(k)
-                yl .= circshift(yl, (0, -nShift))
+                # yl .= circshift(yl, (0, -nShift))
+                shiftBackward!(Val{boundary}, yl, nShift)
             else
-                yu .= circshift(yu, (0, nShift))
+                # yu .= circshift(yu, (0, nShift))
+                shiftForward!(Val{boundary}, yu, nShift)
             end
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
@@ -181,7 +172,8 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
-            ys2 .= circshift(ys2, (0, nShift))
+            # ys2 .= circshift(ys2, (0, nShift))
+            shiftForward!(Val{boundary}, ys2, nShift)
 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
@@ -192,7 +184,8 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
-            ys1 .= circshift(ys1, (0, -nShift))
+            # ys1 .= circshift(ys1, (0, -nShift))
+            shiftBackward!(Val{boundary}, ys1, nShift)
 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl

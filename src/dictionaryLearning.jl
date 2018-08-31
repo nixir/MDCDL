@@ -1,6 +1,6 @@
 
-function optimizeDictionary(cb::CodeBook, trainingSet::AbstractArray)
-
+function train!(cb::CodeBook, trainingSet::AbstractArray; epochs=1, verbose=:none)
+    nothing
 end
 
 # grad_{θ}(1/2 *|| x - D(θ)y ||_2^2)

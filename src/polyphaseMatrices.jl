@@ -313,3 +313,20 @@ function butterfly!(x::AbstractArray{T,2}, p::Integer) where T
     x[1:p,:]           .= (xu + xl) / sqrt(2)
     x[end-(p-1):end,:] .= (xu - xl) / sqrt(2)
 end
+
+function shiftForward!(::Type{Val{:circular}}, mtx::AbstractMatrix, nShift::Integer)
+    mtx .= circshift(mtx, (0, nShift))
+end
+shiftBackward!(::Type{Val{:circular}}, mtx, nShift) = shiftForward!(Val{:circular}, mtx, -nShift)
+
+function shiftForward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
+    mtx[:,1+nShift:end] .= mtx[:,1:end-nShift]
+    mtx[:,1:nShift] .= 0
+    mtx
+end
+
+function shiftBackward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
+    mtx[:,1:end-nShift] .= mtx[:,1+nShift:end]
+    mtx[:,end-nShift+1:end] .= 0
+    mtx
+end

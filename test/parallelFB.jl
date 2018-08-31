@@ -29,10 +29,10 @@ using Random
 
                 y = analyze(pfb, x)
 
-                myfilter = (A, h) -> begin
+                myfilter(A, h) = begin
                     ha = zero(A)
                     # ha[colon.(1,size(h))...] = h
-                    ha[[ 1:lh for lh in size(h) ]...] = h
+                    ha[UnitRange.(1, size(h))...] = h
                     if dt <: Real
                         real(ifft(fft(A).*fft(ha)))
                     else
@@ -70,10 +70,10 @@ using Random
                 szy = rand(1:4) .* (ord .+ 1)
                 y = [ rand(dt, szy) for p in 1:sum(nch) ]
 
-                myfilter = (A, h) -> begin
+                myfilter(A, h) = begin
                     ha = zero(A)
                     # ha[colon.(1,size(h))...] = h
-                    ha[[ 1:lh for lh in size(h) ]...] = h
+                    ha[UnitRange.(1, size(h))...] = h
                     if dt <: Real
                         real(ifft(fft(A).*fft(ha)))
                     else

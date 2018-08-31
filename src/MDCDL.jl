@@ -3,6 +3,7 @@ module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 using LinearAlgebra
 
 import Base.promote_rule
+import LinearAlgebra.adjoint
 
 include("basicComplexDSP.jl")
 
@@ -17,7 +18,10 @@ export getAnalysisFilters, getSynthesisFilters
 export getAngleParameters, setAngleParameters!
 export mdarray2polyphase, polyphase2mdarray
 export iht
-
+# export Analyzer, VecAnalyzer
+# export Synthesizer, VecSynthesizer
+export AbstractAnalyzer, AbstractSynthesizer
+export NsoltAnalyzer, NsoltSynthesizer
 
 struct PolyphaseVector{T,D}
     data::AbstractMatrix{T}
@@ -29,8 +33,9 @@ promote_rule(::Type{PolyphaseVector{TA,D}}, ::Type{PolyphaseVector{TB,D}}) where
 abstract type CodeBook{T,D} end
 abstract type FilterBank{T,D} <: CodeBook{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
+abstract type Nsolt{T,D} <: PolyphaseFB{T,D} end
 
-struct Rnsolt{T,D,S} <: PolyphaseFB{T,D}
+struct Rnsolt{T,D,S} <: Nsolt{T,D}
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Tuple{Int,Int}
@@ -85,7 +90,7 @@ end
 
 promote_rule(::Type{Rnsolt{TA,D,S}}, ::Type{Rnsolt{TB,D,S}}) where {D,S,TA,TB} = Rnsolt{promote_type(TA,TB),D,S}
 
-struct Cnsolt{T,D,S} <: PolyphaseFB{Complex{T},D}
+struct Cnsolt{T,D,S} <: Nsolt{Complex{T},D}
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Int
@@ -182,6 +187,40 @@ struct MultiLayerCsc{T,D} <: CodeBook{T,D}
         new{T,D}(nl, dics)
     end
 end
+
+abstract type AbstractAnalyzer{T,D} end
+abstract type AbstractSynthesizer{T,D} end
+
+struct NsoltAnalyzer{T,D} <: AbstractAnalyzer{T,D}
+    codebook::Nsolt{T,D}
+    datasize::NTuple{D,Int}
+    shape::Symbol
+
+    function NsoltAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape=:normal) where {T,D}
+        new{T,D}(ns, sz, shape)
+    end
+
+    function NsoltAnalyzer(ns::Nsolt, x::AbstractArray; kwargs...)
+        NsoltAnalyzer(ns, size(x); kwargs...)
+    end
+end
+
+struct NsoltSynthesizer{T,D} <: AbstractSynthesizer{T,D}
+    codebook::CodeBook{T,D}
+    datasize::NTuple{D,Int}
+    shape::Symbol
+
+    function NsoltSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape= :normal) where {T,D}
+        new{T,D}(ns, sz, shape)
+    end
+
+    function NsoltSynthesizer(ns::Nsolt, x::AbstractArray; kwargs...)
+        NsoltSynthesizer(ns, size(x); kwargs...)
+    end
+end
+
+adjoint(na::NsoltAnalyzer) = NsoltSynthesizer(na.codebook, na.datasize, shape=na.shape)
+adjoint(ns::NsoltSynthesizer) = NsoltAnalyzer(ns.codebook, ns.datasize, shape=ns.shape)
 
 include("sparseCoding.jl")
 
