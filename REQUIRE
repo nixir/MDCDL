@@ -11,3 +11,4 @@ FFTW
 JSON
 NLopt
 TiledIteration
+InteractiveUtils

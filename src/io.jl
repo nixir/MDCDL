@@ -1,4 +1,5 @@
 using JSON
+using InteractiveUtils: subtypes
 
 function save(filename::AbstractString, cc::MDCDL.Cnsolt{T,D,S}) where {T,D,S}
     configs = JSON.json(cc)
@@ -27,10 +28,12 @@ function save(filename::AbstractString, cc::MDCDL.Rnsolt{T,D,S}) where {T,D,S}
 end
 
 function load(filename::AbstractString)
-    str = open(readstring, filename)
+    # str = open(readstring, filename)
+    str = open(f->read(f, String), filename)
     dic = JSON.parse(str)
 
-    fbs = map(keys(dic)) do key
+
+    fbs = map(collect(keys(dic))) do key
         if key == "CNSOLT"
             loadCnsolt(dic[key])
         elseif key == "RNSOLT"
@@ -49,9 +52,9 @@ function loadCnsolt(dic::Dict)
     D = dic["Dimensions"]
     cfgs = dic["Configurations"]
 
-    dfa = Vector{Int}(D)
+    dfa = Vector{Int}(undef, D)
     nch = Int
-    ppoa = Vector{Int}(D)
+    ppoa = Vector{Int}(undef, D)
     foreach(keys(cfgs)) do key
         if key == "decimationFactor"
             dfa = cfgs[key]
@@ -98,9 +101,9 @@ function loadRnsolt(dic::Dict)
     D = dic["Dimensions"]
     cfgs = dic["Configurations"]
 
-    dfa = Vector{Int}(D)
-    ncha = Vector{Int}(2)
-    ppoa = Vector{Int}(D)
+    dfa = Vector{Int}(undef, D)
+    ncha = Vector{Int}(undef, 2)
+    ppoa = Vector{Int}(undef, D)
     foreach(keys(cfgs)) do key
         if key == "decimationFactor"
             dfa = cfgs[key]

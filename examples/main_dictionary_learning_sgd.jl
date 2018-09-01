@@ -6,6 +6,7 @@ using MDCDL
 using TestImages
 # using Images
 using ColorTypes
+using Statistics
 # using Plots
 cnt = 0
 
@@ -17,17 +18,17 @@ D = 2
 # decimation factor
 df = (2,2)
 # polyphase order
-ord = (4,4)
+ord = (2,2)
 # number of symmetric/antisymmetric channel
-nch = (4,4)
+nch = (3,3)
 
 dt = Float64
 
 η = 1e-1
 
-szSubData = tuple(fill(16,D)...)
-nSubData = 64
-nEpoch = 50
+szSubData = tuple(fill(8 ,D)...)
+nSubData = 128
+nEpoch = 20
 
 nsolt = Rnsolt(dt, df, ord, nch)
 MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false)
@@ -35,8 +36,8 @@ orgNsolt = deepcopy(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = map(1:nSubData) do nsd
-        pos = rand.(UnitRange.(0,size(orgImg) .- szSubData))
-        UnitRange.(1 .+ pos, szSubData .+ pos)
+    pos = rand.(UnitRange.(0,size(orgImg) .- szSubData))
+    UnitRange.(1 .+ pos, szSubData .+ pos)
 end
 
 analyzer = createAnalyzer(nsolt, szSubData; shape=:vector)
@@ -48,6 +49,7 @@ angs0s = angs0[nch[1]:end]
 
 y = y0
 serrs = Vector{dt}(undef, nEpoch)
+svars = Vector{dt}(undef, nEpoch)
 for epoch = 1:nEpoch
     errt = Vector{dt}(undef, length(trainingIds))
     for nd in 1:length(trainingIds)
@@ -68,10 +70,11 @@ for epoch = 1:nEpoch
         adjsyn = synthesizer'
         y = adjsyn(x)
         errt[nd] = norm(x - synthesizer(hy))^2/2
-        println("Epoch: $epoch, No.: $nd, cost = $(errt[nd])")
+        # println("Epoch: $epoch, No.: $nd, cost = $(errt[nd])")
     end
     serrs[epoch] = sum(errt)
-    println("Epoch $epoch finished. sum(cost) = $(serrs[epoch])")
+    svars[epoch] = var(errt)
+    println("Epoch $epoch finished. sum(cost) = $(serrs[epoch]), svars = $(svars[epoch])")
 end
 
 # atmimshow(nsolt)
