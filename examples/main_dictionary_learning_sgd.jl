@@ -23,15 +23,15 @@ nch = (4,4)
 
 dt = Float64
 
-η = 1e-5
+η = 1e-1
 
-szSubData = tuple(fill(32,D)...)
-nSubData = 16
-nEpoch = 30
+szSubData = tuple(fill(16,D)...)
+nSubData = 64
+nEpoch = 50
 
 nsolt = Rnsolt(dt, df, ord, nch)
-# include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-MDCDL.rand!(nsolt)
+MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false)
+orgNsolt = deepcopy(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
 trainingIds = map(1:nSubData) do nsd
@@ -39,7 +39,8 @@ trainingIds = map(1:nSubData) do nsd
         UnitRange.(1 .+ pos, szSubData .+ pos)
 end
 
-y0 = analyze(nsolt, orgImg[trainingIds[1]...]; shape=:vector)
+analyzer = createAnalyzer(nsolt, szSubData; shape=:vector)
+y0 = analyzer(orgImg[trainingIds[1]...])
 sparsity = fld(length(y0), 4)
 
 angs0, mus0 = getAngleParameters(nsolt)
@@ -53,7 +54,7 @@ for epoch = 1:nEpoch
         global y
         subx = trainingIds[nd]
         x = orgImg[subx...]
-        hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
+        hy = MDCDL.iht(nsolt, x, y, sparsity; iterations=100, isverbose=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
 
         pvx = mdarray2polyphase(x, df)
         pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
@@ -63,8 +64,10 @@ for epoch = 1:nEpoch
         angs = angs - η*grad
         setAngleParameters!(nsolt, angs, mus)
 
-        y = analyze(nsolt, x; shape=:vector)
-        errt[nd] = norm(x-synthesize(nsolt,hy,size(x)))^2/2
+        synthesizer = createSynthesizer(nsolt, x; shape=:vector)
+        adjsyn = synthesizer'
+        y = adjsyn(x)
+        errt[nd] = norm(x - synthesizer(hy))^2/2
         println("Epoch: $epoch, No.: $nd, cost = $(errt[nd])")
     end
     serrs[epoch] = sum(errt)

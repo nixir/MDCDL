@@ -2,17 +2,17 @@ using LinearAlgebra
 using ColorTypes
 # iterative shrinkage/thresholding algorithm
 # solve a regularized convex optimization problem e.x. f(x) + g(x)
-function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; maxIterations::Integer=20, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)
-    xₖ = x₀
+function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; iterations::Integer=20, absTol::Real=1e2*eps(), verboseFunction::Function=(args...)->nothing)
+    xₖ = x0
     errx = Inf
-    len = length(x₀)
-    for nItr = 1:maxIterations
+    len = length(x0)
+    for nItr = 1:iterations
         xₖ₋₁ = xₖ
         xₖ = prox(xₖ - stepSize*gradOfLossFcn(xₖ), stepSize)
 
         errx = norm(xₖ - xₖ₋₁)^2 / 2
 
-        viewFunction(nItr, xₖ, errx)
+        verboseFunction(nItr, xₖ, errx)
 
         if errx <= absTol
             break
@@ -21,13 +21,13 @@ function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; max
     xₖ
 end
 
-function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; maxIterations::Integer=100, absTol::Real=1e2*eps(), viewFunction::Function=(itrs,tx,err)->nothing)
-    xₖ = x₀
+function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; iterations::Integer=100, absTol::Real=1e2*eps(), verboseFunction::Function=(itrs,tx,err)->nothing)
+    xₖ = x0
     errx = Inf
-    len = length(x₀)
-    y = x₀
+    len = length(x0)
+    y = x0
     tₖ = 1
-    for nItr = 1:maxIterations
+    for nItr = 1:iterations
         xₖ₋₁ = xₖ
         tₖ₋₁ = tₖ
 
@@ -37,7 +37,7 @@ function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x₀; ma
 
         errx = norm(xₖ - xₖ₋₁)^2
 
-        viewFunction(nItr, xₖ, errx)
+        verboseFunction(nItr, xₖ, errx)
 
         if errx <= absTol
             break
@@ -54,11 +54,11 @@ end
 # f() and g(): proxiable function
 # h(x): smooth convex function having a Lipschitzian gradient
 # L: linear operator
-function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOperator::Function, adjOfLinearOperator::Function, τ::Real, σ::Real, x₀, v0=linearOperator(x₀); maxIterations::Integer=100, absTol::Real=1e-10, viewFunction::Function=(itrs,tx,err)->nothing)
-    xₖ = x₀
+function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOperator::Function, adjOfLinearOperator::Function, τ::Real, σ::Real, x0, v0=linearOperator(x0); iterations::Integer=100, absTol::Real=1e-10, verboseFunction::Function=(args...)->nothing)
+    xₖ = x0
     v = v0
     cproxG = (x_, s_) -> (x_ - proxG(x_,s_))
-    for nItr = 1:maxIterations
+    for nItr = 1:iterations
         xₖ₋₁ = xₖ
         p = proxF(xₖ - τ*(gradOfLossFcn(xₖ) + adjOfLinearOperator(v)), τ)
         q = cproxG(v + linearOperator(2.0*p - xₖ₋₁), σ^-1)
@@ -67,26 +67,26 @@ function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOp
         xₖ, v = p, q
 
         errx = norm(xₖ - xₖ₋₁)^2
-        viewFunction(nItr, xₖ, errx)
+        verboseFunction(nItr, xₖ, errx)
     end
     xₖ
 end
 
-function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y₀, K; maxIterations::Integer=20, absTol::Real=1e-10, viewStatus::Bool=false, lt::Function=isless)
-    len = length(y₀)
-    y = y₀
+function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; iterations::Integer=1, absTol::Real=1e-10, isverbose::Bool=false, lt::Function=isless)
+    len = length(y0)
+    y = y0
     errx = Inf
     erry = Inf
 
     recx = synthesisFunc(y)
-    for itr = 1:maxIterations
+    for itr = 1:iterations
         yprev = y
         y = hardshrink(y + adjointSynthesisFunc(x - recx), K; lt=lt)
         recx = synthesisFunc(y)
 
         errx = norm(x - recx)^2/2
 
-        if viewStatus
+        if isverbose
             println("number of Iterations $itr: err = $errx ")
         end
 
@@ -97,13 +97,23 @@ function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y₀, K
     y
 end
 
+# function iht(cb::CodeBook, x, args...; kwargs...)
+#     iht((ty) -> synthesize(cb, ty, size(x)), (tx) -> adjoint_synthesize(cb, tx; shape=:vector), x, args...; kwargs...)
+# end
+
 function iht(cb::CodeBook, x, args...; kwargs...)
-    iht((ty) -> synthesize(cb, ty, size(x)), (tx) -> adjoint_synthesize(cb, tx; shape=:vector), x, args...; kwargs...)
+    syn = createSynthesizer(cb, x; shape=:vector)
+    adj = syn'
+    iht(syn, adj, x, args...; kwargs...)
+end
+
+function iht(a::AbstractSynthesizer, s::AbstractAnalyzer, x, args...; kwargs...)
+    iht(t->synthesize(a, t), t->analyze(s, t), x, args...; kwargs...)
 end
 
 # prox of l2-norm
 function proxOfL2(x, lambda::Real)
-    max(1.0 - lambda/norm(x), 0) * x
+    max(1.0 - lambda/norm(x), 0) .* x
 end
 
 # prox. of mixed l1- and l2- norm

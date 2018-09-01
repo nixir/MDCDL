@@ -22,6 +22,7 @@ export iht
 # export Synthesizer, VecSynthesizer
 export AbstractAnalyzer, AbstractSynthesizer
 export NsoltAnalyzer, NsoltSynthesizer
+export createAnalyzer, createSynthesizer
 
 struct PolyphaseVector{T,D}
     data::AbstractMatrix{T}
@@ -218,6 +219,9 @@ struct NsoltSynthesizer{T,D} <: AbstractSynthesizer{T,D}
         NsoltSynthesizer(ns, size(x); kwargs...)
     end
 end
+
+createAnalyzer(ns::Nsolt, args...; kwargs...) = NsoltAnalyzer(ns, args...; kwargs...)
+createSynthesizer(ns::Nsolt, args...; kwargs...) = NsoltSynthesizer(ns, args...; kwargs...)
 
 adjoint(na::NsoltAnalyzer) = NsoltSynthesizer(na.codebook, na.datasize, shape=na.shape)
 adjoint(ns::NsoltSynthesizer) = NsoltAnalyzer(ns.codebook, ns.datasize, shape=ns.shape)
