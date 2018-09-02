@@ -1,9 +1,7 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
-# import Base.*
-
-function analyze(A::AbstractAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+function analyze(A::PolyphaseFBAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     y = analyze(A.codebook, x)
 
     if A.shape == :normal
@@ -16,10 +14,10 @@ function analyze(A::AbstractAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX
         error("Invalid augument.")
     end
 end
-(ana::NsoltAnalyzer)(x::AbstractArray) = analyze(ana, x)
+(ana::PolyphaseFBAnalyzer)(x::AbstractArray) = analyze(ana, x)
 
 function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D}
-    analyze(fb, mdarray2polyphase(x, fb.decimationFactor))
+    analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 end
 
 function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
@@ -168,7 +166,6 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bord
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
-            # xs1 .= circshift(xs1, (0, nShift))
             shiftForward!(Val{border}, xs1, nShift)
 
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
@@ -180,7 +177,6 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bord
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
-            # xs2 .= circshift(xs2, (0, -nShift))
             shiftBackward!(Val{border}, xs2, nShift)
 
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
@@ -216,7 +212,7 @@ function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; shape=:normal, a
         error("Invalid augument")
     end
 end
-adjoint_synthesize(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
+# adjoint_synthesize(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
 
 function analyze(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}; shape=:normal) where {TF,TX,D}
     y = subanalyze(msfb.filterBank, x, msfb.treeLevel)

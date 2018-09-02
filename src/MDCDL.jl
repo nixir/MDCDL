@@ -192,39 +192,41 @@ end
 abstract type AbstractAnalyzer{T,D} end
 abstract type AbstractSynthesizer{T,D} end
 
-struct NsoltAnalyzer{T,D} <: AbstractAnalyzer{T,D}
-    codebook::Nsolt{T,D}
+struct PolyphaseFBAnalyzer{T,D} <: AbstractAnalyzer{T,D}
+    codebook::PolyphaseFB{T,D}
     datasize::NTuple{D,Int}
     shape::Symbol
 
-    function NsoltAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape=:normal) where {T,D}
+    function PolyphaseFBAnalyzer(ns::PolyphaseFB{T,D}, sz::NTuple{D,Integer}; shape=:normal) where {T,D}
         new{T,D}(ns, sz, shape)
     end
 
-    function NsoltAnalyzer(ns::Nsolt, x::AbstractArray; kwargs...)
-        NsoltAnalyzer(ns, size(x); kwargs...)
+    function PolyphaseFBAnalyzer(ns::PolyphaseFB, x::AbstractArray; kwargs...)
+        PolyphaseFBAnalyzer(ns, size(x); kwargs...)
     end
 end
 
-struct NsoltSynthesizer{T,D} <: AbstractSynthesizer{T,D}
-    codebook::CodeBook{T,D}
+struct PolyphaseFBSynthesizer{T,D} <: AbstractSynthesizer{T,D}
+    codebook::PolyphaseFB{T,D}
     datasize::NTuple{D,Int}
     shape::Symbol
 
-    function NsoltSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape= :normal) where {T,D}
+    function PolyphaseFBSynthesizer(ns::PolyphaseFB{T,D}, sz::NTuple{D,Integer}; shape= :normal) where {T,D}
         new{T,D}(ns, sz, shape)
     end
 
-    function NsoltSynthesizer(ns::Nsolt, x::AbstractArray; kwargs...)
-        NsoltSynthesizer(ns, size(x); kwargs...)
+    function PolyphaseFBSynthesizer(ns::PolyphaseFB, x::AbstractArray; kwargs...)
+        PolyphaseFBSynthesizer(ns, size(x); kwargs...)
     end
 end
 
-createAnalyzer(ns::Nsolt, args...; kwargs...) = NsoltAnalyzer(ns, args...; kwargs...)
-createSynthesizer(ns::Nsolt, args...; kwargs...) = NsoltSynthesizer(ns, args...; kwargs...)
+createAnalyzer(ns::PolyphaseFB, args...; kwargs...) = PolyphaseFBAnalyzer(ns, args...; kwargs...)
+createSynthesizer(ns::PolyphaseFB, args...; kwargs...) = PolyphaseFBSynthesizer(ns, args...; kwargs...)
 
-adjoint(na::NsoltAnalyzer) = NsoltSynthesizer(na.codebook, na.datasize, shape=na.shape)
-adjoint(ns::NsoltSynthesizer) = NsoltAnalyzer(ns.codebook, ns.datasize, shape=ns.shape)
+adjoint(na::PolyphaseFBAnalyzer) = adjoint_(na.codebook, na)
+adjoint(ns::PolyphaseFBSynthesizer) = adjoint_(ns.codebook, ns)
+adjoint_(::Nsolt, na::PolyphaseFBAnalyzer) =  PolyphaseFBSynthesizer(na.codebook, na.datasize, shape=na.shape)
+adjoint_(::Nsolt, ns::PolyphaseFBSynthesizer) = PolyphaseFBAnalyzer(ns.codebook, ns.datasize, shape=ns.shape)
 
 include("sparseCoding.jl")
 

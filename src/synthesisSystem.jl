@@ -1,9 +1,7 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
-# import Base.*
-
-function synthesize(syn::AbstractSynthesizer{TF,D}, y::AbstractArray) where {TF,D}
+function synthesize(syn::PolyphaseFBSynthesizer{TF,D}, y::AbstractArray) where {TF,D}
     pvy = if syn.shape == :normal
         nBlocks = size(y[1])
         PolyphaseVector( Matrix(transpose(hcat(map(vec, y)...))), nBlocks)
@@ -19,7 +17,7 @@ function synthesize(syn::AbstractSynthesizer{TF,D}, y::AbstractArray) where {TF,
     pvx = synthesize(syn.codebook, pvy)
     polyphase2mdarray(pvx, syn.codebook.decimationFactor)
 end
-(syn::NsoltSynthesizer)(y::AbstractArray) = synthesize(syn, y)
+(syn::PolyphaseFBSynthesizer)(y::AbstractArray) = synthesize(syn, y)
 
 function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
@@ -33,7 +31,7 @@ function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     PolyphaseVector(py, pvy.nBlocks)
 end
 
-function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     P = cc.nChannels
 
     for d = D:-1:1
@@ -51,10 +49,10 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
 
             if isodd(k)
                 # yl .= circshift(yl, (0, -nShift))
-                shiftBackward!(Val{boundary}, yl, nShift)
+                shiftBackward!(Val{border}, yl, nShift)
             else
                 # yu .= circshift(yu, (0, nShift))
-                shiftForward!(Val{boundary}, yu, nShift)
+                shiftForward!(Val{border}, yu, nShift)
             end
             y .= B * y
         end
@@ -64,7 +62,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
 end
 
 
-function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = cc.nChannels
     chEven = 1:(P-1)
@@ -86,7 +84,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             B = getMatrixB(P, cc.paramAngles[d][2*k])
             ye  .= B' * ye
             # yu1 .= circshift(yu1, (0, nShift))
-            shiftForward!(Val{boundary}, yu1, nShift)
+            shiftForward!(Val{border}, yu1, nShift)
             ye  .= B * ye
 
             # first step
@@ -97,7 +95,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             B = getMatrixB(P, cc.paramAngles[d][2*k-1])
             ye  .= B' * ye
             # yl1 .= circshift(yl1, (0, -nShift))
-            shiftBackward!(Val{boundary}, yl1, nShift)
+            shiftBackward!(Val{border}, yl1, nShift)
             ye  .= B * ye
         end
         pvy = ipermutedims(pvy)
@@ -123,7 +121,7 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     PolyphaseVector(ty, uy.nBlocks)
 end
 
-function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     hP = cc.nChannels[1]
 
     for d = D:-1:1
@@ -137,9 +135,9 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
             if isodd(k)
-                shiftBackward!(Val{boundary}, yl, nShift)
+                shiftBackward!(Val{border}, yl, nShift)
             else
-                shiftForward!(Val{boundary}, yu, nShift)
+                shiftForward!(Val{border}, yu, nShift)
             end
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
@@ -149,7 +147,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
     return pvy
 end
 
-function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; boundary=:circular) where {TF,TY,D}
+function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = sum(cc.nChannels)
     maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
@@ -174,7 +172,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
-            shiftForward!(Val{boundary}, ys2, nShift)
+            shiftForward!(Val{border}, ys2, nShift)
 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
@@ -185,7 +183,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
-            shiftBackward!(Val{boundary}, ys1, nShift)
+            shiftBackward!(Val{border}, ys1, nShift)
 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl

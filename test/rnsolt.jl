@@ -84,7 +84,7 @@ using LinearAlgebra
             x = rand(Float64, szx...)
 
             foreach(oms) do om
-                analyzer = NsoltAnalyzer(nsolt, x; shape=om)
+                analyzer = createAnalyzer(nsolt, x; shape=om)
                 synthesizer = analyzer'
 
                 y = analyzer(x)
@@ -104,7 +104,7 @@ using LinearAlgebra
             nsolt = Rnsolt(df, ord, nch)
             rand!(nsolt)
 
-            analyzer = NsoltAnalyzer(nsolt, x; shape = :normal)
+            analyzer = createAnalyzer(nsolt, x; shape = :normal)
             ya = analyzer(x)
 
             afs = getAnalysisFilters(nsolt)
@@ -133,7 +133,7 @@ using LinearAlgebra
 
             y = [ rand(Float64,((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            synthesizer = NsoltSynthesizer(nsolt, ord.+1)
+            synthesizer = createSynthesizer(nsolt, ord.+1)
             x = synthesizer(y)
 
             sfs = getSynthesisFilters(nsolt)
