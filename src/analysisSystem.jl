@@ -188,29 +188,28 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bord
     return pvx
 end
 
-function analyze(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}; shape=:normal) where {TF,TX,D}
-    y = subanalyze(msfb.filterBank, x, msfb.treeLevel)
-    if shape == :normal
+function analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+    y = subanalyze(msop.operators, x)
+    if msop.shape == :normal
         y
-    elseif shape == :augumented
+    elseif msop.shape == :augumented
         map(y) do sy
             cat(D+1, sy...)
         end
-    elseif shape == :vector
+    elseif msop.shape == :vector
         vty = map(y) do sy
             vcat(vec.(sy)...)
         end
         vcat(vty...)
     end
 end
-adjoint_synthesize(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(msfb, x, args...; kwargs...)
 
-function subanalyze(fb::FilterBank{TF,D}, sx::AbstractArray{TS,D}, k::Integer; kwargs...) where {TF,TS,D}
-    sy = analyze(fb, sx; shape=:normal)
-    if k <= 1
+function subanalyze(abop::AbstractVector, sx::AbstractArray{TS,D}) where {TS,D}
+    sy = analyze(abop[1], sx)
+    if length(abop) <= 1
         [sy]
     else
-        [sy[2:end], subanalyze(fb, sy[1], k-1)...]
+        [sy[2:end], subanalyze(abop[2:end], sy[1])...]
     end
 end
 

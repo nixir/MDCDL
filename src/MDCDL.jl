@@ -24,6 +24,7 @@ export AbstractOperator
 export NsoltOperator
 export ConvolutionalOperator
 export createAnalyzer, createSynthesizer
+export createMultiscaleAnalyzer, createMultiscaleSynthesizer
 
 struct PolyphaseVector{T,D}
     data::AbstractMatrix{T}
@@ -145,10 +146,10 @@ end
 
 promote_rule(::Type{Cnsolt{TA,D,S}}, ::Type{Cnsolt{TB,D,S}}) where {D,S,TA,TB} = Cnsolt{promote_type(TA,TB),D,S}
 
-struct Multiscale{T,D} <: CodeBook{T,D}
-    filterBank::FilterBank{T,D}
-    treeLevel::Int
-end
+# struct Multiscale{T,D} <: CodeBook{T,D}
+#     filterBank::FilterBank{T,D}
+#     treeLevel::Int
+# end
 
 struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int
@@ -174,13 +175,29 @@ operate(op_::AbstractOperator, x::AbstractArray) where {T,D} = operate(Val{op_.o
 struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     opmode::Symbol
     shape::Symbol
-    datasize::NTuple{D,Int}
+    insize::NTuple
+    outsize::NTuple
 
     nsolt::Nsolt{T,D}
     border::Symbol
 
-    function NsoltOperator(mode::Symbol, ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape=:normal, border=:circular) where {T,D}
-        new{T,D}(mode, shape, sz, ns, border)
+    function NsoltOperator(mode::Symbol, ns::Nsolt{T,D}, insz::NTuple, outsz::NTuple; shape=:normal, border=:circular) where {T,D}
+        new{T,D}(mode, shape, insz, outsz, ns, border)
+    end
+
+    function NsoltOperator(mode::Symbol, ns::Nsolt{T,D}, insz::NTuple; shape=:normal, kwargs...) where {T,D}
+        # new{T,D}(mode, shape, insz, outsz, ns, border)
+        dcsz = fld.(insz, ns.decimationFactor)
+        outsz = if shape == :normal
+            (sum(ns.nChannels), dcsz...,)
+        elseif shape == :augumented
+            (dcsz..., sum(ns.nChannels),)
+        elseif shape == :vector
+            (prod(dcsz) * sum(ns.nChannels),)
+        else
+            error("Invalid augument")
+        end
+        NsoltOperator(mode, ns, insz, outsz; shape=shape, kwargs...)
     end
 
     function NsoltOperator(mode::Symbol, ns::Nsolt, x::AbstractArray; kwargs...)
@@ -192,9 +209,10 @@ end
 createAnalyzer(ns::Nsolt, args...; kwargs...) = NsoltOperator(:analyzer, ns, args...; kwargs...)
 createSynthesizer(ns::Nsolt, args...; kwargs...) = NsoltOperator(:synthesizer, ns, args...; kwargs...)
 
-struct ConvolutionalOperator{T,D}
+struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     opmode::Symbol
-    datasize::NTuple{D,Int}
+    insize::NTuple
+    outsize::NTuple
     shape::Symbol
 
     kernels::Vector{Array{T,D}}
@@ -206,8 +224,22 @@ struct ConvolutionalOperator{T,D}
     border::Symbol
     domain::Symbol
 
-    function ConvolutionalOperator(mode::Symbol, kernels::Vector{Array{T,D}}, sz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, border=:circular, domain=:spacial) where {T,D}
-        new{T,D}(mode, sz, shape, kernels, df, ord, nch, border, domain)
+    function ConvolutionalOperator(mode::Symbol, kernels::Vector{Array{T,D}}, insz::NTuple, outsz::NTuple, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, border=:circular, domain=:spacial) where {T,D}
+        new{T,D}(mode, insz, outsz, shape, kernels, df, ord, nch, border, domain)
+    end
+
+    function ConvolutionalOperator(mode::Symbol, kernels::Vector{Array{T,D}}, insz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, kwargs...) where {T,D}
+        dcsz = fld.(insz, df)
+        outsz = if shape == :normal
+            (sum(nch), dcsz...,)
+        elseif shape == :augumented
+            (dcsz..., nch,)
+        elseif shape == :vector
+            (prod(dcsz) * nch,)
+        else
+            error("Invalid augument")
+        end
+        ConvolutionalOperator(mode, kernels, insz, outsz, df, ord, nch; shape=shape, kwargs...)
     end
 
     function ConvolutionalOperator(mode::Symbol, kernels::Vector{Array{T,D}}, sz::NTuple{D,Int}; decimation::NTuple{D,Int}, kwargs...) where {T,D}
@@ -234,6 +266,30 @@ end
 
 createAnalyzer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalOperator(:analyzer, ker, args...; kwargs...)
 createSynthesizer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalOperator(:synthesizer, ker, args...; kwargs...)
+
+struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
+    opmode::Symbol
+    insize::NTuple{D,T}
+    shape::Symbol
+
+    operators::Vector{AbstractOperator{T,D}}
+
+    function MultiscaleOperator(mode::Symbol, ops::Vector{X}, sz::NTuple{D,Int}; shape=:normal) where {T,D,X<:AbstractOperator{T,D}}
+        new{T,D}(mode, sz, shape, ops)
+    end
+end
+
+function createMultiscaleAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level=1, shape=:normal, kwargs...) where {T,D}
+    szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
+    ops = map(t->createAnalyzer(ns, t; shape=:normal, kwargs...), szxs)
+    MultiscaleOperator(:analyzer, ops, sz; shape=shape)
+end
+
+function createMultiscaleSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level=1, shape=:normal, kwargs...) where {T,D}
+    szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
+    ops = map(t->createSynthesizer(ns, t; shape=shape, kwargs...), szxs)
+    MultiscaleOperator(:synthesizer, ops, sz; shape=shape)
+end
 
 include("sparseCoding.jl")
 

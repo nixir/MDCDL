@@ -8,7 +8,7 @@ function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     elseif syn.shape == :augumented
         mdarray2polyphase(y)
     elseif syn.shape == :vector
-        ty = reshape(y, fld.(syn.datasize, syn.nsolt.decimationFactor)..., sum(syn.nsolt.nChannels))
+        ty = reshape(y, fld.(syn.insize, syn.nsolt.decimationFactor)..., sum(syn.nsolt.nChannels))
         mdarray2polyphase(ty)
     else
         error("Invalid argument.")
@@ -189,43 +189,33 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-# shape= :normal
-function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{Vector{Array{TY,D}}}) where {TF,TY,D}
-    subsynthesize(msfb.filterBank, y, msfb.treeLevel)
+function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,D}
+    if msop.shape == :normal
+        subsynthesize(Val{msop.shape}, msop.operators, y)
+    elseif msop.shape == :vector
+        subsynthesize(Val{msop.shape}, msop.operators, y)
+    end
 end
 
-function subsynthesize(fb::FilterBank, sy::AbstractVector, k::Integer)
-    ya = if k <= 1
+function subsynthesize(v::Type{Val{:normal}}, abop::AbstractVector, sy::AbstractArray)
+    ya = if length(abop) <= 1
         sy[1]
     else
-        [ subsynthesize(fb, sy[2:end], k-1), sy[1]... ]
+        [ subsynthesize(v, abop[2:end], sy[2:end]), sy[1]... ]
     end
-    synthesize(fb, ya)
+    synthesize(abop[1], ya)
 end
 
-# shape = :augumented
-function synthesize(msfb::Multiscale{TF,DF}, y::AbstractVector{Array{TY,DY}}) where {TF,TY,DF,DY}
-    if DF != DY-1
-        throw(ArgumentError("dimensions of arguments must be satisfy DF + 1 == DY"))
+function subsynthesize(v::Type{Val{:vector}}, abop::AbstractVector, sy::AbstractArray)
+    ya = if length(abop) <= 1
+        sy
+    else
+        lny = prod(abop[1].outsize) - prod(abop[2].insize)
+        [ vec(subsynthesize(v, abop[2:end], sy[lny+1:end])); sy[1:lny] ]
     end
-    yrd = map(y) do ys
-        [ ys[fill(:, DF)...,p] for p in 1:size(ys, DY) ]
-    end
-    synthesize(msfb, yrd)
+    synthesize(abop[1], ya)
 end
 
-# shape = :vector
-function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{TY}, szdata::NTuple{D}) where {TF,TY,D}
-    df = msfb.filterBank.decimationFactor
-    P = sum(msfb.filterBank.nChannels)
-    nCoefs = [ prod(fld.(szdata, df.^l)) * (l==msfb.treeLevel ? P : P-1) for l in 1:msfb.treeLevel ]
-
-    augCoefs = map(1:msfb.treeLevel) do l
-        rang = (1:nCoefs[l]) .+ sum(nCoefs[1:(l-1)])
-        reshape(y[rang], fld.(szdata, df.^l)..., (l==msfb.treeLevel ? P : P-1))
-    end
-    synthesize(msfb, augCoefs)
-end
 
 function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
     df = cs.decimationFactor
@@ -242,7 +232,7 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     elseif cs.shape == :augumented
         [ y[fill(:,D)..., p] for p in 1:cs.nChannels ]
     elseif cs.shape == :vector
-        ry = reshape(y, cs.datasize..., cs.nChannels)
+        ry = reshape(y, cs.insize..., cs.nChannels)
         [ ry[fill(:,D)..., p] for p in 1:cs.nChannels ]
     else
         error("Invalid augument")

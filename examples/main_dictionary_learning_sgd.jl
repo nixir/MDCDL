@@ -68,7 +68,7 @@ for epoch = 1:nEpoch
         setAngleParameters!(nsolt, angs, mus)
 
         synthesizer = createSynthesizer(nsolt, x; shape=:vector)
-        adjsyn = synthesizer'
+        adjsyn = createAnalyzer(nsolt, x; shape=:vector)
         y = adjsyn(x)
         errt[nd] = norm(x - synthesizer(hy))^2/2
         # println("Epoch: $epoch, No.: $nd, cost = $(errt[nd])")
