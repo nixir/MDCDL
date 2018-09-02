@@ -145,29 +145,29 @@ end
 
 promote_rule(::Type{Cnsolt{TA,D,S}}, ::Type{Cnsolt{TB,D,S}}) where {D,S,TA,TB} = Cnsolt{promote_type(TA,TB),D,S}
 
-struct ParallelFB{T,D} <: FilterBank{T,D}
-    decimationFactor::NTuple{D, Int}
-    polyphaseOrder::NTuple{D, Int}
-    nChannels::Int
-
-    analysisFilters::Vector{AbstractArray{T,D}}
-    synthesisFilters::Vector{AbstractArray{T,D}}
-
-    function ParallelFB(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
-        szFilters = df .* (ppo .+ 1)
-        afs = [ Array{T, D}(undef, szFilters...) for p in 1:nChs ]
-        sfs = [ Array{T, D}(undef, szFilters...) for p in 1:nChs ]
-        new{T, D}(df, ppo, nChs, afs, sfs)
-    end
-
-    function ParallelFB(fb::PolyphaseFB{T,D}) where {T,D}
-        afs = getAnalysisFilters(fb)
-        fsf = getSynthesisFilters(fb)
-        new{T, D}(fb.decimationFactor, fb.polyphaseOrder, sum(fb.nChannels), afs, fsf)
-    end
-end
-
-promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
+# struct ParallelFB{T,D} <: FilterBank{T,D}
+#     decimationFactor::NTuple{D, Int}
+#     polyphaseOrder::NTuple{D, Int}
+#     nChannels::Int
+#
+#     analysisFilters::Vector{AbstractArray{T,D}}
+#     synthesisFilters::Vector{AbstractArray{T,D}}
+#
+#     function ParallelFB(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
+#         szFilters = df .* (ppo .+ 1)
+#         afs = [ Array{T, D}(undef, szFilters...) for p in 1:nChs ]
+#         sfs = [ Array{T, D}(undef, szFilters...) for p in 1:nChs ]
+#         new{T, D}(df, ppo, nChs, afs, sfs)
+#     end
+#
+#     function ParallelFB(fb::PolyphaseFB{T,D}) where {T,D}
+#         afs = getAnalysisFilters(fb)
+#         fsf = getSynthesisFilters(fb)
+#         new{T, D}(fb.decimationFactor, fb.polyphaseOrder, sum(fb.nChannels), afs, fsf)
+#     end
+# end
+#
+# promote_rule(::Type{ParallelFB{TA,D}}, ::Type{ParallelFB{TB,D}}) where {TA,TB,D} = ParallelFB{promote_type(TA,TB),D}
 
 struct Multiscale{T,D} <: CodeBook{T,D}
     filterBank::FilterBank{T,D}
@@ -248,6 +248,16 @@ struct ConvolutionalAnalyzer{T,D} <: AbstractAnalyzer{T,D}
         new{T,D}(kernels, sz, shape, df, ord, nch, border, domain)
     end
 
+    function ConvolutionalAnalyzer(kernels::Vector{Array{T,D}}, sz::NTuple{D,Int}; decimation::NTuple{D,Int}, kwargs...) where {T,D}
+        nch = length(kernels)
+        szFilter = size(kernels[1])
+        # if any(map(ker->size(ker) != szFilter, kernels))
+        #     error("size mismatch")
+        # end
+        ord = fld.(szFilter, decimation) .- 1
+        ConvolutionalAnalyzer(kernels, sz, decimation, ord, nch)
+    end
+
     function ConvolutionalAnalyzer(pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}; kwargs...) where {T,D}
         afs = getAnalysisFilters(pfb)
         ConvolutionalAnalyzer(afs, sz, pfb.decimationFactor, pfb.polyphaseOrder, sum(pfb.nChannels); kwargs...)
@@ -274,6 +284,16 @@ struct ConvolutionalSynthesizer{T,D} <: AbstractSynthesizer{T,D}
         new{T,D}(kernels, sz, shape, df, ord, nch, border, domain)
     end
 
+    function ConvolutionalSynthesizer(kernels::Vector{Array{T,D}}, sz::NTuple{D,Int}; decimation::NTuple{D,Int}, kwargs...) where {T,D}
+        nch = length(kernels)
+        szFilter = size(kernels[1])
+        # if any(map(ker->size(ker) != szFilter, kernels))
+        #     error("size mismatch")
+        # end
+        ord = fld.(szFilter, decimation) .- 1
+        ConvolutionalSynthesizer(kernels, sz, decimation, ord, nch)
+    end
+
     function ConvolutionalSynthesizer(pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}; kwargs...) where {T,D}
         sfs = getSynthesisFilters(pfb)
         ConvolutionalSynthesizer(sfs, sz, pfb.decimationFactor, pfb.polyphaseOrder, sum(pfb.nChannels); kwargs...)
@@ -286,6 +306,15 @@ end
 
 createAnalyzer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalAnalyzer(ker, args...; kwargs...)
 createSynthesizer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalSynthesizer(ker, args...; kwargs...)
+
+type MultiscaleAnalyzer{T,D} < AbstractAnalyzer{T,D}
+    analyzers::Vector{AbstractAnalyzer{T,D}}
+    synthesizers::Vector{AbstractSynthesizer{T,D}}
+    datasize::NTuple{D,Int}
+    shape::Symbol
+
+    level::Int
+end
 
 include("sparseCoding.jl")
 

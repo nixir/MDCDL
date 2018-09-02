@@ -189,20 +189,20 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{Array{TY,D}}; alg=FIR()) where {TF,TY,D}
-    df = pfb.decimationFactor
-    ord = pfb.polyphaseOrder
-
-    nShift = df .* cld.(ord, 2) .+ 1
-    region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
-
-    sxs = map(y, pfb.synthesisFilters) do yp, sfp
-        upimg = upsample(yp, df)
-        ker = reflect(OffsetArray(sfp, region...))
-        imfilter(upimg, ker, "circular", alg)
-    end
-    sum(sxs)
-end
+# function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{Array{TY,D}}; alg=FIR()) where {TF,TY,D}
+#     df = pfb.decimationFactor
+#     ord = pfb.polyphaseOrder
+#
+#     nShift = df .* cld.(ord, 2) .+ 1
+#     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
+#
+#     sxs = map(y, pfb.synthesisFilters) do yp, sfp
+#         upimg = upsample(yp, df)
+#         ker = reflect(OffsetArray(sfp, region...))
+#         imfilter(upimg, ker, "circular", alg)
+#     end
+#     sum(sxs)
+# end
 
 # shape= :normal
 function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{Vector{Array{TY,D}}}) where {TF,TY,D}

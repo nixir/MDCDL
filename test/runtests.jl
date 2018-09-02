@@ -7,6 +7,7 @@ end
 
 # write your own tests here
 # include("parallelFB.jl")
+include("convolutionalAnalyzerSynthesizer.jl")
 include("cnsolt.jl")
 include("rnsolt.jl")
 

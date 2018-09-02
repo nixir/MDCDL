@@ -188,30 +188,30 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bord
     return pvx
 end
 
-function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; shape=:normal, alg=FIR()) where {TF,TX,D}
-    df = pfb.decimationFactor
-    ord = pfb.polyphaseOrder
-
-    nShift = df .* fld.(ord, 2) .+ 1
-    region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
-
-    offset = df .- 1
-    y = map(pfb.analysisFilters) do f
-        ker = reflect(OffsetArray(f, region...))
-        fltimg = imfilter(x, ker, "circular", alg)
-        downsample(fltimg, df, offset)
-    end
-
-    if shape == :normal
-        y
-    elseif shape == :augumented
-        cat(D+1, y...)
-    elseif shape == :vector
-        vcat(vec.(y)...)
-    else
-        error("Invalid augument")
-    end
-end
+# function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; shape=:normal, alg=FIR()) where {TF,TX,D}
+#     df = pfb.decimationFactor
+#     ord = pfb.polyphaseOrder
+#
+#     nShift = df .* fld.(ord, 2) .+ 1
+#     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
+#
+#     offset = df .- 1
+#     y = map(pfb.analysisFilters) do f
+#         ker = reflect(OffsetArray(f, region...))
+#         fltimg = imfilter(x, ker, "circular", alg)
+#         downsample(fltimg, df, offset)
+#     end
+#
+#     if shape == :normal
+#         y
+#     elseif shape == :augumented
+#         cat(D+1, y...)
+#     elseif shape == :vector
+#         vcat(vec.(y)...)
+#     else
+#         error("Invalid augument")
+#     end
+# end
 # adjoint_synthesize(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
 
 function analyze(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}; shape=:normal) where {TF,TX,D}
