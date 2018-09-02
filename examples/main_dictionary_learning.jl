@@ -4,6 +4,7 @@ using NLopt
 using MDCDL
 using TestImages, Images
 using Plots
+using LinearAlgebra
 cnt = 0
 
 # output file name
@@ -61,7 +62,7 @@ for idx = 1:nEpoch, subx in trainingIds
         angsvm1 = vcat(zeros(sum(nch)-1), angs)
         setAngleParameters!(msnsolt.filterBank, angsvm1, mus0)
         dist = x .- synthesize(msnsolt, hy, size(x))
-        cst = vecnorm(dist)^2
+        cst = norm(dist)^2
 
         println("f_$(cnt): cost=$(cst)")
 

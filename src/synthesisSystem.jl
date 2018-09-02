@@ -50,9 +50,11 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
             y .= B' * y
 
             if isodd(k)
-                yl .= circshift(yl, (0, -nShift))
+                # yl .= circshift(yl, (0, -nShift))
+                shiftBackward!(Val{boundary}, yl, nShift)
             else
-                yu .= circshift(yu, (0, nShift))
+                # yu .= circshift(yu, (0, nShift))
+                shiftForward!(Val{boundary}, yu, nShift)
             end
             y .= B * y
         end
@@ -83,7 +85,8 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
 
             B = getMatrixB(P, cc.paramAngles[d][2*k])
             ye  .= B' * ye
-            yu1 .= circshift(yu1, (0, nShift))
+            # yu1 .= circshift(yu1, (0, nShift))
+            shiftForward!(Val{boundary}, yu1, nShift)
             ye  .= B * ye
 
             # first step
@@ -93,7 +96,8 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
 
             B = getMatrixB(P, cc.paramAngles[d][2*k-1])
             ye  .= B' * ye
-            yl1 .= circshift(yl1, (0, -nShift))
+            # yl1 .= circshift(yl1, (0, -nShift))
+            shiftBackward!(Val{boundary}, yl1, nShift)
             ye  .= B * ye
         end
         pvy = ipermutedims(pvy)
@@ -133,10 +137,8 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
             if isodd(k)
-                # yl .= circshift(yl, (0, -nShift))
                 shiftBackward!(Val{boundary}, yl, nShift)
             else
-                # yu .= circshift(yu, (0, nShift))
                 shiftForward!(Val{boundary}, yu, nShift)
             end
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
@@ -172,7 +174,6 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
-            # ys2 .= circshift(ys2, (0, nShift))
             shiftForward!(Val{boundary}, ys2, nShift)
 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
@@ -184,7 +185,6 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tu; yl .= tl
 
-            # ys1 .= circshift(ys1, (0, -nShift))
             shiftBackward!(Val{boundary}, ys1, nShift)
 
             tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
@@ -243,7 +243,7 @@ function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{TY}, szdata::NTupl
     nCoefs = [ prod(fld.(szdata, df.^l)) * (l==msfb.treeLevel ? P : P-1) for l in 1:msfb.treeLevel ]
 
     augCoefs = map(1:msfb.treeLevel) do l
-        rang = (1:nCoefs[l]) + sum(nCoefs[1:(l-1)])
+        rang = (1:nCoefs[l]) .+ sum(nCoefs[1:(l-1)])
         reshape(y[rang], fld.(szdata, df.^l)..., (l==msfb.treeLevel ? P : P-1))
     end
     synthesize(msfb, augCoefs)

@@ -51,9 +51,9 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; borde
 
             x .= B' * x
             if isodd(k)
-                xl .= circshift(xl,(0, nShift))
+                shiftForward!(Val{border}, xl, nShift)
             else
-                xu .= circshift(xu,(0, -nShift))
+                shiftBackward!(Val{border}, xu, nShift)
             end
             x .= B * x
 
@@ -64,7 +64,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; borde
     return pvx
 end
 
-function extendAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     nStages = fld.(cc.polyphaseOrder, 2)
     P = cc.nChannels
 
@@ -82,7 +82,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
             B = getMatrixB(P, cc.paramAngles[d][2*k-1])
 
             xe  .= B' * xe
-            xl1 .= circshift(xl1, (0, nShift))
+            shiftForward!(Val{border}, xl1, nShift)
             xe  .= B * xe
 
             xu1 .= cc.propMatrices[d][4*k-3] * xu1
@@ -92,7 +92,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
             B = getMatrixB(P, cc.paramAngles[d][2*k])
 
             xe  .= B' * xe
-            xu1 .= circshift(xu1, (0, -nShift))
+            shiftBackward!(Val{border}, xu1, nShift)
             xe  .= B * xe
 
             xl2 .= cc.propMatrices[d][4*k]   * xl2
@@ -117,7 +117,7 @@ function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     extendAtoms!(cc, ux; kwargs...)
 end
 
-function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     hP = cc.nChannels[1]
 
     for d = 1:D
@@ -131,9 +131,9 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
             xu .= tu; xl .= tl
 
             if isodd(k)
-                shiftForward!(Val{boundary}, xl, nShift)
+                shiftForward!(Val{border}, xl, nShift)
             else
-                shiftBackward!(Val{boundary}, xu, nShift)
+                shiftBackward!(Val{border}, xu, nShift)
             end
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
@@ -144,7 +144,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; bound
     return pvx
 end
 
-function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boundary=:circular) where {TF,TX,D}
+function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = sum(cc.nChannels)
     maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
@@ -169,7 +169,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
             xu .= tu; xl .= tl
 
             # xs1 .= circshift(xs1, (0, nShift))
-            shiftForward!(Val{boundary}, xs1, nShift)
+            shiftForward!(Val{border}, xs1, nShift)
 
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
@@ -181,7 +181,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; boun
             xu .= tu; xl .= tl
 
             # xs2 .= circshift(xs2, (0, -nShift))
-            shiftBackward!(Val{boundary}, xs2, nShift)
+            shiftBackward!(Val{border}, xs2, nShift)
 
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl

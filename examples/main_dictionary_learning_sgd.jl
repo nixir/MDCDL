@@ -7,6 +7,7 @@ using TestImages
 # using Images
 using ColorTypes
 using Statistics
+using Printf: @printf
 # using Plots
 cnt = 0
 
@@ -24,7 +25,7 @@ nch = (3,3)
 
 dt = Float64
 
-η = 1e-1
+η = 1e-2
 
 szSubData = tuple(fill(8 ,D)...)
 nSubData = 128
@@ -42,14 +43,14 @@ end
 
 analyzer = createAnalyzer(nsolt, szSubData; shape=:vector)
 y0 = analyzer(orgImg[trainingIds[1]...])
-sparsity = fld(length(y0), 4)
+sparsity = fld(length(y0), 2)
 
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
 
 y = y0
-serrs = Vector{dt}(undef, nEpoch)
-svars = Vector{dt}(undef, nEpoch)
+serrs = dt[]
+svars = dt[]
 for epoch = 1:nEpoch
     errt = Vector{dt}(undef, length(trainingIds))
     for nd in 1:length(trainingIds)
@@ -72,9 +73,10 @@ for epoch = 1:nEpoch
         errt[nd] = norm(x - synthesizer(hy))^2/2
         # println("Epoch: $epoch, No.: $nd, cost = $(errt[nd])")
     end
-    serrs[epoch] = sum(errt)
-    svars[epoch] = var(errt)
-    println("Epoch $epoch finished. sum(cost) = $(serrs[epoch]), svars = $(svars[epoch])")
+    push!(serrs, sum(errt))
+    push!(svars, var(errt))
+    # println("Epoch $epoch finished. sum(cost) = $(serrs[epoch]), svars = $(svars[epoch])")
+    @printf("Epoch %5d finished. sum(cost) = %.4e, svars= %.4e.\n", epoch, serrs[epoch], svars[epoch])
 end
 
 # atmimshow(nsolt)

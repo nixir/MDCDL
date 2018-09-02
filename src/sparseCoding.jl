@@ -2,17 +2,21 @@ using LinearAlgebra
 using ColorTypes
 # iterative shrinkage/thresholding algorithm
 # solve a regularized convex optimization problem e.x. f(x) + g(x)
-function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; iterations::Integer=20, absTol::Real=1e2*eps(), verboseFunction::Function=(args...)->nothing)
+# ∇loss : gradient of loss function f(x)
+# prox  : proximity function of g(x)
+# x0    : initial value
+# η     : step size of update
+function ista(∇loss::Function, prox::Function, x0; η::Real=1.0, iterations::Integer=20, absTol::Real=1e2*eps(), verboseFunction::Function=(args...)->nothing)
     xₖ = x0
     errx = Inf
     len = length(x0)
-    for nItr = 1:iterations
+    for k = 1:iterations
         xₖ₋₁ = xₖ
-        xₖ = prox(xₖ - stepSize*gradOfLossFcn(xₖ), stepSize)
+        xₖ = prox(xₖ - η*∇loss(xₖ), η)
 
         errx = norm(xₖ - xₖ₋₁)^2 / 2
 
-        verboseFunction(nItr, xₖ, errx)
+        verboseFunction(k, xₖ, errx)
 
         if errx <= absTol
             break
@@ -21,23 +25,23 @@ function ista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; itera
     xₖ
 end
 
-function fista(gradOfLossFcn::Function, prox::Function, stepSize::Real, x0; iterations::Integer=100, absTol::Real=1e2*eps(), verboseFunction::Function=(itrs,tx,err)->nothing)
+function fista(∇loss::Function, prox::Function, x0; η::Real=1.0, iterations::Integer=100, absTol::Real=1e2*eps(), verboseFunction::Function=(itrs,tx,err)->nothing)
     xₖ = x0
     errx = Inf
     len = length(x0)
     y = x0
     tₖ = 1
-    for nItr = 1:iterations
-        xₖ₋₁ = xₖ
-        tₖ₋₁ = tₖ
+    for k = 1:iterations
+        xₖ₋₁, tₖ₋₁ = xₖ, tₖ
 
-        xₖ = prox(y - stepSize*gradOfLossFcn(y), stepSize)
+        xₖ = prox(y - η*∇loss(y), η)
         tₖ = (1 + sqrt(1+4*tₖ^2)) / 2
-        y = xₖ + (tₖ₋₁ - 1) / tₖ * (xₖ - xₖ₋₁)
+        t̂ = (tₖ₋₁ - 1) / tₖ
+        y = xₖ + t̂*(xₖ - xₖ₋₁)
 
-        errx = norm(xₖ - xₖ₋₁)^2
+        errx = norm(xₖ - xₖ₋₁)^2 / 2
 
-        verboseFunction(nItr, xₖ, errx)
+        verboseFunction(k, xₖ, errx)
 
         if errx <= absTol
             break
@@ -53,53 +57,64 @@ end
 # argmin_{x} f(x) + g(Lx) + h(x)
 # f() and g(): proxiable function
 # h(x): smooth convex function having a Lipschitzian gradient
+# ∇loss : gradient of loss function f(x)
 # L: linear operator
-function pds(gradOfLossFcn::Function, proxF::Function, proxG::Function, linearOperator::Function, adjOfLinearOperator::Function, τ::Real, σ::Real, x0, v0=linearOperator(x0); iterations::Integer=100, absTol::Real=1e-10, verboseFunction::Function=(args...)->nothing)
+# Lᵀ: adjoint of L
+function pds(∇loss::Function, proxF::Function, proxG::Function, L::Function, Lᵀ::Function, x0, v0=L(x0); τ::Real=1.0, σ::Real=1.0, iterations::Integer=100, absTol::Real=1e-10, verboseFunction::Function=(args...)->nothing)
     xₖ = x0
     v = v0
-    cproxG = (x_, s_) -> (x_ - proxG(x_,s_))
-    for nItr = 1:iterations
+    # cproxG = (x_, s_) -> (x_ - proxG(x_,s_))
+    cproxG = fmconj(proxG)
+    for k = 1:iterations
         xₖ₋₁ = xₖ
-        p = proxF(xₖ - τ*(gradOfLossFcn(xₖ) + adjOfLinearOperator(v)), τ)
-        q = cproxG(v + linearOperator(2.0*p - xₖ₋₁), σ^-1)
+        p = proxF(xₖ - τ*(∇loss(xₖ) + Lᵀ(v)), τ)
+        q = cproxG(v + L(2.0*p - xₖ₋₁), σ^-1)
 
         # (x, v) <- (x, v) + λ((p,q) - (x,v)) for　λ == 1
         xₖ, v = p, q
 
-        errx = norm(xₖ - xₖ₋₁)^2
+        errx = norm(xₖ - xₖ₋₁)^2 /2
         verboseFunction(nItr, xₖ, errx)
     end
     xₖ
 end
 
-function iht(synthesisFunc::Function, adjointSynthesisFunc::Function, x, y0, K; iterations::Integer=1, absTol::Real=1e-10, isverbose::Bool=false, lt::Function=isless)
+# argmin_{y} || x - Φy ||_2^2/2 s.t. ||y||_0 ≤ K
+# Φ     : synthesis operator
+# Φᵀ    : adjoint of Φ
+#
+function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, absTol::Real=1e-10, isverbose::Bool=false, lt::Function=isless)
     len = length(y0)
-    y = y0
-    errx = Inf
-    erry = Inf
+    yₖ = y0
+    εx = Inf
+    # εy = Inf
 
-    recx = synthesisFunc(y)
-    for itr = 1:iterations
-        yprev = y
-        y = hardshrink(y + adjointSynthesisFunc(x - recx), K; lt=lt)
-        recx = synthesisFunc(y)
+    x̃ = Φ(yₖ)
+    for k = 1:iterations
+        yₖ₋₁ = yₖ
 
-        errx = norm(x - recx)^2/2
+        yₖ = hardshrink(yₖ₋₁ + Φᵀ(x - x̃), S; lt=lt)
+        x̃ = Φ(yₖ)
+
+        εx = norm(x - x̃)^2 / 2
 
         if isverbose
-            println("number of Iterations $itr: err = $errx ")
+            println("number of Iterations $k: err = $errx ")
         end
 
-        if errx <= absTol
+        if εx <= absTol
             break
         end
     end
-    y
+    yₖ
 end
 
 # function iht(cb::CodeBook, x, args...; kwargs...)
 #     iht((ty) -> synthesize(cb, ty, size(x)), (tx) -> adjoint_synthesize(cb, tx; shape=:vector), x, args...; kwargs...)
 # end
+
+# Fenchel-Moreau conjugate function
+fmconj(f) = (x_, s_) -> (x_ - f(x_,s_))
 
 function iht(cb::CodeBook, x, args...; kwargs...)
     syn = createSynthesizer(cb, x; shape=:vector)
