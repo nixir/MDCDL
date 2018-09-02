@@ -22,6 +22,7 @@ export iht
 # export Synthesizer, VecSynthesizer
 export AbstractAnalyzer, AbstractSynthesizer
 export NsoltAnalyzer, NsoltSynthesizer
+export ConvolutionalAnalyzer, ConvolutionalSynthesizer
 export createAnalyzer, createSynthesizer
 
 struct PolyphaseVector{T,D}
@@ -86,7 +87,8 @@ struct Rnsolt{T,D,S} <: Nsolt{T,D}
 
         new{T,D,S}(df, ppo, nChs, initMts, propMts, mtxc)
     end
-    Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
+    Rnsolt(t::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {D,T} = Rnsolt(t, df, ppo, (cld(nChs,2), fld(nChs,2)))
+    Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
 end
 
 promote_rule(::Type{Rnsolt{TA,D,S}}, ::Type{Rnsolt{TB,D,S}}) where {D,S,TA,TB} = Rnsolt{promote_type(TA,TB),D,S}
@@ -197,10 +199,10 @@ struct NsoltAnalyzer{T,D} <: AbstractAnalyzer{T,D}
     datasize::NTuple{D,Int}
     shape::Symbol
 
+    border::Symbol
 
-
-    function NsoltAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape=:normal) where {T,D}
-        new{T,D}(ns, sz, shape)
+    function NsoltAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape=:normal, border=:circular) where {T,D}
+        new{T,D}(ns, sz, shape, border)
     end
 
     function NsoltAnalyzer(ns::Nsolt, x::AbstractArray; kwargs...)
@@ -209,12 +211,14 @@ struct NsoltAnalyzer{T,D} <: AbstractAnalyzer{T,D}
 end
 
 struct NsoltSynthesizer{T,D} <: AbstractSynthesizer{T,D}
-    codebook::PolyphaseFB{T,D}
+    codebook::Nsolt{T,D}
     datasize::NTuple{D,Int}
     shape::Symbol
 
-    function NsoltSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape= :normal) where {T,D}
-        new{T,D}(ns, sz, shape)
+    border::Symbol
+
+    function NsoltSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Integer}; shape= :normal, border=:circular) where {T,D}
+        new{T,D}(ns, sz, shape, border)
     end
 
     function NsoltSynthesizer(ns::Nsolt, x::AbstractArray; kwargs...)
@@ -225,10 +229,63 @@ end
 createAnalyzer(ns::Nsolt, args...; kwargs...) = NsoltAnalyzer(ns, args...; kwargs...)
 createSynthesizer(ns::Nsolt, args...; kwargs...) = NsoltSynthesizer(ns, args...; kwargs...)
 
-# adjoint(na::NsoltAnalyzer) = adjoint_(na.codebook, na)
-# adjoint(ns::NsoltSynthesizer) = adjoint_(ns.codebook, ns)
-adjoint(na::NsoltAnalyzer) =  NsoltSynthesizer(na.codebook, na.datasize, shape=na.shape)
-adjoint(ns::NsoltSynthesizer) = NsoltAnalyzer(ns.codebook, ns.datasize, shape=ns.shape)
+adjoint(na::NsoltAnalyzer) =  NsoltSynthesizer(na.codebook, na.datasize, shape=na.shape, border=na.border)
+adjoint(ns::NsoltSynthesizer) = NsoltAnalyzer(ns.codebook, ns.datasize, shape=ns.shape, border=na.border)
+
+struct ConvolutionalAnalyzer{T,D} <: AbstractAnalyzer{T,D}
+    kernels::Vector{Array{T,D}}
+    datasize::NTuple{D,Int}
+    shape::Symbol
+
+    decimationFactor::NTuple{D,Int}
+    polyphaseOrder::NTuple{D,Int}
+    nChannels::Int
+
+    border::Symbol
+    domain::Symbol
+
+    function ConvolutionalAnalyzer(kernels::Vector{Array{T,D}}, sz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, border=:circular, domain=:spacial) where {T,D}
+        new{T,D}(kernels, sz, shape, df, ord, nch, border, domain)
+    end
+
+    function ConvolutionalAnalyzer(pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}; kwargs...) where {T,D}
+        afs = getAnalysisFilters(pfb)
+        ConvolutionalAnalyzer(afs, sz, pfb.decimationFactor, pfb.polyphaseOrder, sum(pfb.nChannels); kwargs...)
+    end
+
+    function ConvolutionalAnalyzer(pfb::PolyphaseFB, x::AbstractArray, args...; kwargs...)
+        ConvolutionalAnalyzer(pfb, size(x), args...; kwargs...)
+    end
+end
+
+struct ConvolutionalSynthesizer{T,D} <: AbstractSynthesizer{T,D}
+    kernels::Vector{Array{T,D}}
+    datasize::NTuple{D,Int}
+    shape::Symbol
+
+    decimationFactor::NTuple{D,Int}
+    polyphaseOrder::NTuple{D,Int}
+    nChannels::Int
+
+    border::Symbol
+    domain::Symbol
+
+    function ConvolutionalSynthesizer(kernels::Vector{Array{T,D}}, sz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, border=:circular, domain=:spacial) where {T,D}
+        new{T,D}(kernels, sz, shape, df, ord, nch, border, domain)
+    end
+
+    function ConvolutionalSynthesizer(pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}; kwargs...) where {T,D}
+        sfs = getSynthesisFilters(pfb)
+        ConvolutionalSynthesizer(sfs, sz, pfb.decimationFactor, pfb.polyphaseOrder, sum(pfb.nChannels); kwargs...)
+    end
+
+    function ConvolutionalSynthesizer(pfb::PolyphaseFB, x::AbstractArray, args...; kwargs...)
+        ConvolutionalSynthesizer(pfb, size(x), args...; kwargs...)
+    end
+end
+
+createAnalyzer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalAnalyzer(ker, args...; kwargs...)
+createSynthesizer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalSynthesizer(ker, args...; kwargs...)
 
 include("sparseCoding.jl")
 

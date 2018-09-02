@@ -1,8 +1,8 @@
-using ImageFiltering: imfilter, reflect, FIR
+using ImageFiltering: imfilter, reflect, FIR, FFT
 using OffsetArrays: OffsetArray
 
 function analyze(A::NsoltAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    y = analyze(A.codebook, x)
+    y = analyze(A.codebook, x; border=A.border)
 
     if A.shape == :normal
         [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
@@ -239,3 +239,36 @@ function subanalyze(fb::FilterBank{TF,D}, sx::AbstractArray{TS,D}, k::Integer; k
         [sy[2:end], subanalyze(fb, sy[1], k-1)...]
     end
 end
+
+function analyze(ca::ConvolutionalAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+    df = ca.decimationFactor
+    ord = ca.polyphaseOrder
+
+    alg = if ca.domain == :spacial
+        FIR()
+    elseif ca.domain == :frequency
+        FFT()
+    end
+
+    nShift = df .* fld.(ord, 2) .+ 1
+    region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
+
+    offset = df .- 1
+    y = map(ca.kernels) do f
+        ker = reflect(OffsetArray(f, region...))
+        fltimg = imfilter(x, ker, "circular", alg)
+        downsample(fltimg, df, offset)
+    end
+
+    if ca.shape == :normal
+        y
+    elseif ca.shape == :augumented
+        cat(D+1, y...)
+    elseif ca.shape == :vector
+        vcat(vec.(y)...)
+    else
+        error("Invalid augument")
+    end
+end
+
+(ca::ConvolutionalAnalyzer)(x::AbstractArray) = analyze(ca, x)

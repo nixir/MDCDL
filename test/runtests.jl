@@ -6,7 +6,7 @@ else
 end
 
 # write your own tests here
-include("parallelFB.jl")
+# include("parallelFB.jl")
 include("cnsolt.jl")
 include("rnsolt.jl")
 

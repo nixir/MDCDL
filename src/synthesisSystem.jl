@@ -14,7 +14,7 @@ function synthesize(syn::NsoltSynthesizer{TF,D}, y::AbstractArray) where {TF,D}
         error("Invalid argument.")
     end
 
-    pvx = synthesize(syn.codebook, pvy)
+    pvx = synthesize(syn.codebook, pvy; border=syn.border)
     polyphase2mdarray(pvx, syn.codebook.decimationFactor)
 end
 (syn::NsoltSynthesizer)(y::AbstractArray) = synthesize(syn, y)
@@ -48,10 +48,8 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
             y .= B' * y
 
             if isodd(k)
-                # yl .= circshift(yl, (0, -nShift))
                 shiftBackward!(Val{border}, yl, nShift)
             else
-                # yu .= circshift(yu, (0, nShift))
                 shiftForward!(Val{border}, yu, nShift)
             end
             y .= B * y
@@ -83,7 +81,6 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
 
             B = getMatrixB(P, cc.paramAngles[d][2*k])
             ye  .= B' * ye
-            # yu1 .= circshift(yu1, (0, nShift))
             shiftForward!(Val{border}, yu1, nShift)
             ye  .= B * ye
 
@@ -94,7 +91,6 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
 
             B = getMatrixB(P, cc.paramAngles[d][2*k-1])
             ye  .= B' * ye
-            # yl1 .= circshift(yl1, (0, -nShift))
             shiftBackward!(Val{border}, yl1, nShift)
             ye  .= B * ye
         end
@@ -245,3 +241,37 @@ function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{TY}, szdata::NTupl
     end
     synthesize(msfb, augCoefs)
 end
+
+function synthesize(cs::ConvolutionalSynthesizer{TF,D}, y::AbstractVector) where {TF,D}
+    df = cs.decimationFactor
+    ord = cs.polyphaseOrder
+
+    alg = if cs.domain == :spacial
+        FIR()
+    elseif cs.domain == :frequency
+        FFT()
+    end
+
+    ty = if cs.shape == :normal
+        y
+    elseif cs.shape == :augumented
+        [ y[fill(:,D)..., p] for p in 1:cs.nChannels ]
+    elseif cs.shape == :vector
+        ry = reshape(y, cs.datasize..., cs.nChannels)
+        [ ry[fill(:,D)..., p] for p in 1:cs.nChannels ]
+    else
+        error("Invalid augument")
+    end
+
+    nShift = df .* cld.(ord, 2) .+ 1
+    region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
+
+    sxs = map(ty, cs.kernels) do yp, sfp
+        upimg = upsample(yp, df)
+        ker = reflect(OffsetArray(sfp, region...))
+        imfilter(upimg, ker, "circular", alg)
+    end
+    sum(sxs)
+end
+
+(cs::ConvolutionalSynthesizer)(y::AbstractArray) = synthesize(cs, y)
