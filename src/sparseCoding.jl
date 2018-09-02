@@ -122,7 +122,7 @@ function iht(cb::CodeBook, x, args...; kwargs...)
     iht(syn, adj, x, args...; kwargs...)
 end
 
-function iht(a::AbstractSynthesizer, s::AbstractAnalyzer, x, args...; kwargs...)
+function iht(a::AbstractOperator, s::AbstractOperator, x, args...; kwargs...)
     iht(t->synthesize(a, t), t->analyze(s, t), x, args...; kwargs...)
 end
 

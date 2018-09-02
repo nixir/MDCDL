@@ -1,23 +1,23 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
-function synthesize(syn::NsoltSynthesizer{TF,D}, y::AbstractArray) where {TF,D}
+function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     pvy = if syn.shape == :normal
         nBlocks = size(y[1])
         PolyphaseVector( Matrix(transpose(hcat(map(vec, y)...))), nBlocks)
     elseif syn.shape == :augumented
         mdarray2polyphase(y)
     elseif syn.shape == :vector
-        ty = reshape(y, fld.(syn.datasize, syn.codebook.decimationFactor)..., sum(syn.codebook.nChannels))
+        ty = reshape(y, fld.(syn.datasize, syn.nsolt.decimationFactor)..., sum(syn.nsolt.nChannels))
         mdarray2polyphase(ty)
     else
         error("Invalid argument.")
     end
 
-    pvx = synthesize(syn.codebook, pvy; border=syn.border)
-    polyphase2mdarray(pvx, syn.codebook.decimationFactor)
+    pvx = synthesize(syn.nsolt, pvy; border=syn.border)
+    polyphase2mdarray(pvx, syn.nsolt.decimationFactor)
 end
-(syn::NsoltSynthesizer)(y::AbstractArray) = synthesize(syn, y)
+operate(::Type{Val{:synthesizer}}, syn::NsoltOperator, y::AbstractArray) = synthesize(syn, y)
 
 function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
@@ -189,21 +189,6 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-# function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{Array{TY,D}}; alg=FIR()) where {TF,TY,D}
-#     df = pfb.decimationFactor
-#     ord = pfb.polyphaseOrder
-#
-#     nShift = df .* cld.(ord, 2) .+ 1
-#     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
-#
-#     sxs = map(y, pfb.synthesisFilters) do yp, sfp
-#         upimg = upsample(yp, df)
-#         ker = reflect(OffsetArray(sfp, region...))
-#         imfilter(upimg, ker, "circular", alg)
-#     end
-#     sum(sxs)
-# end
-
 # shape= :normal
 function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{Vector{Array{TY,D}}}) where {TF,TY,D}
     subsynthesize(msfb.filterBank, y, msfb.treeLevel)
@@ -242,7 +227,7 @@ function synthesize(msfb::Multiscale{TF,D}, y::AbstractVector{TY}, szdata::NTupl
     synthesize(msfb, augCoefs)
 end
 
-function synthesize(cs::ConvolutionalSynthesizer{TF,D}, y::AbstractVector) where {TF,D}
+function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
     df = cs.decimationFactor
     ord = cs.polyphaseOrder
 
@@ -274,4 +259,4 @@ function synthesize(cs::ConvolutionalSynthesizer{TF,D}, y::AbstractVector) where
     sum(sxs)
 end
 
-(cs::ConvolutionalSynthesizer)(y::AbstractArray) = synthesize(cs, y)
+operate(::Type{Val{:synthesizer}}, cvop::ConvolutionalOperator, y::AbstractArray) = synthesize(cvop, y)

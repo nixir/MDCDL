@@ -3,7 +3,7 @@ using MDCDL
 using FFTW
 using Random
 
-@testset "convolutionalAnalyzerSynthesizer" begin
+@testset "convolutionalOperator" begin
     include("testsetGenerator.jl")
 
     Random.seed!(3923528829)
@@ -19,7 +19,7 @@ using Random
                 szFilter = df .* (ord .+ 1)
                 afs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
                 szx = rand(1:4) .* df .* (ord .+ 1)
-                ca = ConvolutionalAnalyzer(afs, szx, df, ord, nch)
+                ca = ConvolutionalOperator(:analyzer, afs, szx, df, ord, nch)
 
                 x = rand(dt, szx)
                 y = analyze(ca, x)
@@ -56,7 +56,7 @@ using Random
                 szFilter = df .* (ord .+ 1)
                 sfs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
                 szy = rand(1:4) .* (ord .+ 1)
-                cs = ConvolutionalSynthesizer(sfs, szy, df, ord, nch)
+                cs = ConvolutionalOperator(:synthesizer, sfs, szy, df, ord, nch)
 
                 y = [ rand(dt, szy) for p in 1:sum(nch) ]
                 rx = synthesize(cs, y)

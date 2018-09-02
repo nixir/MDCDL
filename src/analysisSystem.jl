@@ -1,8 +1,8 @@
 using ImageFiltering: imfilter, reflect, FIR, FFT
 using OffsetArrays: OffsetArray
 
-function analyze(A::NsoltAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    y = analyze(A.codebook, x; border=A.border)
+function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+    y = analyze(A.nsolt, x; border=A.border)
 
     if A.shape == :normal
         [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
@@ -14,7 +14,7 @@ function analyze(A::NsoltAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
         error("Invalid augument.")
     end
 end
-(ana::NsoltAnalyzer)(x::AbstractArray) = analyze(ana, x)
+operate(::Type{Val{:analyzer}}, nsop::NsoltOperator, x::AbstractArray) = analyze(nsop, x)
 
 function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
@@ -188,32 +188,6 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bord
     return pvx
 end
 
-# function analyze(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}; shape=:normal, alg=FIR()) where {TF,TX,D}
-#     df = pfb.decimationFactor
-#     ord = pfb.polyphaseOrder
-#
-#     nShift = df .* fld.(ord, 2) .+ 1
-#     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
-#
-#     offset = df .- 1
-#     y = map(pfb.analysisFilters) do f
-#         ker = reflect(OffsetArray(f, region...))
-#         fltimg = imfilter(x, ker, "circular", alg)
-#         downsample(fltimg, df, offset)
-#     end
-#
-#     if shape == :normal
-#         y
-#     elseif shape == :augumented
-#         cat(D+1, y...)
-#     elseif shape == :vector
-#         vcat(vec.(y)...)
-#     else
-#         error("Invalid augument")
-#     end
-# end
-# adjoint_synthesize(pfb::ParallelFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(pfb, x, args...; kwargs...)
-
 function analyze(msfb::Multiscale{TF,D}, x::AbstractArray{TX,D}; shape=:normal) where {TF,TX,D}
     y = subanalyze(msfb.filterBank, x, msfb.treeLevel)
     if shape == :normal
@@ -240,7 +214,7 @@ function subanalyze(fb::FilterBank{TF,D}, sx::AbstractArray{TS,D}, k::Integer; k
     end
 end
 
-function analyze(ca::ConvolutionalAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     df = ca.decimationFactor
     ord = ca.polyphaseOrder
 
@@ -271,4 +245,4 @@ function analyze(ca::ConvolutionalAnalyzer{TF,D}, x::AbstractArray{TX,D}) where 
     end
 end
 
-(ca::ConvolutionalAnalyzer)(x::AbstractArray) = analyze(ca, x)
+operate(::Type{Val{:analzer}}, nsop::NsoltOperator, x::AbstractArray) = analyze(nsop, x)

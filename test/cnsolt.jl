@@ -93,7 +93,7 @@ using Random
 
             foreach(oms) do om
                 analyzer = createAnalyzer(nsolt, x; shape=om)
-                synthesizer = analyzer'
+                synthesizer = createSynthesizer(nsolt, x; shape=om)
 
                 y = analyzer(x)
                 rx = synthesizer(y)
