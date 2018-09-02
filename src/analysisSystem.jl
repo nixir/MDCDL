@@ -213,6 +213,8 @@ function subanalyze(abop::AbstractVector, sx::AbstractArray{TS,D}) where {TS,D}
     end
 end
 
+operate(::Type{Val{:analyzer}}, msop::MultiscaleOperator, x::AbstractArray) = analyze(msop, x)
+
 function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     df = ca.decimationFactor
     ord = ca.polyphaseOrder
@@ -244,4 +246,4 @@ function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where 
     end
 end
 
-operate(::Type{Val{:analzer}}, nsop::NsoltOperator, x::AbstractArray) = analyze(nsop, x)
+operate(::Type{Val{:analyzer}}, cvop::ConvolutionalOperator, x::AbstractArray) = analyze(cvop, x)

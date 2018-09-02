@@ -235,9 +235,6 @@ function getSynthesisFilters(rc::MDCDL.Rnsolt)
     end
 end
 
-# getAnalysisFilters(pfb::ParallelFB) = pfb.analysisFilters
-# getSynthesisFilters(pfb::ParallelFB) = pfb.synthesisFilters
-
 function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
     nBlocks = fld.(size(x), szBlock)
     if any(size(x) .% szBlock .!= 0)

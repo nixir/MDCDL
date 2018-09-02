@@ -279,17 +279,19 @@ struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     end
 end
 
-function createMultiscaleAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level=1, shape=:normal, kwargs...) where {T,D}
+function createMultiscaleAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
     ops = map(t->createAnalyzer(ns, t; shape=:normal, kwargs...), szxs)
     MultiscaleOperator(:analyzer, ops, sz; shape=shape)
 end
 
-function createMultiscaleSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level=1, shape=:normal, kwargs...) where {T,D}
+function createMultiscaleSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
     ops = map(t->createSynthesizer(ns, t; shape=shape, kwargs...), szxs)
     MultiscaleOperator(:synthesizer, ops, sz; shape=shape)
 end
+
+(msop::MultiscaleOperator)(x::AbstractArray) = operate(msop, x)
 
 include("sparseCoding.jl")
 

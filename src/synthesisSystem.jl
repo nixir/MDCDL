@@ -216,6 +216,7 @@ function subsynthesize(v::Type{Val{:vector}}, abop::AbstractVector, sy::Abstract
     synthesize(abop[1], ya)
 end
 
+operate(::Type{Val{:synthesizer}}, msop::MultiscaleOperator, y::AbstractArray) = synthesize(msop, y)
 
 function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
     df = cs.decimationFactor
