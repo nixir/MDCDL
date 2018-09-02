@@ -1,7 +1,7 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
-function analyze(A::PolyphaseFBAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+function analyze(A::NsoltAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     y = analyze(A.codebook, x)
 
     if A.shape == :normal
@@ -14,7 +14,7 @@ function analyze(A::PolyphaseFBAnalyzer{TF,D}, x::AbstractArray{TX,D}) where {TF
         error("Invalid augument.")
     end
 end
-(ana::PolyphaseFBAnalyzer)(x::AbstractArray) = analyze(ana, x)
+(ana::NsoltAnalyzer)(x::AbstractArray) = analyze(ana, x)
 
 function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D}
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)

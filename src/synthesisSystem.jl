@@ -1,7 +1,7 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
-function synthesize(syn::PolyphaseFBSynthesizer{TF,D}, y::AbstractArray) where {TF,D}
+function synthesize(syn::NsoltSynthesizer{TF,D}, y::AbstractArray) where {TF,D}
     pvy = if syn.shape == :normal
         nBlocks = size(y[1])
         PolyphaseVector( Matrix(transpose(hcat(map(vec, y)...))), nBlocks)
@@ -17,7 +17,7 @@ function synthesize(syn::PolyphaseFBSynthesizer{TF,D}, y::AbstractArray) where {
     pvx = synthesize(syn.codebook, pvy)
     polyphase2mdarray(pvx, syn.codebook.decimationFactor)
 end
-(syn::PolyphaseFBSynthesizer)(y::AbstractArray) = synthesize(syn, y)
+(syn::NsoltSynthesizer)(y::AbstractArray) = synthesize(syn, y)
 
 function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
     M = prod(cc.decimationFactor)
@@ -193,7 +193,6 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-# function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{AbstractArray{TY,D}}; alg=FIR()) where {TF,TY,D}
 function synthesize(pfb::ParallelFB{TF,D}, y::AbstractVector{Array{TY,D}}; alg=FIR()) where {TF,TY,D}
     df = pfb.decimationFactor
     ord = pfb.polyphaseOrder
