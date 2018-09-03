@@ -78,7 +78,7 @@ struct Rnsolt{T,D,S} <: Nsolt{T,D}
             else
                 [
                     vcat(
-                        fill(Array[ Matrix{T}(I,nChs[1],nChs[1]), -Matrix{T}(I,nChs[2],nChs[2]) ], fld(ppo[pd],2))...
+                        fill(Array[ -Matrix{T}(I,nChs[1],nChs[1]), Matrix{T}(I,nChs[2],nChs[2]) ], fld(ppo[pd],2))...
                     )
                 for pd in 1:D]
             end

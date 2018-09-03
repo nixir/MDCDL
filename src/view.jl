@@ -1,37 +1,34 @@
-using Plots: plot, px
+using Plots: plot, px, heatmap
 using ColorTypes
 
-function atmimshow(cc::MDCDL.Cnsolt{T,2,S}; scale = 1.0, offset = 0.5) where {S,T}
+function atmimshow(cc::MDCDL.Cnsolt{T,2,S}; clims=(-1.0,1.0), coordinate=:cartesian) where {S,T}
     P = cc.nChannels
-    # offset = 0.5
 
     afs = getAnalysisFilters(cc);
+    atms = if coordinate == :cartesian
+        [ real.(afs) ; imag.(afs) ]
+    elseif coordinate == :polar
+        rs = map(f->abs.(f) .- 0.5, afs)
+        angs = map(f->angle.(f) ./ pi, afs)
+        [ rs; angs ]
+    end
 
-    atmsre = [ Array{Gray{T}}(scale * real.(f) .+ offset) for f in afs ]
-    atmsim = [ Array{Gray{T}}(scale * imag.(f) .+ offset) for f in afs ]
-
-    plotsre = plot(plot.(atmsre; ticks=nothing)...; layout=(1,P), aspect_ratio=:equal)
-    plotsim = plot(plot.(atmsim; ticks=nothing)...; layout=(1,P), aspect_ratio=:equal)
-
-    plot(plotsre, plotsim; layout=(2,1), aspect_ratio=:equal)
+    plot(heatmap.(atms, color=:gray, aspect_ratio=:equal, legend=false, clims=clims)...; layout=(2,P))
 end
 
-function atmimshow(cc::MDCDL.Rnsolt{T,2,S}; scale = 1.0, offset = 0.5) where {S,T}
+function atmimshow(cc::MDCDL.Rnsolt{T,2,S}; clims=(-1.0, 1.0)) where {S,T}
     nch = cc.nChannels
-    # offset = 0.5
+    difch = nch[2]-nch[1]
 
     afs = getAnalysisFilters(cc);
 
-    atms = [ Array{Gray{T}}(scale * f .+ offset) for f in afs ]
+    dummyimg = fill(-Inf, size(afs[1]))
 
-    plotsyms = plot(plot.(atms[1:nch[1]]; ticks=nothing, margin=0px)...; layout=(1,nch[1]), aspect_ratio=:equal, margin=0px)
-    plotasyms = plot(plot.(atms[nch[1]+1:end]; ticks=nothing, margin=0px)...; layout=(1,nch[2]), aspect_ratio=:equal, margin=0px)
+    afssym = [ afs[1:nch[1]]; fill(dummyimg, max(difch, 0)) ]
+    afsasym = [ afs[(nch[1]+1):end]; fill(dummyimg, max(-difch, 0)) ]
+
+    plotsyms = plot(heatmap.(afssym, color=:gray, aspect_ratio=:equal, legend=false, clims=clims)..., layout=(1,length(afssym)))
+    plotasyms = plot(heatmap.(afsasym, color=:gray, aspect_ratio=:equal, legend=false, clims=clims)..., layout=(1,length(afsasym)))
 
     plot(plotsyms, plotasyms; layout=(2,1), aspect_ratio=:equal, margin=0px)
 end
-
-# function atmimshow(mlcsc::MDCDL.MultiLayerCsc, args...)
-#     for l = mlcsc.nLayers
-#         atmimshow(mlcsc.dictionaries[l], args...)
-#     end
-# end
