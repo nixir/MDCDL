@@ -1,34 +1,56 @@
-using Plots: plot, px, heatmap
+using RecipesBase
 using ColorTypes
 
-function atmimshow(cc::MDCDL.Cnsolt{T,2,S}; clims=(-1.0,1.0), coordinate=:cartesian) where {S,T}
-    P = cc.nChannels
+@recipe function atmimshow(cc::Cnsolt{T,2,S}) where {T,S}
+    nch = cc.nChannels
+    layout := (2,nch)
+    clims := (-1.0, 1.0)
 
-    afs = getAnalysisFilters(cc);
-    atms = if coordinate == :cartesian
-        [ real.(afs) ; imag.(afs) ]
-    elseif coordinate == :polar
-        rs = map(f->abs.(f) .- 0.5, afs)
-        angs = map(f->angle.(f) ./ pi, afs)
-        [ rs; angs ]
+    afs = getAnalysisFilters(cc)
+    afsre = map(f->real.(f), afs)
+    afsim = map(f->imag.(f), afs)
+
+    mafsre = map(f-> 0.5*f .+ 0.5, afsre)
+    mafsim = map(f-> 0.5*f .+ 0.5, afsim)
+
+    atms = Array{Gray{Float64}}[ mafsre; mafsim ]
+
+    for idx = 1:2*nch
+        @series begin
+            subplot := idx
+            aspect_ratio := :equal
+            atms[idx]
+        end
     end
-
-    plot(heatmap.(atms, color=:gray, aspect_ratio=:equal, legend=false, clims=clims)...; layout=(2,P))
 end
 
-function atmimshow(cc::MDCDL.Rnsolt{T,2,S}; clims=(-1.0, 1.0)) where {S,T}
+@recipe function atmimshow(cc::Rnsolt{T,2,S}) where {T,S}
+    mxP = maximum(cc.nChannels)
+    layout := (2,mxP)
+    clims := (-1.0, 1.0)
     nch = cc.nChannels
     difch = nch[2]-nch[1]
 
-    afs = getAnalysisFilters(cc);
+    afs = getAnalysisFilters(cc)
 
-    dummyimg = fill(-Inf, size(afs[1]))
+    mafs = map(f-> 0.5*f .+ 0.5, afs)
 
-    afssym = [ afs[1:nch[1]]; fill(dummyimg, max(difch, 0)) ]
-    afsasym = [ afs[(nch[1]+1):end]; fill(dummyimg, max(-difch, 0)) ]
+    dummyimg = fill(0.0, size(afs[1]))
 
-    plotsyms = plot(heatmap.(afssym, color=:gray, aspect_ratio=:equal, legend=false, clims=clims)..., layout=(1,length(afssym)))
-    plotasyms = plot(heatmap.(afsasym, color=:gray, aspect_ratio=:equal, legend=false, clims=clims)..., layout=(1,length(afsasym)))
+    afssym = Array{Gray{Float64}}[ mafs[1:nch[1]]; fill(dummyimg, max(difch, 0)) ]
+    afsasym = Array{Gray{Float64}}[ mafs[(nch[1]+1):end]; fill(dummyimg, max(-difch, 0)) ]
 
-    plot(plotsyms, plotasyms; layout=(2,1), aspect_ratio=:equal, margin=0px)
+    for idx = 1:mxP
+        @series begin
+            subplot := idx
+            aspect_ratio := :equal
+            afssym[idx]
+        end
+
+        @series begin
+            subplot := idx+mxP
+            aspect_ratio := :equal
+            afsasym[idx]
+        end
+    end
 end

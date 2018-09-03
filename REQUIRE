@@ -1,11 +1,10 @@
 julia 0.7
 Images
-ImageView
 TestImages
 ImageMagick
 ImageFiltering
 ColorTypes
-Plots
+RecipesBase
 OffsetArrays
 FFTW
 JSON
