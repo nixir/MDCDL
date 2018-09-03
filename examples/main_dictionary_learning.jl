@@ -5,7 +5,8 @@ using MDCDL
 using TestImages, Images
 using Plots
 using LinearAlgebra
-cnt = 0
+using Printf: @printf
+# cnt = 0
 
 # output file name
 filename = ""
@@ -21,14 +22,13 @@ nch = (4,4)
 # tree level
 lv = 3
 
-szSubData = tuple(fill(8,D)...)
+szSubData = tuple(fill(16,D)...)
 nSubData = 64
 nEpoch = 10
 
 nsolt = Rnsolt(df, ord, nch)
-# include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
-# rand!(nsolt)
-# msnsolt = Multiscale(nsolt, lv)
+MDCDL.rand!(nsolt; isPropMat=false)
+
 msanalyzer = MDCDL.createMultiscaleAnalyzer(nsolt, szSubData; level=lv, shape=:vector)
 mssynthesizer = MDCDL.createMultiscaleSynthesizer(nsolt, szSubData; level=lv, shape=:vector)
 
@@ -45,7 +45,7 @@ sparsity = fld(length(y0),4)
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[sum(nch):end]
 
-opt = Opt(:LN_COBYLA, length(angs0s))
+opt = Opt(:GN_CRS2_LM, length(angs0s))
 # opt = Opt(:LD_MMA, length(angs0))
 lower_bounds!(opt, -1*pi*ones(size(angs0s)))
 upper_bounds!(opt,  1*pi*ones(size(angs0s)))
@@ -57,34 +57,40 @@ maxeval!(opt,400)
 
 # (minf, minx, ret) = optimize(opt, [1.234, 5.678])
 y = y0
-for idx = 1:nEpoch, subx in trainingIds
-    global y
-    x = orgImg[subx...]
-    hy = iht(mssynthesizer, msanalyzer, x, y, sparsity; iterations=400, isverbose=true, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
-    cnt = 0
-    objfunc = (angs::Vector, grad::Vector) -> begin
-        global cnt
-        cnt::Int += 1
+for epoch = 1:nEpoch
+    errs = fill(Inf, nSubData)
+    for idx = 1:nSubData
+        subx = trainingIds[idx]
+        global y
+        x = orgImg[subx...]
+        hy = iht(mssynthesizer, msanalyzer, x, y, sparsity; iterations=400, isverbose=false, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
+        # cnt = 0
+        objfunc = (angs::Vector, grad::Vector) -> begin
+            # global cnt
+            # cnt::Int += 1
 
-        angsvm1 = vcat(zeros(sum(nch)-1), angs)
-        setAngleParameters!(msnsolt.filterBank, angsvm1, mus0)
-        dist = x .- synthesize(msnsolt, hy, size(x))
-        cst = norm(dist)^2
+            angsvm1 = vcat(zeros(sum(nch)-1), angs)
+            setAngleParameters!(nsolt, angsvm1, mus0)
+            dist = x .- mssynthesizer(hy)
+            cst = norm(dist)^2
 
-        println("f_$(cnt): cost=$(cst)")
+            # println("f_$(cnt): cost=$(cst)")
 
-        cst
+            cst
+        end
+        min_objective!(opt, objfunc)
+        (minf, minx, ret) = optimize(opt, angs0s)
+        errs[idx] = minf
+
+        minxt = vcat(zeros(sum(nch)-1), minx);
+        setAngleParameters!(nsolt, minxt, mus0)
+        y = msanalyzer(x)
+        @printf("dataset %3d: cost = %.4e\n", idx, errs[idx])
     end
-    min_objective!(opt, objfunc)
-    (minf, minx, ret) = optimize(opt, angs0s)
-
-    minxt = vcat(zeros(sum(nch)-1), minx);
-    setAngleParameters!(msnsolt.filterBank, minxt, mus0)
-    y = analyze(msnsolt, x; shape=:vector)
-    println("Iterations $idx finished.")
+    @printf("epoch %3d finished, total cost = %.4e\n", epoch, sum(errs))
 end
 
-atmimshow(msnsolt.filterBank)
+atmimshow(nsolt; scale=0.6)
 
 if !isempty(filename)
     MDCDL.save(filename, msnsolt.filterBank)

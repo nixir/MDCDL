@@ -60,10 +60,9 @@ end
 # ∇loss : gradient of loss function f(x)
 # L: linear operator
 # Lᵀ: adjoint of L
-function pds(∇loss::Function, proxF::Function, proxG::Function, L::Function, Lᵀ::Function, x0, v0=L(x0); τ::Real=1.0, σ::Real=1.0, iterations::Integer=100, absTol::Real=1e-10, verboseFunction::Function=(args...)->nothing)
+function pds(∇loss::Function, proxF::Function, proxG::Function, L::Function, Lᵀ::Function, x0, v0=L(x0); τ::Real=1.0, σ::Real=1.0, λ::Real=1.0, iterations::Integer=100, absTol::Real=1e-10, verboseFunction::Function=(args...)->nothing)
     xₖ = x0
     v = v0
-    # cproxG = (x_, s_) -> (x_ - proxG(x_,s_))
     cproxG = fmconj(proxG)
     for k = 1:iterations
         xₖ₋₁ = xₖ
@@ -71,7 +70,8 @@ function pds(∇loss::Function, proxF::Function, proxG::Function, L::Function, L
         q = cproxG(v + L(2.0*p - xₖ₋₁), σ^-1)
 
         # (x, v) <- (x, v) + λ((p,q) - (x,v)) for　λ == 1
-        xₖ, v = p, q
+        xₖ, v = (x, v) + λ .* (p - x, q - v)
+        # xₖ, v = p, q
 
         errx = norm(xₖ - xₖ₋₁)^2 /2
         verboseFunction(nItr, xₖ, errx)
@@ -99,7 +99,7 @@ function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, abs
         εx = norm(x - x̃)^2 / 2
 
         if isverbose
-            println("number of Iterations $k: err = $errx ")
+            println("number of Iterations $k: err = $εx ")
         end
 
         if εx <= absTol
@@ -108,10 +108,6 @@ function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, abs
     end
     yₖ
 end
-
-# function iht(cb::CodeBook, x, args...; kwargs...)
-#     iht((ty) -> synthesize(cb, ty, size(x)), (tx) -> adjoint_synthesize(cb, tx; shape=:vector), x, args...; kwargs...)
-# end
 
 # Fenchel-Moreau conjugate function
 fmconj(f) = (x_, s_) -> (x_ - f(x_,s_))
@@ -162,7 +158,6 @@ function l2ballProj(x::T, radius::Real, centerVec::T) where T
     end
 end
 
-# hardshrink(x::AbstractArray{AbstractArray}, ks; kwargs...) = hardshrink.(x, ks; kwargs...)
 function hardshrink(x::AbstractArray, k::Integer; lt::Function=isless)
     nzids = sortperm(vec(x); lt=lt, rev=true)[1:k]
     output = zero(x)
