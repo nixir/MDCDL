@@ -28,15 +28,21 @@ nEpoch = 10
 nsolt = Rnsolt(df, ord, nch)
 # include(joinpath(Pkg.dir(),"MDCDL","test","randomInit.jl"))
 # rand!(nsolt)
-msnsolt = Multiscale(nsolt, lv)
+# msnsolt = Multiscale(nsolt, lv)
+msanalyzer = MDCDL.createMultiscaleAnalyzer(nsolt, szSubData; level=lv, shape=:vector)
+mssynthesizer = MDCDL.createMultiscaleSynthesizer(nsolt, szSubData; level=lv, shape=:vector)
 
 orgImg = Array{RGB{Float64}}(testimage("lena"))
-trainingIds = [ (colon.(1,szSubData) .+ rand.(colon.(0,size(orgImg) .- szSubData))) for nsd in 1:nSubData ]
+trainingIds = map(1:nSubData) do nsd
+    pos = rand.(UnitRange.(0,size(orgImg) .- szSubData))
+    UnitRange.(1 .+ pos, szSubData .+ pos)
+end
 
-y0 = analyze(msnsolt, orgImg[trainingIds[1]...]; shape=:vector)
+# y0 = analyze(msnsolt, orgImg[trainingIds[1]...]; shape=:vector)
+y0 = msanalyzer(orgImg[trainingIds[1]...])
 sparsity = fld(length(y0),4)
 
-angs0, mus0 = getAngleParameters(msnsolt.filterBank)
+angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[sum(nch):end]
 
 opt = Opt(:LN_COBYLA, length(angs0s))
@@ -52,8 +58,9 @@ maxeval!(opt,400)
 # (minf, minx, ret) = optimize(opt, [1.234, 5.678])
 y = y0
 for idx = 1:nEpoch, subx in trainingIds
+    global y
     x = orgImg[subx...]
-    hy = MDCDL.iht(msnsolt, x, y, sparsity; maxIterations=400, viewStatus=true, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
+    hy = iht(mssynthesizer, msanalyzer, x, y, sparsity; iterations=400, isverbose=true, lt=(lhs,rhs)->isless(norm(lhs),norm(rhs)))
     cnt = 0
     objfunc = (angs::Vector, grad::Vector) -> begin
         global cnt

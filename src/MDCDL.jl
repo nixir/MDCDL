@@ -146,11 +146,6 @@ end
 
 promote_rule(::Type{Cnsolt{TA,D,S}}, ::Type{Cnsolt{TB,D,S}}) where {D,S,TA,TB} = Cnsolt{promote_type(TA,TB),D,S}
 
-# struct Multiscale{T,D} <: CodeBook{T,D}
-#     filterBank::FilterBank{T,D}
-#     treeLevel::Int
-# end
-
 struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int
 

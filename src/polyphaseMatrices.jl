@@ -241,21 +241,21 @@ function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where 
         error("size error. input data: $(size(x)), block size: $(szBlock).")
     end
 
-    data = Matrix{TX}(undef, prod(szBlock), prod(nBlocks))
+    outdata = Matrix{TX}(undef, prod(szBlock), prod(nBlocks))
     tiles = collect(TileIterator(axes(x), szBlock))
     for idx in LinearIndices(nBlocks)
-        data[:,idx] = vec(x[tiles[idx]...])
+        outdata[:,idx] = vec(x[tiles[idx]...])
     end
-    PolyphaseVector(data, nBlocks)
+    PolyphaseVector(outdata, nBlocks)
 end
 
 function mdarray2polyphase(x::AbstractArray{T,D}) where {T,D}
-    data = Matrix{T}(undef, size(x,D), prod(size(x)[1:D-1]))
+    outdata = Matrix{T}(undef, size(x,D), prod(size(x)[1:D-1]))
     for p = 1:size(x,D)
-        data[p,:] = transpose(vec( x[fill(:,D-1)..., p] ))
+        outdata[p,:] = vec( x[fill(:,D-1)..., p])
     end
     nBlocks = size(x)[1:D-1]
-    PolyphaseVector(data, nBlocks)
+    PolyphaseVector(outdata, nBlocks)
 end
 
 function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
