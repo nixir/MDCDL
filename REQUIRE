@@ -1,13 +1,10 @@
 julia 0.7
 Images
-TestImages
-ImageMagick
 ImageFiltering
 ColorTypes
 RecipesBase
 OffsetArrays
 FFTW
 JSON
-NLopt
 TiledIteration
 InteractiveUtils
