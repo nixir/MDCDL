@@ -1,5 +1,5 @@
 using LinearAlgebra
-using ColorTypes
+using ColorTypes, ColorVectorSpace
 # iterative shrinkage/thresholding algorithm
 # solve a regularized convex optimization problem e.x. f(x) + g(x)
 # ∇loss : gradient of loss function f(x)
@@ -83,7 +83,7 @@ end
 # Φ     : synthesis operator
 # Φᵀ    : adjoint of Φ
 #
-function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, absTol::Real=1e-10, isverbose::Bool=false, lt::Function=isless)
+function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, absTol::Real=1e-10, isverbose::Bool=false)
     len = length(y0)
     yₖ = y0
     εx = Inf
@@ -93,7 +93,7 @@ function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, abs
     for k = 1:iterations
         yₖ₋₁ = yₖ
 
-        yₖ = hardshrink(yₖ₋₁ + Φᵀ(x - x̃), S; lt=lt)
+        yₖ = hardshrink(yₖ₋₁ + Φᵀ(x - x̃), S)
         x̃ = Φ(yₖ)
 
         εx = norm(x - x̃)^2 / 2
@@ -123,25 +123,25 @@ function iht(a::AbstractOperator, s::AbstractOperator, x, args...; kwargs...)
 end
 
 # prox of l2-norm
-function proxOfL2(x, lambda::Real)
-    max(1.0 - lambda/norm(x), 0) .* x
+function proxL2(x, λ::Real)
+    max(1.0 - λ/norm(x), 0) .* x
 end
 
 # prox. of mixed l1- and l2- norm
-function groupshrink(x, lambda::Real)
-    proxOfL2.(x, lambda)
+function groupshrink(x, λ::Real)
+    proxL2.(x, λ)
 end
 
 # prox. of l1-norm
-softshrink(x::AbstractArray{T}, lambda::Real) where T = softshrink.(x, lambda)
-function softshrink(x, lambda::Real)
-    max(1.0 - lambda / abs(x),0) * x
+softshrink(x::AbstractArray{T}, λ::Real) where T = softshrink.(x, λ)
+function softshrink(x, λ::Real)
+    max(1.0 - λ / abs(x), 0) * x
 end
 
 # prox. of nuclear norm.
-function shrinkSingularValue(A::Matrix, lambda::Real)
+function shrinkSingularValue(A::Matrix, λ::Real)
     U, S, V = svd(A,thin=true)
-    U * diagm(softshrink(S,lambda)) * V'
+    U * diagm(softshrink(S, λ)) * V'
 end
 
 function boxProj(x, lowerBound::Real, upperBound::Real)
@@ -154,11 +154,11 @@ function l2ballProj(x::T, radius::Real, centerVec::T) where T
     if dist <= radius
         x
     else
-        centerVec + lambda/dist*(x - centerVec)
+        centerVec + λ/dist*(x - centerVec)
     end
 end
 
-function hardshrink(x::AbstractArray, k::Integer; lt::Function=isless)
+function hardshrink(x::AbstractArray, k::Integer; lt::Function=(lhs,rhs)->isless(abs2(lhs),abs2(rhs)))
     nzids = sortperm(vec(x); lt=lt, rev=true)[1:k]
     output = zero(x)
     for idx in nzids
@@ -166,14 +166,3 @@ function hardshrink(x::AbstractArray, k::Integer; lt::Function=isless)
     end
     output
 end
-
-# function hardshrink(x::AbstractArray{Complex{T}}, ks::Integer) where T
-#     hardshrink(x, ks; lt=(lhs,rhs)->isless(abs(lhs),abs(rhs)))
-# end
-#
-# function hardshrink(x::AbstractArray{Colorant}, ks::Integer)
-#     normc = (c) -> mapreducec((v)->v^2,+,0,c)
-#     ltfcn = (lhs,rhs)->isless(normc(lhs),normc(rhs))
-#     println("FOOOOOOO")
-#     hardshrink(x, ks; lt=ltfcn)
-# end

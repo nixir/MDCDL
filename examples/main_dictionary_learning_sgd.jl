@@ -19,17 +19,17 @@ D = 2
 # decimation factor
 df = (2,2)
 # polyphase order
-ord = (2,2)
+ord = (4,4)
 # number of symmetric/antisymmetric channel
-nch = (3,3)
+nch = (4,4)
 
 dt = Float64
 
-η = 1e-2
+η = 1e-1
 
-szSubData = tuple(fill(8 ,D)...)
-nSubData = 128
-nEpoch = 20
+szSubData = tuple(fill(16 ,D)...)
+nSubData = 32
+nEpoch = 400
 
 nsolt = Rnsolt(dt, df, ord, nch)
 MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false)
@@ -43,7 +43,8 @@ end
 
 analyzer = createAnalyzer(nsolt, szSubData; shape=:vector)
 y0 = analyzer(orgImg[trainingIds[1]...])
-sparsity = fld(length(y0), 2)
+# sparsity = fld(length(y0), 2)
+sparsity = floor(Int, 0.6*length(y0))
 
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
@@ -57,7 +58,7 @@ for epoch = 1:nEpoch
         global y
         subx = trainingIds[nd]
         x = orgImg[subx...]
-        hy = MDCDL.iht(nsolt, x, y, sparsity; iterations=100, isverbose=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
+        hy = MDCDL.iht(nsolt, x, y, sparsity; iterations=100, isverbose=false)
 
         pvx = mdarray2polyphase(x, df)
         pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))

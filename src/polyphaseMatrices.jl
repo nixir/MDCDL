@@ -18,6 +18,9 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
+function get∇MatrixB(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, A::AbstractMatrix{TA}) where {TV,TA,D}
+end
+
 function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
