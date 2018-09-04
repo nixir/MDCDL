@@ -4,6 +4,7 @@ using LinearAlgebra
 
 import Base.promote_rule
 import LinearAlgebra.adjoint
+import Random: rand!
 
 include("basicComplexDSP.jl")
 
@@ -301,7 +302,7 @@ include("parameterizeFilterBanks.jl")
 include("dictionaryLearning.jl")
 include("mlcsc.jl")
 
-include("view.jl")
+include("recipes.jl")
 include("io.jl")
 
 include("utils.jl")
