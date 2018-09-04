@@ -7,12 +7,12 @@ end
 # D: RNSOLT synthesizer
 function gradSqrdError(nsolt::Nsolt, x, y)
     errvec = PolyphaseVector(x.data - synthesize(nsolt, y).data, x.nBlocks)
-    return -gradOfAnalyzer(nsolt, errvec, y)
+    return -1 .* real.(gradOfAnalyzer(nsolt, errvec, y))
 end
 
-function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{T,D}, y0::PolyphaseVector{T,D}; border=:circular) where {T,D}
+function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{TV,D}, y0::PolyphaseVector{TV,D}; border=:circular) where {T,TV,D}
 
-    error("this method hasn't implemented yet.")
+    # error("this method hasn't implemented yet.")
 
     df = nsolt.decimationFactor
     ord = nsolt.polyphaseOrder
@@ -30,8 +30,8 @@ function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{T,D}, y0:
     hP = fld(nch, 2)
 
     L = fld(hP*(hP-1),2)
-    gdudk = [ fill(zeros(T,L), o) for o in ord ]
-    gdθ = [ fill(zeros(T,fld(nch,4)), o) for o in ord]
+    gdudk = [ fill(zeros(Complex{T},L), 2*o) for o in ord ]
+    gdθ = [ fill(zeros(Complex{T},fld(nch,4)), o) for o in ord]
     for d = D:-1:1
         nShift = fld(size(rt,2), nBlocks[end])
         # submatrices
@@ -51,7 +51,8 @@ function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{T,D}, y0:
             yu .= Wk' * ru
             yl .= Uk' * yl
 
-            B = getMatrixB(nch, nsolt.paramAngles[d][k])
+            angs = nsolt.paramAngles[d][k]
+            B = getMatrixB(nch, angs)
             r .= B' * r
             if isodd(k)
                 shiftBackward!(Val{border}, rl, nShift)
@@ -60,7 +61,7 @@ function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{T,D}, y0:
             end
             r .= B * r
             #************ Processing *************
-            gdθ = zeros(T, fld(nch,4))
+            gdθ[d][k] = get∇BΛBᵀ(y, r, nch, angs, k, nShift, border)
             #************    End     *************
             y .= B' * y
             if isodd(k)
@@ -78,19 +79,23 @@ function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{T,D}, y0:
     end
 
     V0om = nsolt.initMatrices[1]
-    Iv = Matrix{T}(I, nch, M)
-    V = V0om * Iv
+    Iv = Matrix{Complex{T}}(I, nch, M)
+    V0 = V0om * Iv
     rts = V0' * rt
-    gdv = MDCDL.scalarGradOfOrthonormalMatrix(yt, Iv * rts, V0om)
+    # gdv = MDCDL.scalarGradOfOrthonormalMatrix(yt, Iv * rts, V0om)
+    gdv = MDCDL.scalarGradOfOrthonormalMatrix(yt, V0om' * rt, V0om)
     # yts = vcat(W0' * yt[1:nch[1],:], U0' * yt[nch[1]+1:end,:])
     #
     # rts .= nsolt.matrixC' * rts
     # yts .= nsolt.matrixC' * yts
 
-    vcat(gdw, gdu, vcat(vcat.(gdudk...)...))
+    # return gdv, gdudk, gdθ
+    tmp = [ [ vcat(gdudk[d][2k-1], gdudk[d][2k], gdθ[d][k]) for k in 1:ord[d] ] for d in 1:D ]
+
+    vcat(gdv, (vcat.(tmp...)...))
 end
 
-function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::PolyphaseVector{T,D}) where {T,D}
+function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::PolyphaseVector{T,D}; border=:circular) where {T,D}
     df = nsolt.decimationFactor
     ord = nsolt.polyphaseOrder
     nch = nsolt.nChannels
@@ -128,11 +133,11 @@ function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::P
             tru, trl = (ru + rl, ru - rl) ./ sqrt(2)
             ru .= tru; rl .= trl
             if isodd(k)
-                yl .= circshift(yl, (0, -nShift))
-                rl .= circshift(rl, (0, -nShift))
+                shiftBackward!(Val{border}, yl, nShift)
+                shiftBackward!(Val{border}, rl, nShift)
             else
-                yu .= circshift(yu, (0, nShift))
-                ru .= circshift(ru, (0, nShift))
+                shiftForward!(Val{border}, yu, nShift)
+                shiftForward!(Val{border}, ru, nShift)
             end
             tyu, tyl = (yu + yl, yu - yl) ./ sqrt(2)
             yu .= tyu; yl .= tyl
@@ -155,10 +160,47 @@ function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::P
     rts = vcat(W0' * rt[1:nch[1],:], U0' * rt[nch[1]+1:end,:])
     gdw = ∇θ(yt[1:nch[1],:], Iw * rts[1:cM,:], W0om)
     gdu = ∇θ(yt[nch[1]+1:end,:], Iu * rts[cM+1:end,:], U0om)
+
+    # gdw = ∇θ(yt[1:nch[1],:], W0om' * rt[1:nch[1],:], W0om)
+    # gdu = ∇θ(yt[nch[1]+1:end,:], U0om' * rt[nch[1]+1:end,:], U0om)
     # yts = vcat(W0' * yt[1:nch[1],:], U0' * yt[nch[1]+1:end,:])
     #
     # rts .= nsolt.matrixC' * rts
     # yts .= nsolt.matrixC' * yts
 
     vcat(gdw, gdu, vcat(vcat.(gdudk...)...))
+end
+
+function get∇BΛBᵀ(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, P::Integer, θs::AbstractVector{TA}, k::Integer, nShift::Integer, border::Symbol) where {TV,TA,D}
+    get∇BΛBᵀ_reference(x, y, P, θs, k, nShift, border)
+end
+
+function get∇BΛBᵀ_reference(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, P::Integer, θs::AbstractVector{TA}, k::Integer, nShift::Integer, border::Symbol) where {TV,TA,D}
+    hP = fld(P,2)
+    map(1:length(θs)) do idx
+        ang = θs[idx] + pi/2
+        c, s = cos(ang), sin(ang)
+
+        lc = [ (-1im*c) (-1im*s); (c) (-s) ]
+        ls = [ (s) (c); (1im*s) (-1im*c) ]
+
+        ∇C, ∇S = if iseven(hP)
+            zeros(complex(TV),fill(hP,2)...), zeros(complex(TV), fill(hP,2)...)
+        else
+            cat(zeros(complex(TV),fill(hP-1,2)...), 1; dims=[1,2]), cat(zeros(complex(TV),fill(hP-1,2)...), 1im; dims=[1,2])
+        end
+        ∇C[fill((1:2) .+ 2*(idx-1),2)...] = lc
+        ∇S[fill((1:2) .+ 2*(idx-1),2)...] = ls
+
+        ∇B = [ ∇C conj(∇C); ∇S conj(∇S) ] / sqrt(convert(TV,2))
+
+        ty = copy(∇B' * y)
+        if isodd(k)
+            shiftBackward!(Val{border}, ty[1:hP,:], nShift)
+        else
+            shiftForward!(Val{border}, ty[hP+1:end,:], nShift)
+        end
+
+        dot(x, ∇B * ty)
+    end
 end

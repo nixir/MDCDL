@@ -54,7 +54,7 @@ function scalarGradOfOrthonormalMatrix(x::AbstractArray{TV,D}, y::AbstractArray{
     L = length(θs)
     P = round(Integer, (1 + sqrt(1+8*L)) / 2)
 
-    ∇xᵀAy = Vector{TA}(undef, L)
+    ∇xᵀAy = Vector{TV}(undef, L)
     ay = A*y
 
     nr = 1

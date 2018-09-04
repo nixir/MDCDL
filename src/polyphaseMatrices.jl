@@ -18,9 +18,6 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-function get∇MatrixB(x::AbstractArray{TV,D}, y::AbstractArray{TV,D}, A::AbstractMatrix{TA}) where {TV,TA,D}
-end
-
 function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
@@ -330,3 +327,7 @@ function shiftBackward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer
     mtx[:,end-nShift+1:end] .= 0
     mtx
 end
+
+shiftForward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftForward!(tp, deepcopy(mtx), nShift)
+
+shiftBackward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftBackward!(tp, deepcopy(mtx), nShift)
