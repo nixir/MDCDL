@@ -113,7 +113,6 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
     ty = vcat(W0' * y[1:nch[1],:], U0' * y[(nch[1]+1):end,:])
     ty .= reverse(cc.matrixC, dims=2)' * ty
-
     PolyphaseVector(ty, uy.nBlocks)
 end
 

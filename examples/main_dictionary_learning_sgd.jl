@@ -21,17 +21,17 @@ df = (2,2)
 # polyphase order
 ord = (4,4)
 # number of symmetric/antisymmetric channel
-nch = (4,4)
+nch = 8
 
 dt = Float64
 
-η = 1e-1
+η = 1e-2
 
 szSubData = tuple(fill(16 ,D)...)
-nSubData = 32
+nSubData = 64
 nEpoch = 400
 
-nsolt = Rnsolt(dt, df, ord, nch)
+nsolt = Cnsolt(dt, df, ord, nch)
 MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false)
 orgNsolt = deepcopy(nsolt)
 

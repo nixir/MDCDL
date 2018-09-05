@@ -82,20 +82,18 @@ function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{TV,D}, y0
     Iv = Matrix{Complex{T}}(I, nch, M)
     V0 = V0om * Iv
     rts = V0' * rt
-    # gdv = MDCDL.scalarGradOfOrthonormalMatrix(yt, Iv * rts, V0om)
-    gdv = MDCDL.scalarGradOfOrthonormalMatrix(yt, V0om' * rt, V0om)
-    # yts = vcat(W0' * yt[1:nch[1],:], U0' * yt[nch[1]+1:end,:])
-    #
-    # rts .= nsolt.matrixC' * rts
-    # yts .= nsolt.matrixC' * yts
+    gdv = MDCDL.scalarGradOfOrthonormalMatrix(yt, Iv * rts, V0om)
+    # gdv = MDCDL.scalarGradOfOrthonormalMatrix(yt, V0om' * rt, V0om)
 
-    # return gdv, gdudk, gdθ
+    # rts .= reverse(nsolt.matrixF, dims=2)' * rts
+    # @show rts ≈ x0.data
+
     tmp = [ [ vcat(gdudk[d][2k-1], gdudk[d][2k], gdθ[d][k]) for k in 1:ord[d] ] for d in 1:D ]
 
     vcat(gdv, (vcat.(tmp...)...))
 end
 
-function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::PolyphaseVector{T,D}; border=:circular) where {T,D}
+function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::PolyphaseVector{T,D}; border=:circular, debug=false) where {T,D}
     df = nsolt.decimationFactor
     ord = nsolt.polyphaseOrder
     nch = nsolt.nChannels
@@ -158,16 +156,20 @@ function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::P
     W0 = W0om * Iw
     U0 = U0om * Iu
     rts = vcat(W0' * rt[1:nch[1],:], U0' * rt[nch[1]+1:end,:])
+
     gdw = ∇θ(yt[1:nch[1],:], Iw * rts[1:cM,:], W0om)
     gdu = ∇θ(yt[nch[1]+1:end,:], Iu * rts[cM+1:end,:], U0om)
 
     # gdw = ∇θ(yt[1:nch[1],:], W0om' * rt[1:nch[1],:], W0om)
     # gdu = ∇θ(yt[nch[1]+1:end,:], U0om' * rt[nch[1]+1:end,:], U0om)
+
     # yts = vcat(W0' * yt[1:nch[1],:], U0' * yt[nch[1]+1:end,:])
     #
-    # rts .= nsolt.matrixC' * rts
-    # yts .= nsolt.matrixC' * yts
-
+    # rts .= reverse(nsolt.matrixC, dims=2)' * rts
+    # yts .= reverse(nsolt.matrixC, dims=2)' * yts
+    #
+    # @show rts ≈ x.data
+    #
     vcat(gdw, gdu, vcat(vcat.(gdudk...)...))
 end
 
