@@ -17,22 +17,22 @@ filename = ""
 # data dimension
 D = 2
 # decimation factor
-df = (2,2)
+df = (4,4)
 # polyphase order
-ord = (4,4)
+ord = (2,2)
 # number of symmetric/antisymmetric channel
-nch = 8
+nch = 18
 
 dt = Float64
 
-η = 1e-2
+η = 1e-4
 
 szSubData = tuple(fill(16 ,D)...)
-nSubData = 64
+nSubData = 32
 nEpoch = 400
 
 nsolt = Cnsolt(dt, df, ord, nch)
-MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false)
+MDCDL.rand!(nsolt; isInitMat=true, isPropMat=true)
 orgNsolt = deepcopy(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))

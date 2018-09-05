@@ -2,6 +2,7 @@ julia 0.7
 Images
 ImageFiltering
 ColorTypes
+ColorSchemes
 ColorVectorSpace
 RecipesBase
 OffsetArrays
