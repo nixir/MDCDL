@@ -10,13 +10,13 @@ using Printf: @printf, @sprintf
 using Plots
 
 using Base.Filesystem
-using DatedTime
+using Dates
 
 ########## Configurations #########
 cnt = 0
 
 # output file name
-const doWriteResults = false
+const doWriteResults = true
 
 # data dimension
 const D = 2
@@ -33,15 +33,20 @@ const η = 1e-4
 
 const szSubData = tuple(fill(16 ,D)...)
 const nSubData = 32
-const nEpoch = 1
+const nEpoch = 2
 
 const sparsity = 0.6 # ∈ [0, 1.0]
 #####################################
 
+resultsdir_parent = joinpath(@__DIR__, "results")
+!isdir(resultsdir_parent) && mkdir(resultsdir_parent)
+
 tm = Dates.format(now(), "yyyy_mm_dd_SS_sss")
-resultsdir = joinpath(@__DIR__, "results", tm)
-logfile = joinpath(resultdir, "log")
-datafile = joinpath(resultdir, "nsolt")
+resultsdir = joinpath(resultsdir_parent, tm)
+!isdir(resultsdir) && mkdir(resultsdir)
+
+logfile = joinpath(resultsdir, "log")
+datafile = joinpath(resultsdir, "nsolt")
 
 nsolt = Cnsolt(dt, df, ord, nch)
 MDCDL.rand!(nsolt; isInitMat=true, isPropMat=true)
@@ -91,12 +96,11 @@ for epoch = 1:nEpoch
     msg = @sprintf("Epoch %5d finished. sum(cost) = %.4e, svars= %.4e.", epoch, serrs[epoch], svars[epoch])
     println(msg)
 
-    if doWriteFile
-        open(logfile, "a") do io
+    if doWriteResults
+        open(logfile, append=true) do io
             println(io, msg)
         end
-        # open(datafile, "a") do io
-        # end
+        MDCDL.save(nsolt, datafile)
     end
 end
 
