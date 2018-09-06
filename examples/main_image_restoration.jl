@@ -66,5 +66,3 @@ plotOrg = plot(u ; xlabel=string("Original Image"), aspect_ratio=:equal);
 plotObs = plot(x ; xlabel=string("Observed Image\nPSNR=",trunc(psnr(x,u),digits=3)), aspect_ratio=:equal);
 plotRes = plot(ru; xlabel=string("Restored Image\nPSNR=",trunc(psnr(ru,u),digits=3)), aspect_ratio=:equal);
 plot(plotOrg, plotObs, plotRes; aspect_ratio=:equal, layout=(1,3))
-# atmimshow(msnsolt.filterBank)
-# imshow(ru)

@@ -77,8 +77,8 @@ for idx = 1:nEpoch, subx in trainingIds
     println("Iterations $idx finished.")
 end
 
-atmimshow(msnsolt.filterBank)
-
 if !isempty(filename)
     MDCDL.save(filename, msnsolt.filterBank)
 end
+
+atmimshow(msnsolt.filterBank)

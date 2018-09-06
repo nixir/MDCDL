@@ -1,35 +1,47 @@
 # RNSOLT dictionary learning with 1-vanishing moment
 
-# using NLopt
 using LinearAlgebra
 using MDCDL
 using TestImages
 # using Images
 using ColorTypes
 using Statistics
-using Printf: @printf
-# using Plots
+using Printf: @printf, @sprintf
+using Plots
+
+using Base.Filesystem
+using DatedTime
+
+########## Configurations #########
 cnt = 0
 
 # output file name
-filename = ""
+const doWriteResults = false
 
 # data dimension
-D = 2
+const D = 2
 # decimation factor
-df = (4,4)
+const df = (4,4)
 # polyphase order
-ord = (2,2)
+const ord = (2,2)
 # number of symmetric/antisymmetric channel
-nch = 18
+const nch = 18
 
-dt = Float64
+const dt = Float64
 
-η = 1e-4
+const η = 1e-4
 
-szSubData = tuple(fill(16 ,D)...)
-nSubData = 32
-nEpoch = 400
+const szSubData = tuple(fill(16 ,D)...)
+const nSubData = 32
+const nEpoch = 1
+
+const sparsity = 0.6 # ∈ [0, 1.0]
+#####################################
+
+tm = Dates.format(now(), "yyyy_mm_dd_SS_sss")
+resultsdir = joinpath(@__DIR__, "results", tm)
+logfile = joinpath(resultdir, "log")
+datafile = joinpath(resultdir, "nsolt")
 
 nsolt = Cnsolt(dt, df, ord, nch)
 MDCDL.rand!(nsolt; isInitMat=true, isPropMat=true)
@@ -43,8 +55,8 @@ end
 
 analyzer = createAnalyzer(nsolt, szSubData; shape=:vector)
 y0 = analyzer(orgImg[trainingIds[1]...])
-# sparsity = fld(length(y0), 2)
-sparsity = floor(Int, 0.6*length(y0))
+# nSparseCoefs = fld(length(y0), 2)
+nSparseCoefs = floor(Int, sparsity*length(y0))
 
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
@@ -58,7 +70,7 @@ for epoch = 1:nEpoch
         global y
         subx = trainingIds[nd]
         x = orgImg[subx...]
-        hy = MDCDL.iht(nsolt, x, y, sparsity; iterations=100, isverbose=false)
+        hy = MDCDL.iht(nsolt, x, y, nSparseCoefs; iterations=100, isverbose=false)
 
         pvx = mdarray2polyphase(x, df)
         pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
@@ -76,12 +88,16 @@ for epoch = 1:nEpoch
     end
     push!(serrs, sum(errt))
     push!(svars, var(errt))
-    # println("Epoch $epoch finished. sum(cost) = $(serrs[epoch]), svars = $(svars[epoch])")
-    @printf("Epoch %5d finished. sum(cost) = %.4e, svars= %.4e.\n", epoch, serrs[epoch], svars[epoch])
+    msg = @sprintf("Epoch %5d finished. sum(cost) = %.4e, svars= %.4e.", epoch, serrs[epoch], svars[epoch])
+    println(msg)
+
+    if doWriteFile
+        open(logfile, "a") do io
+            println(io, msg)
+        end
+        # open(datafile, "a") do io
+        # end
+    end
 end
 
-# atmimshow(nsolt)
-
-if !isempty(filename)
-    MDCDL.save(filename, nsolt)
-end
+plot(nsolt)

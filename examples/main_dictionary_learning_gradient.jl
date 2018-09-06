@@ -96,8 +96,8 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
     @printf("Epoch: %4d, No.: %3d, cost = %.6e\n", epoch, nd, minf)
 end
 
-atmimshow(nsolt)
-
 if !isempty(filename)
     MDCDL.save(filename, nsolt)
 end
+
+atmimshow(nsolt)

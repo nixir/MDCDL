@@ -13,7 +13,7 @@ export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
 export Multiscale, MultiLayerCsc
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
-export atmimshow
+export serialize, deserialize
 # export getAnalysisBank
 export getAnalysisFilters, getSynthesisFilters
 export getAngleParameters, setAngleParameters!

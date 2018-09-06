@@ -1,52 +1,38 @@
 using JSON
 using InteractiveUtils: subtypes
 
-function save(filename::AbstractString, cc::MDCDL.Cnsolt{T,D,S}) where {T,D,S}
+function save(nsolt::Nsolt, filename::AbstractString, mode::AbstractString="w")
+    if match(r".*\.json$", filename) === nothing
+        filename = string(filename, ".json")
+    end
+    open(io->save(io, nsolt), filename, mode)
+end
+
+save(io::IOStream, nsolt::Nsolt) = print(io, serialize(nsolt))
+
+function serialize(cc::Nsolt{T,D}; format::AbstractString="JSON") where {T,D,S}
     configs = JSON.json(cc)
-    outstr = string("{\"CNSOLT\":{\"DataType\":\"", string(T), "\",\"Dimensions\":", D, ",\"Configurations\":", configs ,"}}")
-
-    ext = if splitext(filename)[2] == ""
-        ".json"
-    else
-        ""
+    fbname = if isa(cc, Cnsolt)
+        "CNSOLT"
+    elseif isa(cc, Rnsolt)
+        "RNSOLT"
     end
 
-    open(io->print(io,outstr), string(filename,ext), "w")
+    string("{\"Name\":\"", fbname ,"\",\"DataType\":\"", string(T), "\",\"Dimensions\":", D, ",\"Configurations\":", configs ,"}")
 end
 
-function save(filename::AbstractString, cc::MDCDL.Rnsolt{T,D,S}) where {T,D,S}
-    configs = JSON.json(cc)
-    outstr = string("{\"RNSOLT\":{\"DataType\":\"", string(T), "\",\"Dimensions\":", D, ",\"Configurations\":", configs ,"}}")
+load(filename::AbstractString) = open(io->MDCDL.load(io), filename)
 
-    ext = if splitext(filename)[2] == ""
-        ".json"
-    else
-        ""
-    end
+function load(io::IOStream)
+    dic = JSON.parse(read(io, String))
 
-    open(io->print(io,outstr), string(filename,ext), "w")
+    deserialize(dic)
 end
 
-function load(filename::AbstractString)
-    # str = open(readstring, filename)
-    str = open(f->read(f, String), filename)
-    dic = JSON.parse(str)
+deserialize(dic::Dict; format::AbstractString="JSON") = deserialize(Val{Symbol(dic["Name"])}, dic)
 
-
-    fbs = map(collect(keys(dic))) do key
-        if key == "CNSOLT"
-            loadCnsolt(dic[key])
-        elseif key == "RNSOLT"
-            loadRnsolt(dic[key])
-        else
-            throw(KeyError(key))
-        end
-    end
-    fbs[1]
-end
-
-function loadCnsolt(dic::Dict)
-    dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
+function deserialize(::Type{Val{:CNSOLT}}, dic::Dict)
+    dtSet = Dict([ string(Complex{slf}) => slf for slf in subtypes(AbstractFloat) ])
 
     T = dtSet[dic["DataType"]]
     D = dic["Dimensions"]
@@ -67,7 +53,7 @@ function loadCnsolt(dic::Dict)
     df = tuple(dfa...)
     ppo = tuple(ppoa...)
 
-    nsolt = Cnsolt(T, df, nch, ppo)
+    nsolt = Cnsolt(T, df, ppo, nch)
 
     foreach(keys(cfgs)) do key
         if key == "initMatrices"
@@ -94,7 +80,7 @@ function loadCnsolt(dic::Dict)
     nsolt
 end
 
-function loadRnsolt(dic::Dict)
+function deserialize(::Type{Val{:RNSOLT}}, dic::Dict)
     dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
 
     T = dtSet[dic["DataType"]]

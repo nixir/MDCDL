@@ -90,8 +90,8 @@ for epoch = 1:nEpoch
     @printf("epoch %3d finished, total cost = %.4e\n", epoch, sum(errs))
 end
 
-atmimshow(nsolt; scale=0.6)
-
 if !isempty(filename)
     MDCDL.save(filename, msnsolt.filterBank)
 end
+
+atmimshow(nsolt; scale=0.6)
