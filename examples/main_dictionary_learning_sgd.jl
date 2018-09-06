@@ -49,7 +49,7 @@ logfile = joinpath(resultsdir, "log")
 datafile = joinpath(resultsdir, "nsolt")
 
 nsolt = Cnsolt(dt, df, ord, nch)
-MDCDL.rand!(nsolt; isInitMat=true, isPropMat=true)
+MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false)
 orgNsolt = deepcopy(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
