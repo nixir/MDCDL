@@ -31,6 +31,11 @@ function synthesize(cc::Cnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) whe
     PolyphaseVector(py, pvy.nBlocks)
 end
 
+# function synthesize(::Type{Val{Cnsolt{T,D}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, initMts::AbstractArray, propMts::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer) where {T,D}
+#     M = prod(df)
+#     uy = concate
+# end
+
 function concatenateAtoms!(::Type{Val{:TypeI}}, cc::Cnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     P = cc.nChannels
 

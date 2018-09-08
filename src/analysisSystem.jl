@@ -21,31 +21,27 @@ function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs.
 end
 
 function analyze(cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D}
-    M = prod(cc.decimationFactor)
-    P = cc.nChannels
-
-    x = pvx.data
-    tx = reverse(cc.matrixF, dims=2) * x
-
-    V0 = cc.initMatrices[1] * Matrix{Complex{TF}}(I, P, M)
-    ux = V0 * tx
-
-    extx = extendAtoms!(Val{cc.category}, cc, PolyphaseVector(ux, pvx.nBlocks); kwargs...)
-    PolyphaseVector(cc.symmetry * extx.data, extx.nBlocks)
+    tmp = analyze_cnsolt(Val{cc.category}, pvx.data, pvx.nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
+    PolyphaseVector(tmp, pvx.nBlocks)
 end
 
-function extendAtoms!(::Type{Val{:TypeI}}, cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
-    P = cc.nChannels
+function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixF::AbstractArray, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D}
+    # ux = V0 * F * J * x
+    ux = (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2)) * x
 
+    sym * extendAtoms_cnsolt(category, ux, nBlocks, propMts, paramAngs, sym, df, ord, nch; kwargs...)
+end
+
+function extendAtoms_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, sym::AbstractArray, df::NTuple{D}, ord::NTuple{D}, P::Integer; border=:circular) where {D}
     for d = 1:D
-        nShift = fld(size(pvx.data, 2), pvx.nBlocks[1])
-        pvx = permutedims(pvx)
+        nShift = fld(size(pvx, 2), nBlocks[d])
+        pvx = permutedimspv(pvx, nBlocks[d])
         # submatrices
-        x  = view(pvx.data, :, :)
-        xu = view(pvx.data, 1:fld(P, 2), :)
-        xl = view(pvx.data, (fld(P, 2)+1):P, :)
-        for k = 1:cc.polyphaseOrder[d]
-            B = getMatrixB(P, cc.paramAngles[d][k])
+        x  = view(pvx, :, :)
+        xu = view(pvx, 1:fld(P, 2), :)
+        xl = view(pvx, (fld(P, 2)+1):P, :)
+        for k = 1:ord[d]
+            B = getMatrixB(P, paramAngs[d][k])
 
             x .= B' * x
             if isodd(k)
@@ -55,76 +51,79 @@ function extendAtoms!(::Type{Val{:TypeI}}, cc::Cnsolt{TF,D}, pvx::PolyphaseVecto
             end
             x .= B * x
 
-            xu .= cc.propMatrices[d][2*k-1] * xu
-            xl .= cc.propMatrices[d][2*k]   * xl
+            xu .= propMts[d][2*k-1] * xu
+            xl .= propMts[d][2*k]   * xl
         end
     end
     return pvx
 end
 
-function extendAtoms!(::Type{Val{:TypeII}}, cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
-    nStages = fld.(cc.polyphaseOrder, 2)
-    P = cc.nChannels
+function extendAtoms_cnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, sym::AbstractArray, df::NTuple{D}, ord::NTuple{D}, P::Integer; border=:circular) where {D}
+    nStages = fld.(ord, 2)
 
     for d = 1:D
-        nShift = fld(size(pvx.data, 2), pvx.nBlocks[1])
-        pvx = permutedims(pvx)
+        nShift = fld(size(pvx, 2), nBlocks[d])
+        pvx = permutedimspv(pvx, nBlocks[d])
         # submatrices
-        xe  = view(pvx.data, 1:P-1, :)
-        xu1 = view(pvx.data, 1:fld(P,2), :)
-        xl1 = view(pvx.data, (fld(P,2)+1):(P-1), :)
-        xu2 = view(pvx.data, 1:cld(P,2), :)
-        xl2 = view(pvx.data, cld(P,2):P, :)
+        xe  = view(pvx, 1:P-1, :)
+        xu1 = view(pvx, 1:fld(P,2), :)
+        xl1 = view(pvx, (fld(P,2)+1):(P-1), :)
+        xu2 = view(pvx, 1:cld(P,2), :)
+        xl2 = view(pvx, cld(P,2):P, :)
         for k = 1:nStages[d]
             # first step
-            B = getMatrixB(P, cc.paramAngles[d][2*k-1])
+            B = getMatrixB(P, paramAngs[d][2*k-1])
 
             xe  .= B' * xe
             shiftForward!(Val{border}, xl1, nShift)
             xe  .= B * xe
 
-            xu1 .= cc.propMatrices[d][4*k-3] * xu1
-            xl1 .= cc.propMatrices[d][4*k-2] * xl1
+            xu1 .= propMts[d][4*k-3] * xu1
+            xl1 .= propMts[d][4*k-2] * xl1
 
             # second step
-            B = getMatrixB(P, cc.paramAngles[d][2*k])
+            B = getMatrixB(P, paramAngs[d][2*k])
 
             xe  .= B' * xe
             shiftBackward!(Val{border}, xu1, nShift)
             xe  .= B * xe
 
-            xl2 .= cc.propMatrices[d][4*k]   * xl2
-            xu2 .= cc.propMatrices[d][4*k-1] * xu2
+            xl2 .= propMts[d][4*k]   * xl2
+            xu2 .= propMts[d][4*k-1] * xu2
         end
     end
     return pvx
 end
 
 function analyze(cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D}
-    M = prod(cc.decimationFactor)
-    cM = cld(M,2)
-    fM = fld(M,2)
-    nch = cc.nChannels
-
-    tx = reverse(cc.matrixC, dims=2) * pvx.data
-
-    W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)
-    U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
-    ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[(cM+1):end, :]), pvx.nBlocks)
-
-    extendAtoms!(Val{cc.category}, cc, ux; kwargs...)
+    tmp = analyze_rnsolt(Val{cc.category}, pvx.data, pvx.nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
+    PolyphaseVector(tmp, pvx.nBlocks)
 end
 
-function extendAtoms!(::Type{Val{:TypeI}}, cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
-    hP = cc.nChannels[1]
+function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixC::AbstractArray, initMts::AbstractArray, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
+    M = prod(df)
+    cM = cld(M,2)
+    fM = fld(M,2)
+
+    tx = reverse(matrixC, dims=2) * x
+
+    W0 = initMts[1] * Matrix(I, nch[1], cM)
+    U0 = initMts[2] * Matrix(I, nch[2], fM)
+    ux = vcat(W0 * tx[1:cM, :], U0 * tx[(cM+1):end, :])
+
+    extendAtoms_rnsolt(category, ux, nBlocks, propMts, df, ord, nch; kwargs...)
+end
+
+function extendAtoms_rnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
+    hP = nch[1]
 
     for d = 1:D
-        nShift = fld(size(pvx.data, 2), pvx.nBlocks[1])
-        pvx = permutedims(pvx)
+        nShift = fld(size(pvx, 2), nBlocks[d])
+        pvx = permutedimspv(pvx, nBlocks[d])
         # submatrices
-        xu = view(pvx.data, 1:hP, :)
-        xl = view(pvx.data, (1:hP) .+ hP, :)
-        for k = 1:cc.polyphaseOrder[d]
+        xu = view(pvx, 1:hP, :)
+        xl = view(pvx, (1:hP) .+ hP, :)
+        for k = 1:ord[d]
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
@@ -136,31 +135,31 @@ function extendAtoms!(::Type{Val{:TypeI}}, cc::Rnsolt{TF,D}, pvx::PolyphaseVecto
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
-            xl .= cc.propMatrices[d][k] * xl
+            xl .= propMts[d][k] * xl
         end
     end
     return pvx
 end
 
-function extendAtoms!(::Type{Val{:TypeII}}, cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
-    nStages = fld.(cc.polyphaseOrder,2)
-    P = sum(cc.nChannels)
-    maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
-        (cc.nChannels[1], cc.nChannels[2], 1:cc.nChannels[1], (cc.nChannels[1]+1):P)
+function extendAtoms_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
+    nStages = fld.(ord, 2)
+    P = sum(nch)
+    maxP, minP, chMajor, chMinor = if nch[1] > nch[2]
+        (nch[1], nch[2], 1:nch[1], (nch[1]+1):P)
     else
-        (cc.nChannels[2], cc.nChannels[1], (cc.nChannels[1]+1):P, 1:cc.nChannels[1])
+        (nch[2], nch[1], (nch[1]+1):P, 1:nch[1])
     end
 
     for d = 1:D
-        nShift = fld(size(pvx.data,2), pvx.nBlocks[1])
-        pvx = permutedims(pvx)
+        nShift = fld(size(pvx,2), nBlocks[d])
+        pvx = permutedimspv(pvx, nBlocks[d])
         # submatrices
-        xu  = view(pvx.data, 1:minP, :)
-        xl  = view(pvx.data, (P-minP+1):P, :)
-        xs1 = view(pvx.data, (minP+1):P, :)
-        xs2 = view(pvx.data, 1:maxP, :)
-        xmj = view(pvx.data, chMajor, :)
-        xmn = view(pvx.data, chMinor, :)
+        xu  = view(pvx, 1:minP, :)
+        xl  = view(pvx, (P-minP+1):P, :)
+        xs1 = view(pvx, (minP+1):P, :)
+        xs2 = view(pvx, 1:maxP, :)
+        xmj = view(pvx, chMajor, :)
+        xmn = view(pvx, chMinor, :)
         for k = 1:nStages[d]
             # first step
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
@@ -171,7 +170,7 @@ function extendAtoms!(::Type{Val{:TypeII}}, cc::Rnsolt{TF,D}, pvx::PolyphaseVect
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
-            xmn .= cc.propMatrices[d][2*k-1] * xmn
+            xmn .= propMts[d][2*k-1] * xmn
 
             # second step
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
@@ -182,7 +181,7 @@ function extendAtoms!(::Type{Val{:TypeII}}, cc::Rnsolt{TF,D}, pvx::PolyphaseVect
             tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
             xu .= tu; xl .= tl
 
-            xmj .= cc.propMatrices[d][2*k] * xmj
+            xmj .= propMts[d][2*k] * xmj
         end
     end
     return pvx

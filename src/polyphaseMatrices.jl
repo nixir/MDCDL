@@ -305,6 +305,24 @@ function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
     PolyphaseVector(data,nBlocks)
 end
 
+function permutedimspv(x::AbstractMatrix, nShift::Integer)
+    S = fld(size(x,2), nShift)
+    data = similar(x)
+    for idx = 0:nShift - 1
+        data[:,(1:S) .+ idx*S] = x[:, (1:nShift:end) .+ idx]
+    end
+    data
+end
+
+function ipermutedimspv(x::AbstractMatrix, nShift::Integer)
+    S = fld(size(x, 2), nShift)
+    data = similar(x)
+    for idx = 0:S-1
+        data[:,(1:nShift) .+ idx*nShift] = x[:, (1:S:end) .+ idx]
+    end
+    data
+end
+
 function butterfly!(x::AbstractArray{T,2}, p::Integer) where T
     xu = x[1:p,:]
     xl = x[end-(p-1):end,:]
