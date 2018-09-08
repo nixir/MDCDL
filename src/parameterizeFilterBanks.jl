@@ -1,7 +1,13 @@
 
 #TODO: 角度パラメータのベクトル化手法の仕様をどこかに記述する．
 #TODO: コードが汚いのでリファクタリングする
-function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
+
+getAngleParameters(cc::Nsolt) = getAngleParameters(Val{cc.category}, cc)
+setAngleParameters!(cc::Nsolt, θ, μ) = setAngleParameters!(Val{cc.category}, cc, θ, μ)
+
+setAngleParameters(cc::Nsolt, args...) = setAngleParameters!(deepcopy(cc), args...)
+
+function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -40,7 +46,7 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeI}, angs::AbstractArray{T}, mus) where {D,T}
+function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -89,7 +95,7 @@ function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeI}, angs::AbstractArray{T
     return cc
 end
 
-function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
+function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -131,7 +137,7 @@ function getAngleParameters(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
     (angs, mus)
 end
 
-function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeII}, angs::AbstractArray{T}, mus) where {D,T}
+function setAngleParameters!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -195,7 +201,7 @@ function setAngleParameters!(cc::MDCDL.Cnsolt{T,D,:TypeII}, angs::AbstractArray{
     return cc
 end
 
-function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
+function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}) where {D,T}
     P = sum(cc.nChannels)
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -236,7 +242,7 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::AbstractArray{T}, mus) where {D,T}
+function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = sum(cc.nChannels)
     df = cc.decimationFactor
@@ -282,7 +288,7 @@ function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeI}, angs::AbstractArray{T
     return cc
 end
 
-function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
+function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}) where {D,T}
     nch = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -324,7 +330,7 @@ function getAngleParameters(cc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
     (angs, mus)
 end
 
-function setAngleParameters!(cc::MDCDL.Rnsolt{T,D,:TypeII}, angs::AbstractArray{T}, mus) where {D,T}
+function setAngleParameters!(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     nch = cc.nChannels
     df = cc.decimationFactor

@@ -20,7 +20,7 @@ function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs.
     analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 end
 
-function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
+function analyze(cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
@@ -30,11 +30,11 @@ function analyze(cc::Cnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     V0 = cc.initMatrices[1] * Matrix{Complex{TF}}(I, P, M)
     ux = V0 * tx
 
-    extx = extendAtoms!(cc, PolyphaseVector(ux, pvx.nBlocks); kwargs...)
+    extx = extendAtoms!(Val{cc.category}, cc, PolyphaseVector(ux, pvx.nBlocks); kwargs...)
     PolyphaseVector(cc.symmetry * extx.data, extx.nBlocks)
 end
 
-function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
+function extendAtoms!(::Type{Val{:TypeI}}, cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     P = cc.nChannels
 
     for d = 1:D
@@ -62,7 +62,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; borde
     return pvx
 end
 
-function extendAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
+function extendAtoms!(::Type{Val{:TypeII}}, cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     nStages = fld.(cc.polyphaseOrder, 2)
     P = cc.nChannels
 
@@ -100,7 +100,7 @@ function extendAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; bord
     return pvx
 end
 
-function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D,S}
+function analyze(cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
@@ -112,10 +112,10 @@ function analyze(cc::Rnsolt{TF,D,S}, pvx::PolyphaseVector{TX,D}; kwargs...) wher
     U0 = cc.initMatrices[2] * Matrix{TF}(I, nch[2], fM)
     ux = PolyphaseVector(vcat(W0 * tx[1:cM, :], U0 * tx[(cM+1):end, :]), pvx.nBlocks)
 
-    extendAtoms!(cc, ux; kwargs...)
+    extendAtoms!(Val{cc.category}, cc, ux; kwargs...)
 end
 
-function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
+function extendAtoms!(::Type{Val{:TypeI}}, cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     hP = cc.nChannels[1]
 
     for d = 1:D
@@ -142,7 +142,7 @@ function extendAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvx::PolyphaseVector{TX,D}; borde
     return pvx
 end
 
-function extendAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
+function extendAtoms!(::Type{Val{:TypeII}}, cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; border=:circular) where {TF,TX,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = sum(cc.nChannels)
     maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]

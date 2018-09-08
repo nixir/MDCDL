@@ -10,7 +10,9 @@ function gradSqrdError(nsolt::Nsolt, x, y)
     return -1 .* real.(gradOfAnalyzer(nsolt, errvec, y))
 end
 
-function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{TV,D}, y0::PolyphaseVector{TV,D}; border=:circular) where {T,TV,D}
+gradOfAnalyzer(nsolt::Nsolt, args...; kwargs...) = gradOfAnalyzer(Val{nsolt.category}, nsolt, args...; kwargs...)
+
+function gradOfAnalyzer(::Type{Val{:TypeI}}, nsolt::Cnsolt{T,D}, x0::PolyphaseVector{TV,D}, y0::PolyphaseVector{TV,D}; border=:circular) where {T,TV,D}
 
     # error("this method hasn't implemented yet.")
 
@@ -93,7 +95,7 @@ function gradOfAnalyzer(nsolt::Cnsolt{T,D,:TypeI}, x0::PolyphaseVector{TV,D}, y0
     vcat(gdv, (vcat.(tmp...)...))
 end
 
-function gradOfAnalyzer(nsolt::Rnsolt{T,D,:TypeI}, x::PolyphaseVector{T,D}, y::PolyphaseVector{T,D}; border=:circular, debug=false) where {T,D}
+function gradOfAnalyzer(::Type{Val{:TypeI}}, nsolt::Rnsolt{T,D}, x::PolyphaseVector{T,D}, y::PolyphaseVector{T,D}; border=:circular, debug=false) where {T,D}
     df = nsolt.decimationFactor
     ord = nsolt.polyphaseOrder
     nch = nsolt.nChannels

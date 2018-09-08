@@ -39,7 +39,8 @@ abstract type FilterBank{T,D} <: CodeBook{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
 abstract type Nsolt{T,D} <: PolyphaseFB{T,D} end
 
-struct Rnsolt{T,D,S} <: Nsolt{T,D}
+struct Rnsolt{T,D} <: Nsolt{T,D}
+    category::Symbol
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Tuple{Int,Int}
@@ -60,7 +61,7 @@ struct Rnsolt{T,D,S} <: Nsolt{T,D}
         end
 
         if nChs[1] == nChs[2]
-            S = :TypeI
+            categ = :TypeI
             initMts = Array[ Matrix{T}(I, p, p) for p in nChs ]
             propMts = Array[
                 Array[
@@ -68,7 +69,7 @@ struct Rnsolt{T,D,S} <: Nsolt{T,D}
                 for n in 1:ppo[pd] ]
             for pd in 1:D ]
         else
-            S = :TypeII
+            categ = :TypeII
             initMts = Array[ Matrix{T}(I, p, p) for p in nChs ]
             propMts = if nChs[1] > nChs[2]
                 [
@@ -87,15 +88,16 @@ struct Rnsolt{T,D,S} <: Nsolt{T,D}
 
         mtxc = reverse(MDCDL.permdctmtx(T, df...); dims=2)
 
-        new{T,D,S}(df, ppo, nChs, initMts, propMts, mtxc)
+        new{T,D}(categ, df, ppo, nChs, initMts, propMts, mtxc)
     end
     Rnsolt(t::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {D,T} = Rnsolt(t, df, ppo, (cld(nChs,2), fld(nChs,2)))
     Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
 end
 
-promote_rule(::Type{Rnsolt{TA,D,S}}, ::Type{Rnsolt{TB,D,S}}) where {D,S,TA,TB} = Rnsolt{promote_type(TA,TB),D,S}
+promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsolt{promote_type(TA,TB),D}
 
-struct Cnsolt{T,D,S} <: Nsolt{Complex{T},D}
+struct Cnsolt{T,D} <: Nsolt{Complex{T},D}
+    category::Symbol
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Int
@@ -113,7 +115,7 @@ struct Cnsolt{T,D,S} <: Nsolt{Complex{T},D}
         end
 
         if iseven(nChs)
-            S = :TypeI
+            categ = :TypeI
             initMts = Array[ Matrix{T}(I,nChs,nChs) ]
             propMts = Array[
                 Array[
@@ -126,7 +128,7 @@ struct Cnsolt{T,D,S} <: Nsolt{Complex{T},D}
             end
             cch = cld(nChs, 2)
             fch = fld(nChs, 2)
-            S = :TypeII
+            categ = :TypeII
             initMts = Array[ Matrix{T}(I, nChs, nChs) ]
             propMts = [
                 vcat(fill(Array[
@@ -140,12 +142,12 @@ struct Cnsolt{T,D,S} <: Nsolt{Complex{T},D}
         sym = Diagonal{Complex{T}}(ones(nChs))
         mtxf = reverse(MDCDL.cdftmtx(T, df...); dims=2)
 
-        new{T,D,S}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
+        new{T,D}(categ, df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end
     Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
 end
 
-promote_rule(::Type{Cnsolt{TA,D,S}}, ::Type{Cnsolt{TB,D,S}}) where {D,S,TA,TB} = Cnsolt{promote_type(TA,TB),D,S}
+promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
 
 struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int

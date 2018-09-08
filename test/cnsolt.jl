@@ -52,10 +52,15 @@ using Random
 
                 nsolt = Cnsolt(df, ord, nch)
 
+                # if iseven(sum(nch))
+                #     @test isa(nsolt, Cnsolt{defaultType,d,:TypeI})
+                # else
+                #     @test isa(nsolt, Cnsolt{defaultType,d,:TypeII})
+                # end
                 if iseven(sum(nch))
-                    @test isa(nsolt, Cnsolt{defaultType,d,:TypeI})
+                    @test nsolt.category == :TypeI
                 else
-                    @test isa(nsolt, Cnsolt{defaultType,d,:TypeII})
+                    @test nsolt.category == :TypeII
                 end
             end
         end

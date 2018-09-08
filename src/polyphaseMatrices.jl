@@ -18,7 +18,9 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
+getAnalysisBank(cc::Nsolt) = getAnalysisBank(Val{cc.category}, cc)
+
+function getAnalysisBank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -56,7 +58,7 @@ function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeI}) where {D,T}
     cc.symmetry * ppm
 end
 
-function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
+function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -112,7 +114,7 @@ function getAnalysisBank(cc::MDCDL.Cnsolt{T,D,:TypeII}) where {D,T}
     cc.symmetry * ppm
 end
 
-function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
+function getAnalysisBank(::Type{Val{:TypeI}}, rc::MDCDL.Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     nch = rc.nChannels
     P = sum(nch)
@@ -149,7 +151,7 @@ function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeI}) where {D,T}
     ppm
 end
 
-function getAnalysisBank(rc::MDCDL.Rnsolt{T,D,:TypeII}) where {D,T}
+function getAnalysisBank(::Type{Val{:TypeII}}, rc::MDCDL.Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     M = prod(df)
     ord = rc.polyphaseOrder

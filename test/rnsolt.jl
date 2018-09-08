@@ -44,10 +44,15 @@ using LinearAlgebra
 
                 nsolt = Rnsolt(df, ord, nch)
 
+                # if nch[1] == nch[2]
+                #     @test isa(nsolt, Rnsolt{defaultType,d,:TypeI})
+                # else
+                #     @test isa(nsolt, Rnsolt{defaultType,d,:TypeII})
+                # end
                 if nch[1] == nch[2]
-                    @test isa(nsolt, Rnsolt{defaultType,d,:TypeI})
+                    @test nsolt.category == :TypeI
                 else
-                    @test isa(nsolt, Rnsolt{defaultType,d,:TypeII})
+                    @test nsolt.category == :TypeII
                 end
             end
         end

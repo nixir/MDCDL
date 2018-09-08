@@ -19,11 +19,11 @@ function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
 end
 operate(::Type{Val{:synthesizer}}, syn::NsoltOperator, y::AbstractArray) = synthesize(syn, y)
 
-function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
+function synthesize(cc::Cnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D}
     M = prod(cc.decimationFactor)
     P = cc.nChannels
 
-    uy = concatenateAtoms!(cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks); kwargs...)
+    uy = concatenateAtoms!(Val{cc.category}, cc, PolyphaseVector(cc.symmetry' * pvy.data, pvy.nBlocks); kwargs...)
 
     py = (cc.initMatrices[1] * Matrix{Complex{TF}}(I,P,M))' * uy.data
     py .= reverse(cc.matrixF, dims=2)' * py
@@ -31,7 +31,7 @@ function synthesize(cc::Cnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     PolyphaseVector(py, pvy.nBlocks)
 end
 
-function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
+function concatenateAtoms!(::Type{Val{:TypeI}}, cc::Cnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     P = cc.nChannels
 
     for d = D:-1:1
@@ -60,7 +60,7 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
 end
 
 
-function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
+function concatenateAtoms!(::Type{Val{:TypeII}}, cc::Cnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = cc.nChannels
     chEven = 1:(P-1)
@@ -99,14 +99,14 @@ function concatenateAtoms!(cc::Cnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D};
     return pvy
 end
 
-function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D,S}
+function synthesize(cc::Rnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D}
     M = prod(cc.decimationFactor)
     cM = cld(M,2)
     fM = fld(M,2)
     nch = cc.nChannels
 
     cpvy = deepcopy(pvy)
-    uy = concatenateAtoms!(cc, cpvy; kwargs...)
+    uy = concatenateAtoms!(Val{cc.category}, cc, cpvy; kwargs...)
     y = uy.data
 
     W0 = cc.initMatrices[1] * Matrix{TF}(I, nch[1], cM)
@@ -116,7 +116,7 @@ function synthesize(cc::Rnsolt{TF,D,S}, pvy::PolyphaseVector{TY,D}; kwargs...) w
     PolyphaseVector(ty, uy.nBlocks)
 end
 
-function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
+function concatenateAtoms!(::Type{Val{:TypeI}}, cc::Rnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     hP = cc.nChannels[1]
 
     for d = D:-1:1
@@ -142,7 +142,7 @@ function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeI}, pvy::PolyphaseVector{TY,D}; 
     return pvy
 end
 
-function concatenateAtoms!(cc::Rnsolt{TF,D,:TypeII}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
+function concatenateAtoms!(::Type{Val{:TypeII}}, cc::Rnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; border=:circular) where {TF,TY,D}
     nStages = fld.(cc.polyphaseOrder,2)
     P = sum(cc.nChannels)
     maxP, minP, chMajor, chMinor = if cc.nChannels[1] > cc.nChannels[2]
