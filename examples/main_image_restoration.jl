@@ -36,16 +36,16 @@ println(" - Decimation Factor = $(nsolt.decimationFactor)")
 println(" - Number of Channels = $(nsolt.nChannels)")
 println(" - Polyphase Order = $(nsolt.polyphaseOrder)")
 ### show analysis filters
-atmimshow(nsolt)
 
 # setup Multiscale NSOLT
-mlpfb = Multiscale(ParallelFB(nsolt), lv)
+analyzer = createMultiscaleAnalyzer(nsolt, size(x); level=lv, shape=:vector)
+synthesizer = createMultiscaleSynthesizer(nsolt, size(x); level=lv, shape=:vector)
 
 # setup FISTA
-y0 = analyze(mlpfb, x; shape = :vector)
+y0 = analyze(analyzer, x)
 
 ∇f(ty) = begin
-    - analyze(mlpfb, P.*(x - synthesize(mlpfb, ty, size(x))); shape = :vector)
+    - analyze(analyzer, P.*(x - synthesize(synthesizer, ty)))
 end
 prox(ty, η) = MDCDL.softshrink(ty, λ*η)
 viewFcn(itrs, ty, err) = begin
@@ -55,7 +55,7 @@ end
 hy = MDCDL.fista(∇f, prox, y0; η=1.0, iterations=400, verboseFunction=viewFcn, absTol=eps())
 
 # restored image
-ru = synthesize(mlpfb, hy, size(x))
+ru = synthesize(synthesizer, hy)
 
 psnr = (a, ref) -> 10*log10(1/(norm(a-ref)^2/length(a)))
 errx = norm(ru - u)
@@ -63,6 +63,5 @@ errx = norm(ru - u)
 println("error: $errx")
 
 plotOrg = plot(u ; xlabel=string("Original Image"), aspect_ratio=:equal);
-plotObs = plot(x ; xlabel=string("Observed Image\nPSNR=",trunc(psnr(x,u),digits=3)), aspect_ratio=:equal);
 plotRes = plot(ru; xlabel=string("Restored Image\nPSNR=",trunc(psnr(ru,u),digits=3)), aspect_ratio=:equal);
 plot(plotOrg, plotObs, plotRes; aspect_ratio=:equal, layout=(1,3))
