@@ -25,7 +25,7 @@ function analyze(cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where 
     PolyphaseVector(tmp, pvx.nBlocks)
 end
 
-function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractArray, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D}
+function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D}
     # ux = V0 * F * J * x
     ux = (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2)) * x
 
@@ -100,7 +100,7 @@ function analyze(cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where 
     PolyphaseVector(tmp, pvx.nBlocks)
 end
 
-function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixC::AbstractArray, initMts::AbstractArray, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
+function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixC::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
     M = prod(df)
     cM = cld(M,2)
     fM = fld(M,2)
