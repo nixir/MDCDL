@@ -25,14 +25,14 @@ function analyze(cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where 
     PolyphaseVector(tmp, pvx.nBlocks)
 end
 
-function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixF::AbstractArray, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D}
+function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractArray, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D}
     # ux = V0 * F * J * x
     ux = (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2)) * x
 
-    sym * extendAtoms_cnsolt(category, ux, nBlocks, propMts, paramAngs, sym, df, ord, nch; kwargs...)
+    sym * extendAtoms_cnsolt(category, ux, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
 end
 
-function extendAtoms_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, sym::AbstractArray, df::NTuple{D}, ord::NTuple{D}, P::Integer; border=:circular) where {D}
+function extendAtoms_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; border=:circular) where {D}
     for d = 1:D
         nShift = fld(size(pvx, 2), nBlocks[d])
         pvx = permutedimspv(pvx, nBlocks[d])
@@ -58,7 +58,7 @@ function extendAtoms_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::N
     return pvx
 end
 
-function extendAtoms_cnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, sym::AbstractArray, df::NTuple{D}, ord::NTuple{D}, P::Integer; border=:circular) where {D}
+function extendAtoms_cnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; border=:circular) where {D}
     nStages = fld.(ord, 2)
 
     for d = 1:D
@@ -111,10 +111,10 @@ function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matr
     U0 = initMts[2] * Matrix(I, nch[2], fM)
     ux = vcat(W0 * tx[1:cM, :], U0 * tx[(cM+1):end, :])
 
-    extendAtoms_rnsolt(category, ux, nBlocks, propMts, df, ord, nch; kwargs...)
+    extendAtoms_rnsolt(category, ux, nBlocks, propMts, ord, nch; kwargs...)
 end
 
-function extendAtoms_rnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
+function extendAtoms_rnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
     hP = nch[1]
 
     for d = 1:D
@@ -141,7 +141,7 @@ function extendAtoms_rnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::N
     return pvx
 end
 
-function extendAtoms_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
+function extendAtoms_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
     nStages = fld.(ord, 2)
     P = sum(nch)
     maxP, minP, chMajor, chMinor = if nch[1] > nch[2]
