@@ -283,28 +283,6 @@ function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
     output
 end
 
-function permutedims(x::PolyphaseVector{T,D}) where {T,D}
-    S = fld(size(x.data,2), x.nBlocks[1])
-    data = similar(x.data)
-    for idx = 0:x.nBlocks[1]-1
-        data[:,(1:S) .+ idx*S] = x.data[:, (1:x.nBlocks[1]:end) .+ idx]
-    end
-    nBlocks = tuple(circshift(collect(x.nBlocks),-1)...)
-
-    PolyphaseVector(data, nBlocks)
-end
-
-function ipermutedims(x::PolyphaseVector{T,D}) where {T,D}
-    S = fld(size(x.data,2), x.nBlocks[end])
-    data = similar(x.data)
-    for idx = 0:S-1
-        data[:,(1:x.nBlocks[end]) .+ idx*x.nBlocks[end]] = x.data[:, (1:S:end) .+ idx]
-    end
-    nBlocks = tuple(circshift(collect(x.nBlocks),1)...)
-
-    PolyphaseVector(data,nBlocks)
-end
-
 function permutedimspv(x::AbstractMatrix, nShift::Integer)
     S = fld(size(x,2), nShift)
     data = similar(x)

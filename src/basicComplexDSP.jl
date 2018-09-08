@@ -12,7 +12,7 @@ end
 cconv(x::Array, h::Array) = cconv(promote(x,h)...)
 
 # upsampler
-function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
+function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
     szx = size(x)
     output = zeros(T, szx .* factor)
     for ci in CartesianIndices(szx)
@@ -21,9 +21,9 @@ function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = 
     output
 end
 
-function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = tuple(zeros(Integer,D)...)) where {T,D}
+function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
     szout = fld.(size(x), factor)
-    output = Array{T,D}(undef, szout...)
+    output = similar(x, szout...)
     ci = CartesianIndices(szout)
     for idx = LinearIndices(szout)
         output[idx] = x[((ci[idx].I .- 1) .* factor .+ 1 .+ offset)...]
@@ -35,13 +35,8 @@ end
 function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     len = prod(sz)
 
-    imps = map(1:len) do idx
-        u = zeros(T, sz)
-        u[idx] = 1
-        vec(fft(u))
-    end
+    imps = [ setindex!(zeros(T, sz), 1, idx) |> fft |> vec for idx in 1:len ]
     mtx = hcat(imps...)
-
     rm = Diagonal(Complex{T}[ exp(-1im*angle(mtx[n,end])/2) for n in 1:len ])
 
     rm * mtx / sqrt(T(len))
@@ -50,15 +45,11 @@ end
 cdftmtx(sz::Integer...) = cdftmtx(Float64, sz...)
 
 function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
-    isevenids = map(ci->iseven(sum(ci.I .- 1)), CartesianIndices(sz))
-    permids = sortperm(vec(isevenids); rev=true, alg=Base.DEFAULT_STABLE)
-
-    imps = map(1:prod(sz)) do idx
-        u = zeros(T, sz)
-        u[idx] = 1
-        vec(dct(u))
-    end
+    imps = [ setindex!(zeros(T, sz), 1, idx) |> dct |> vec for idx in 1:prod(sz) ]
     mtx = hcat(imps...)
+
+    isevenids = map(ci->iseven(sum(ci.I .- 1)), CartesianIndices(sz)) |> vec
+    permids = sortperm(isevenids; rev=true, alg=Base.DEFAULT_STABLE)
 
     vcat([ transpose(mtx[pi,:]) for pi in permids ]...)
 end

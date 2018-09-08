@@ -71,19 +71,12 @@ struct Rnsolt{T,D} <: Nsolt{T,D}
         else
             categ = :TypeII
             initMts = Array[ Matrix{T}(I, p, p) for p in nChs ]
-            propMts = if nChs[1] > nChs[2]
-                [
-                    vcat(
-                        fill(Array[-Matrix{T}(I,nChs[2],nChs[2]), Matrix{T}(I,nChs[1],nChs[1]) ], fld(ppo[pd],2))...
-                    )
-                for pd in 1:D]
-            else
-                [
-                    vcat(
-                        fill(Array[ -Matrix{T}(I,nChs[1],nChs[1]), Matrix{T}(I,nChs[2],nChs[2]) ], fld(ppo[pd],2))...
-                    )
-                for pd in 1:D]
-            end
+            chx, chn = maximum(nChs), minimum(nChs)
+            propMts = [
+                vcat(
+                    fill(Array[ -Matrix{T}(I, chn, chn), Matrix{T}(I, chx, chx) ], fld(ppo[pd],2))...
+                )
+            for pd in 1:D ]
         end
 
         mtxc = reverse(MDCDL.permdctmtx(T, df...); dims=2)
