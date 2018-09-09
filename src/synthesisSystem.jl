@@ -22,10 +22,7 @@ operate(::Type{Val{:synthesizer}}, syn::NsoltOperator, y::AbstractArray) = synth
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
-synthesize(fb::PolyphaseFB{ForwardDiff.Dual,D}, py::AbstractMatrix{T}, nBlocks::NTuple{D}; kwargs...) where {T,D} = synthesize(fb, convert(ForwardDiff.Dual, py), nBlocks;)
-
-synthesize(cc::Cnsolt{TF,D}, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D} =
-    synthesize_cnsolt(Val{cc.category}, py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
+synthesize(cc::Cnsolt{TF,D}, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D} = synthesize_cnsolt(Val{cc.category}, py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
 
 function synthesize_cnsolt(category::Type, y::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D}
     uy = concatenateAtoms_cnsolt(category, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
@@ -118,7 +115,7 @@ end
 
 function concatenateAtomsPerDims_rnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,D}
     hP = nch[1]
-    pvy = copy(pvy)
+    pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
     nShift = fld(size(pvy, 2), nBlock)
     # submatrices
     yu = view(pvy, 1:hP, :)
@@ -148,7 +145,7 @@ function concatenateAtomsPerDims_rnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatri
         (nch[2], nch[1], (nch[1]+1):P, 1:nch[1])
     end
 
-    pvy = copy(pvy)
+    pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
     nShift = fld(size(pvy,2), nBlock)
     # submatrices
     yu  = view(pvy, 1:minP, :)

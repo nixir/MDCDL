@@ -145,6 +145,8 @@ struct Cnsolt{T,D} <: Nsolt{T,D}
         new{T,D}(categ, df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end
     Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
+
+    Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int, θ::AbstractArray{T}, μ::AbstractArray; kwargs...) where {T,D} = setAngleParameters!(Cnsolt(T, df, ppo, nChs; kwargs...), θ, μ)
 end
 
 promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
