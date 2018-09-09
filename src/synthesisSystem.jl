@@ -1,5 +1,6 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
+using ForwardDiff
 
 function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     pvy = if syn.shape == :normal
@@ -19,11 +20,12 @@ function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
 end
 operate(::Type{Val{:synthesizer}}, syn::NsoltOperator, y::AbstractArray) = synthesize(syn, y)
 
-function synthesize(cc::Cnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D}
-    x = synthesize_cnsolt(Val{cc.category}, pvy.data, pvy.nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
+synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
-    PolyphaseVector(x, pvy.nBlocks)
-end
+synthesize(fb::PolyphaseFB{ForwardDiff.Dual,D}, py::AbstractMatrix{T}, nBlocks::NTuple{D}; kwargs...) where {T,D} = synthesize(fb, convert(ForwardDiff.Dual, py), nBlocks;)
+
+synthesize(cc::Cnsolt{TF,D}, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D} =
+    synthesize_cnsolt(Val{cc.category}, py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
 
 function synthesize_cnsolt(category::Type, y::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D}
     uy = concatenateAtoms_cnsolt(category, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
@@ -96,10 +98,7 @@ function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatri
     return ipermutedimspv(pvy, nBlock)
 end
 
-function synthesize(cc::Rnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D}
-    x = synthesize_rnsolt(Val{cc.category}, pvy.data, pvy.nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
-    PolyphaseVector(x, pvy.nBlocks)
-end
+synthesize(cc::Rnsolt{TF,D}, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D} = synthesize_rnsolt(Val{cc.category}, py, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 
 function synthesize_rnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D}
     M = prod(df)

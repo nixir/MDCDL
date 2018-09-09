@@ -1,5 +1,6 @@
 using ImageFiltering: imfilter, reflect, FIR, FFT
 using OffsetArrays: OffsetArray
+using ForwardDiff
 
 function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     y = analyze(A.nsolt, x; border=A.border)
@@ -16,14 +17,13 @@ function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
 end
 operate(::Type{Val{:analyzer}}, nsop::NsoltOperator, x::AbstractArray) = analyze(nsop, x)
 
-function analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D}
-    analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
-end
+analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 
-function analyze(cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D}
-    tmp = analyze_cnsolt(Val{cc.category}, pvx.data, pvx.nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
-    PolyphaseVector(tmp, pvx.nBlocks)
-end
+analyze(fb::PolyphaseFB{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D} = PolyphaseVector(analyze(fb, pvx.data, pvx.nBlocks; kwargs...), pvx.nBlocks)
+
+analyze(fb::PolyphaseFB{ForwardDiff.Dual, D}, px::AbstractMatrix{T}, nBlocks::NTuple{D}; kwargs...) where {T,D} = analyze(fb, convert(ForwardDiff.Dual, px), nBlocks; kwargs...)
+
+analyze(cc::Cnsolt{TF,D}, px::AbstractMatrix{TX}, nBlocks::NTuple{D}; kwargs...) where {TF,TX,D} = analyze_cnsolt(Val{cc.category}, px, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 
 function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D}
     # ux = V0 * F * J * x
@@ -96,9 +96,8 @@ function extendAtomsPerDims_cnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nB
     return pvx
 end
 
-function analyze(cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D}
-    y = analyze_rnsolt(Val{cc.category}, pvx.data, pvx.nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
-    PolyphaseVector(y, pvx.nBlocks)
+function analyze(cc::Rnsolt{TF,D}, px::AbstractMatrix{TX}, nBlocks::NTuple{D}; kwargs...) where {TF,TX,D}
+    analyze_rnsolt(Val{cc.category}, px, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 end
 
 function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D}

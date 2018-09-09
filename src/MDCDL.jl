@@ -86,6 +86,10 @@ struct Rnsolt{T,D} <: Nsolt{T,D}
     end
     Rnsolt(t::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {D,T} = Rnsolt(t, df, ppo, (cld(nChs,2), fld(nChs,2)))
     Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
+
+    function Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int, Int}, θ::AbstractArray{T}, μ::AbstractArray) where {T,D}
+        setAngleParameters!(Rnsolt(T, df, ppo, nChs), θ, μ)
+    end
 end
 
 promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsolt{promote_type(TA,TB),D}
