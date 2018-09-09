@@ -204,7 +204,7 @@ function getAnalysisBank(::Type{Val{:TypeII}}, rc::MDCDL.Rnsolt{T,D}) where {D,T
     ppm
 end
 
-function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
+function getAnalysisFilters(pfb::MDCDL.PolyphaseFB)
     df = pfb.decimationFactor
     P = sum(pfb.nChannels)
 
@@ -212,7 +212,7 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB{T,D}) where {T,D}
     ordm = pfb.polyphaseOrder .+ 1
 
     return map(1:P) do p
-        out = Array{T}(undef, df .* ordm )
+        out = similar(afb, df .* ordm )
         tilesout = collect(TileIterator(axes(out), df))
 
         for idx in LinearIndices(ordm)

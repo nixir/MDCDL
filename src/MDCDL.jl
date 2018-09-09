@@ -48,7 +48,7 @@ struct Rnsolt{T,D} <: Nsolt{T,D}
     initMatrices::Array{AbstractMatrix{T},1}
     propMatrices::Array{Array{AbstractMatrix{T},1},1}
 
-    matrixC::Matrix{T}
+    matrixC::Matrix
 
     function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int, Int}) where {T,D}
         P = sum(nChs)
@@ -79,7 +79,8 @@ struct Rnsolt{T,D} <: Nsolt{T,D}
             for pd in 1:D ]
         end
 
-        mtxc = reverse(MDCDL.permdctmtx(T, df...); dims=2)
+        TM = if T <: AbstractFloat; T else Float64 end
+        mtxc = reverse(MDCDL.permdctmtx(TM, df...); dims=2)
 
         new{T,D}(categ, df, ppo, nChs, initMts, propMts, mtxc)
     end
@@ -89,7 +90,7 @@ end
 
 promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsolt{promote_type(TA,TB),D}
 
-struct Cnsolt{T,D} <: Nsolt{Complex{T},D}
+struct Cnsolt{T,D} <: Nsolt{T,D}
     category::Symbol
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
@@ -98,8 +99,8 @@ struct Cnsolt{T,D} <: Nsolt{Complex{T},D}
     initMatrices::Vector{AbstractMatrix{T}}
     propMatrices::Vector{Vector{AbstractMatrix{T}}}
     paramAngles::Vector{Vector{AbstractVector{T}}}
-    symmetry::Diagonal{Complex{T}}
-    matrixF::Matrix{Complex{T}}
+    symmetry::Diagonal
+    matrixF::Matrix
 
     # constructor
     function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
@@ -132,8 +133,10 @@ struct Cnsolt{T,D} <: Nsolt{Complex{T},D}
         paramAngs = Array[
             Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ]
         for pd in 1:D ]
-        sym = Diagonal{Complex{T}}(ones(nChs))
-        mtxf = reverse(MDCDL.cdftmtx(T, df...); dims=2)
+
+        TM = if T <: AbstractFloat; T else Float64 end
+        sym = Diagonal{Complex{TM}}(ones(nChs))
+        mtxf = reverse(MDCDL.cdftmtx(TM, df...); dims=2)
 
         new{T,D}(categ, df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end

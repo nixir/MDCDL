@@ -14,8 +14,6 @@ gradOfAnalyzer(nsolt::Nsolt, args...; kwargs...) = gradOfAnalyzer(Val{nsolt.cate
 
 function gradOfAnalyzer(::Type{Val{:TypeI}}, nsolt::Cnsolt{T,D}, x0::PolyphaseVector{TV,D}, y0::PolyphaseVector{TV,D}; border=:circular) where {T,TV,D}
 
-    # error("this method hasn't implemented yet.")
-
     df = nsolt.decimationFactor
     ord = nsolt.polyphaseOrder
     nch = nsolt.nChannels

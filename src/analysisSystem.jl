@@ -25,82 +25,84 @@ function analyze(cc::Cnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where 
     PolyphaseVector(tmp, pvx.nBlocks)
 end
 
-function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D}
+function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D}
     # ux = V0 * F * J * x
     ux = (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2)) * x
 
     sym * extendAtoms_cnsolt(category, ux, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
 end
 
-function extendAtoms_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; border=:circular) where {D}
+function extendAtoms_cnsolt(tp::Type, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {D}
     for d = 1:D
-        nShift = fld(size(pvx, 2), nBlocks[d])
-        pvx = permutedimspv(pvx, nBlocks[d])
-        # submatrices
-        x  = view(pvx, :, :)
-        xu = view(pvx, 1:fld(P, 2), :)
-        xl = view(pvx, (fld(P, 2)+1):P, :)
-        for k = 1:ord[d]
-            B = getMatrixB(P, paramAngs[d][k])
-
-            x .= B' * x
-            if isodd(k)
-                shiftForward!(Val{border}, xl, nShift)
-            else
-                shiftBackward!(Val{border}, xu, nShift)
-            end
-            x .= B * x
-
-            xu .= propMts[d][2*k-1] * xu
-            xl .= propMts[d][2*k]   * xl
-        end
+        pvx = extendAtomsPerDims_cnsolt(tp, pvx, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
     end
     return pvx
 end
 
-function extendAtoms_cnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; border=:circular) where {D}
-    nStages = fld.(ord, 2)
+function extendAtomsPerDims_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM},  paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix}
+    nShift = fld(size(pvx, 2), nBlock)
+    pvx = permutedimspv(pvx, nBlock)
+    # submatrices
+    x  = view(pvx, :, :)
+    xu = view(pvx, 1:fld(P, 2), :)
+    xl = view(pvx, (fld(P, 2)+1):P, :)
+    for k = 1:ordd
+        B = getMatrixB(P, paramAngsd[k])
 
-    for d = 1:D
-        nShift = fld(size(pvx, 2), nBlocks[d])
-        pvx = permutedimspv(pvx, nBlocks[d])
-        # submatrices
-        xe  = view(pvx, 1:P-1, :)
-        xu1 = view(pvx, 1:fld(P,2), :)
-        xl1 = view(pvx, (fld(P,2)+1):(P-1), :)
-        xu2 = view(pvx, 1:cld(P,2), :)
-        xl2 = view(pvx, cld(P,2):P, :)
-        for k = 1:nStages[d]
-            # first step
-            B = getMatrixB(P, paramAngs[d][2*k-1])
-
-            xe  .= B' * xe
-            shiftForward!(Val{border}, xl1, nShift)
-            xe  .= B * xe
-
-            xu1 .= propMts[d][4*k-3] * xu1
-            xl1 .= propMts[d][4*k-2] * xl1
-
-            # second step
-            B = getMatrixB(P, paramAngs[d][2*k])
-
-            xe  .= B' * xe
-            shiftBackward!(Val{border}, xu1, nShift)
-            xe  .= B * xe
-
-            xl2 .= propMts[d][4*k]   * xl2
-            xu2 .= propMts[d][4*k-1] * xu2
+        x .= B' * x
+        if isodd(k)
+            shiftForward!(Val{border}, xl, nShift)
+        else
+            shiftBackward!(Val{border}, xu, nShift)
         end
+        x .= B * x
+
+        xu .= propMtsd[2*k-1] * xu
+        xl .= propMtsd[2*k]   * xl
+    end
+    return pvx
+end
+
+function extendAtomsPerDims_cnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM},  paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix}
+    nStages = fld(ordd, 2)
+    nShift = fld(size(pvx, 2), nBlock)
+    pvx = permutedimspv(pvx, nBlock)
+    # submatrices
+    xe  = view(pvx, 1:P-1, :)
+    xu1 = view(pvx, 1:fld(P,2), :)
+    xl1 = view(pvx, (fld(P,2)+1):(P-1), :)
+    xu2 = view(pvx, 1:cld(P,2), :)
+    xl2 = view(pvx, cld(P,2):P, :)
+    for k = 1:nStages
+        # first step
+        B = getMatrixB(P, paramAngsd[2*k-1])
+
+        xe  .= B' * xe
+        shiftForward!(Val{border}, xl1, nShift)
+        xe  .= B * xe
+
+        xu1 .= propMtsd[4*k-3] * xu1
+        xl1 .= propMtsd[4*k-2] * xl1
+
+        # second step
+        B = getMatrixB(P, paramAngsd[2*k])
+
+        xe  .= B' * xe
+        shiftBackward!(Val{border}, xu1, nShift)
+        xe  .= B * xe
+
+        xl2 .= propMtsd[4*k]   * xl2
+        xu2 .= propMtsd[4*k-1] * xu2
     end
     return pvx
 end
 
 function analyze(cc::Rnsolt{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D}
-    tmp = analyze_rnsolt(Val{cc.category}, pvx.data, pvx.nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
-    PolyphaseVector(tmp, pvx.nBlocks)
+    y = analyze_rnsolt(Val{cc.category}, pvx.data, pvx.nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
+    PolyphaseVector(y, pvx.nBlocks)
 end
 
-function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixC::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
+function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D}
     M = prod(df)
     cM = cld(M,2)
     fM = fld(M,2)
@@ -114,35 +116,39 @@ function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matr
     extendAtoms_rnsolt(category, ux, nBlocks, propMts, ord, nch; kwargs...)
 end
 
-function extendAtoms_rnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
-    hP = nch[1]
-
+function extendAtoms_rnsolt(tp::Type, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
     for d = 1:D
-        nShift = fld(size(pvx, 2), nBlocks[d])
-        pvx = permutedimspv(pvx, nBlocks[d])
-        # submatrices
-        xu = view(pvx, 1:hP, :)
-        xl = view(pvx, (1:hP) .+ hP, :)
-        for k = 1:ord[d]
-            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-            xu .= tu; xl .= tl
-
-            if isodd(k)
-                shiftForward!(Val{border}, xl, nShift)
-            else
-                shiftBackward!(Val{border}, xu, nShift)
-            end
-            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-            xu .= tu; xl .= tl
-
-            xl .= propMts[d][k] * xl
-        end
+        pvx = extendAtomsPerDims_rnsolt(tp, pvx, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
     end
     return pvx
 end
 
-function extendAtoms_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
-    nStages = fld.(ord, 2)
+function extendAtomsPerDims_rnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix}
+    hP = nch[1]
+    nShift = fld(size(pvx, 2), nBlock)
+    pvx = permutedimspv(pvx, nBlock)
+    # submatrices
+    xu = view(pvx, 1:hP, :)
+    xl = view(pvx, (1:hP) .+ hP, :)
+    for k = 1:ordd
+        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+        xu .= tu; xl .= tl
+
+        if isodd(k)
+            shiftForward!(Val{border}, xl, nShift)
+        else
+            shiftBackward!(Val{border}, xu, nShift)
+        end
+        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+        xu .= tu; xl .= tl
+
+        xl .= propMtsd[k] * xl
+    end
+    return pvx
+end
+
+function extendAtomsPerDims_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix}
+    nStages = fld(ordd, 2)
     P = sum(nch)
     maxP, minP, chMajor, chMinor = if nch[1] > nch[2]
         (nch[1], nch[2], 1:nch[1], (nch[1]+1):P)
@@ -150,39 +156,37 @@ function extendAtoms_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nBlocks::
         (nch[2], nch[1], (nch[1]+1):P, 1:nch[1])
     end
 
-    for d = 1:D
-        nShift = fld(size(pvx,2), nBlocks[d])
-        pvx = permutedimspv(pvx, nBlocks[d])
-        # submatrices
-        xu  = view(pvx, 1:minP, :)
-        xl  = view(pvx, (P-minP+1):P, :)
-        xs1 = view(pvx, (minP+1):P, :)
-        xs2 = view(pvx, 1:maxP, :)
-        xmj = view(pvx, chMajor, :)
-        xmn = view(pvx, chMinor, :)
-        for k = 1:nStages[d]
-            # first step
-            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-            xu .= tu; xl .= tl
+    nShift = fld(size(pvx,2), nBlock)
+    pvx = permutedimspv(pvx, nBlock)
+    # submatrices
+    xu  = view(pvx, 1:minP, :)
+    xl  = view(pvx, (P-minP+1):P, :)
+    xs1 = view(pvx, (minP+1):P, :)
+    xs2 = view(pvx, 1:maxP, :)
+    xmj = view(pvx, chMajor, :)
+    xmn = view(pvx, chMinor, :)
+    for k = 1:nStages
+        # first step
+        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+        xu .= tu; xl .= tl
 
-            shiftForward!(Val{border}, xs1, nShift)
+        shiftForward!(Val{border}, xs1, nShift)
 
-            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-            xu .= tu; xl .= tl
+        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+        xu .= tu; xl .= tl
 
-            xmn .= propMts[d][2*k-1] * xmn
+        xmn .= propMtsd[2*k-1] * xmn
 
-            # second step
-            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-            xu .= tu; xl .= tl
+        # second step
+        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+        xu .= tu; xl .= tl
 
-            shiftBackward!(Val{border}, xs2, nShift)
+        shiftBackward!(Val{border}, xs2, nShift)
 
-            tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-            xu .= tu; xl .= tl
+        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
+        xu .= tu; xl .= tl
 
-            xmj .= propMts[d][2*k] * xmj
-        end
+        xmj .= propMtsd[2*k] * xmj
     end
     return pvx
 end

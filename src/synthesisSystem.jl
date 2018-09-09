@@ -25,75 +25,76 @@ function synthesize(cc::Cnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) whe
     PolyphaseVector(x, pvy.nBlocks)
 end
 
-function synthesize_cnsolt(category::Type, y::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D}
+function synthesize_cnsolt(category::Type, y::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D}
     uy = concatenateAtoms_cnsolt(category, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
 
     # output = (V0 * F * J)' * uy == J * F' * V0' * uy
     (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2))' * uy
 end
 
-function concatenateAtoms_cnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; border=:circular) where {D}
-    pvy = copy(pvy)
+function concatenateAtoms_cnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {D}
     for d = D:-1:1
-        nShift = fld(size(pvy, 2), nBlocks[d])
-        # submatrices
-        y  = view(pvy, :, :)
-        yu = view(pvy, 1:fld(P,2), :)
-        yl = view(pvy, (fld(P,2)+1):P, :)
-        for k = ord[d]:-1:1
-            yu .= propMts[d][2*k-1]' * yu
-            yl .= propMts[d][2*k]'   * yl
-
-            B = getMatrixB(P, paramAngs[d][k])
-            y .= B' * y
-
-            if isodd(k)
-                shiftBackward!(Val{border}, yl, nShift)
-            else
-                shiftForward!(Val{border}, yu, nShift)
-            end
-            y .= B * y
-        end
-        pvy = ipermutedimspv(pvy, nBlocks[d])
+        pvy = concatenateAtomsPerDims_cnsolt(category, pvy, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
     end
     return pvy
 end
 
-function concatenateAtoms_cnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; border=:circular) where {D}
-    nStages = fld.(ord, 2)
+function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,D}
+    pvy = copy(pvy)
+    nShift = fld(size(pvy, 2), nBlock)
+    # submatrices
+    y  = view(pvy, :, :)
+    yu = view(pvy, 1:fld(P,2), :)
+    yl = view(pvy, (fld(P,2)+1):P, :)
+    for k = ordd:-1:1
+        yu .= propMtsd[2*k-1]' * yu
+        yl .= propMtsd[2*k]'   * yl
+
+        B = getMatrixB(P, paramAngsd[k])
+        y .= B' * y
+
+        if isodd(k)
+            shiftBackward!(Val{border}, yl, nShift)
+        else
+            shiftForward!(Val{border}, yu, nShift)
+        end
+        y .= B * y
+    end
+    return ipermutedimspv(pvy, nBlock)
+end
+
+function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,D}
+    nStages = fld(ordd, 2)
     chEven = 1:(P-1)
 
     pvy = copy(pvy)
-    for d = D:-1:1
-        nShift = fld(size(pvy,2), nBlocks[d])
-        # submatrices
-        ye  = view(pvy, 1:(P-1), :)
-        yu1 = view(pvy, 1:fld(P,2), :)
-        yl1 = view(pvy, (fld(P,2)+1):(P-1), :)
-        yu2 = view(pvy, 1:cld(P,2), :)
-        yl2 = view(pvy, cld(P,2):P, :)
-        for k = nStages[d]:-1:1
-            # second step
-            yu2 .= propMts[d][4*k-1]' * yu2
-            yl2 .= propMts[d][4*k]'   * yl2
+    nShift = fld(size(pvy,2), nBlock)
+    # submatrices
+    ye  = view(pvy, 1:(P-1), :)
+    yu1 = view(pvy, 1:fld(P,2), :)
+    yl1 = view(pvy, (fld(P,2)+1):(P-1), :)
+    yu2 = view(pvy, 1:cld(P,2), :)
+    yl2 = view(pvy, cld(P,2):P, :)
+    for k = nStages:-1:1
+        # second step
+        yu2 .= propMtsd[4*k-1]' * yu2
+        yl2 .= propMtsd[4*k]'   * yl2
 
-            B = getMatrixB(P, paramAngs[d][2*k])
-            ye  .= B' * ye
-            shiftForward!(Val{border}, yu1, nShift)
-            ye  .= B * ye
+        B = getMatrixB(P, paramAngsd[2*k])
+        ye  .= B' * ye
+        shiftForward!(Val{border}, yu1, nShift)
+        ye  .= B * ye
 
-            # first step
-            yu1 .= propMts[d][4*k-3]' * yu1
-            yl1 .= propMts[d][4*k-2]' * yl1
+        # first step
+        yu1 .= propMtsd[4*k-3]' * yu1
+        yl1 .= propMtsd[4*k-2]' * yl1
 
-            B = getMatrixB(P, paramAngs[d][2*k-1])
-            ye  .= B' * ye
-            shiftBackward!(Val{border}, yl1, nShift)
-            ye  .= B * ye
-        end
-        pvy = ipermutedimspv(pvy, nBlocks[d])
+        B = getMatrixB(P, paramAngsd[2*k-1])
+        ye  .= B' * ye
+        shiftBackward!(Val{border}, yl1, nShift)
+        ye  .= B * ye
     end
-    return pvy
+    return ipermutedimspv(pvy, nBlock)
 end
 
 function synthesize(cc::Rnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D}
@@ -101,7 +102,7 @@ function synthesize(cc::Rnsolt{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) whe
     PolyphaseVector(x, pvy.nBlocks)
 end
 
-function synthesize_rnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
+function synthesize_rnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D}
     M = prod(df)
 
     y = concatenateAtoms_rnsolt(category, pvy, nBlocks, propMts, ord, nch; kwargs...)
@@ -111,34 +112,38 @@ function synthesize_rnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{
     reverse(matrixC, dims=2)' * vcat(W0' * y[1:nch[1],:], U0' * y[(nch[1]+1):end,:])
 end
 
-function concatenateAtoms_rnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
-    hP = nch[1]
-    pvy = copy(pvy)
+function concatenateAtoms_rnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
     for d = D:-1:1
-        nShift = fld(size(pvy, 2), nBlocks[d])
-        # submatrices
-        yu = view(pvy, 1:hP, :)
-        yl = view(pvy, (1:hP) .+ hP, :)
-        for k = ord[d]:-1:1
-            yl .= propMts[d][k]' * yl
-
-            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-            yu .= tu; yl .= tl
-            if isodd(k)
-                shiftBackward!(Val{border}, yl, nShift)
-            else
-                shiftForward!(Val{border}, yu, nShift)
-            end
-            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-            yu .= tu; yl .= tl
-        end
-        pvy = ipermutedimspv(pvy, nBlocks[d])
+        pvy = concatenateAtomsPerDims_rnsolt(category, pvy, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
     end
     return pvy
 end
 
-function concatenateAtoms_rnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; border=:circular) where {D}
-    nStages = fld.(ord, 2)
+function concatenateAtomsPerDims_rnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,D}
+    hP = nch[1]
+    pvy = copy(pvy)
+    nShift = fld(size(pvy, 2), nBlock)
+    # submatrices
+    yu = view(pvy, 1:hP, :)
+    yl = view(pvy, (1:hP) .+ hP, :)
+    for k = ordd:-1:1
+        yl .= propMtsd[k]' * yl
+
+        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
+        yu .= tu; yl .= tl
+        if isodd(k)
+            shiftBackward!(Val{border}, yl, nShift)
+        else
+            shiftForward!(Val{border}, yu, nShift)
+        end
+        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
+        yu .= tu; yl .= tl
+    end
+    return ipermutedimspv(pvy, nBlock)
+end
+
+function concatenateAtomsPerDims_rnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,D}
+    nStages = fld(ordd, 2)
     P = sum(nch)
     maxP, minP, chMajor, chMinor = if nch[1] > nch[2]
         (nch[1], nch[2], 1:nch[1], (nch[1]+1):P)
@@ -147,41 +152,38 @@ function concatenateAtoms_rnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatrix, nBlo
     end
 
     pvy = copy(pvy)
-    for d = D:-1:1
-        nShift = fld(size(pvy,2), nBlocks[d])
-        # submatrices
-        yu  = view(pvy, 1:minP, :)
-        yl  = view(pvy, (P-minP+1):P, :)
-        ys1 = view(pvy, (minP+1):P, :)
-        ys2 = view(pvy, 1:maxP, :)
-        ymj = view(pvy, chMajor, :)
-        ymn = view(pvy, chMinor, :)
-        for k = nStages[d]:-1:1
-            # second step
-            ymj .= propMts[d][2*k]' * ymj
+    nShift = fld(size(pvy,2), nBlock)
+    # submatrices
+    yu  = view(pvy, 1:minP, :)
+    yl  = view(pvy, (P-minP+1):P, :)
+    ys1 = view(pvy, (minP+1):P, :)
+    ys2 = view(pvy, 1:maxP, :)
+    ymj = view(pvy, chMajor, :)
+    ymn = view(pvy, chMinor, :)
+    for k = nStages:-1:1
+        # second step
+        ymj .= propMtsd[2*k]' * ymj
 
-            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-            yu .= tu; yl .= tl
+        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
+        yu .= tu; yl .= tl
 
-            shiftForward!(Val{border}, ys2, nShift)
+        shiftForward!(Val{border}, ys2, nShift)
 
-            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-            yu .= tu; yl .= tl
+        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
+        yu .= tu; yl .= tl
 
-            # first step
-            ymn .= propMts[d][2*k-1]' * ymn
+        # first step
+        ymn .= propMtsd[2*k-1]' * ymn
 
-            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-            yu .= tu; yl .= tl
+        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
+        yu .= tu; yl .= tl
 
-            shiftBackward!(Val{border}, ys1, nShift)
+        shiftBackward!(Val{border}, ys1, nShift)
 
-            tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-            yu .= tu; yl .= tl
-        end
-        pvy = ipermutedimspv(pvy, nBlocks[d])
+        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
+        yu .= tu; yl .= tl
     end
-    return pvy
+    ipermutedimspv(pvy, nBlock)
 end
 
 function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,D}
