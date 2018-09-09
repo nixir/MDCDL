@@ -33,10 +33,9 @@ function synthesize_cnsolt(category::Type, y::AbstractMatrix, nBlocks::NTuple{D}
 end
 
 function concatenateAtoms_cnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {D}
-    for d = D:-1:1
-        pvy = concatenateAtomsPerDims_cnsolt(category, pvy, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
+    foldr(1:D; init=pvy) do d, ty
+        concatenateAtomsPerDims_cnsolt(category, ty, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
     end
-    return pvy
 end
 
 function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,D}
@@ -113,10 +112,9 @@ function synthesize_rnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{
 end
 
 function concatenateAtoms_rnsolt(category::Type, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
-    for d = D:-1:1
-        pvy = concatenateAtomsPerDims_rnsolt(category, pvy, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
+    foldr(1:D; init=pvy) do d, ty
+        concatenateAtomsPerDims_rnsolt(category, ty, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
     end
-    return pvy
 end
 
 function concatenateAtomsPerDims_rnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,D}

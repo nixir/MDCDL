@@ -32,11 +32,10 @@ function analyze_cnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple{D}, m
     sym * extendAtoms_cnsolt(category, ux, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
 end
 
-function extendAtoms_cnsolt(tp::Type, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {D}
-    for d = 1:D
-        pvx = extendAtomsPerDims_cnsolt(tp, pvx, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
+function extendAtoms_cnsolt(category::Type, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {D}
+    foldl(1:D; init=pvx) do tx, d
+        extendAtomsPerDims_cnsolt(category, tx, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
     end
-    return pvx
 end
 
 function extendAtomsPerDims_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM},  paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix}
@@ -116,11 +115,10 @@ function analyze_rnsolt(category::Type, x::AbstractMatrix, nBlocks::NTuple, matr
     extendAtoms_rnsolt(category, ux, nBlocks, propMts, ord, nch; kwargs...)
 end
 
-function extendAtoms_rnsolt(tp::Type, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
-    for d = 1:D
-        pvx = extendAtomsPerDims_rnsolt(tp, pvx, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
+function extendAtoms_rnsolt(category::Type, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {D}
+    foldl(1:D; init=pvx) do tx, d
+        extendAtomsPerDims_rnsolt(category, tx, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
     end
-    return pvx
 end
 
 function extendAtomsPerDims_rnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix}
