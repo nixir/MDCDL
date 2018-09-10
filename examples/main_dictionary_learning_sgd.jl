@@ -19,25 +19,28 @@ cnt = 0
 # output file name
 doWriteResults = true
 
+# choose NSOLT type (Rnsolt | Cnsolt)
+Nsolt = Cnsolt
+
 # data dimension
 D = 2
 # decimation factor
 df = (2,2)
 # polyphase order
-ord = (2,2)
+ord = (4,4)
 # number of symmetric/antisymmetric channel
-nch = 6
+nch = 8
 
 dt = Float64
 
-η = 1e-5
+η = 1e-4
 
-szSubData = tuple(fill(16 ,D)...)
+szSubData = tuple(fill(32 ,D)...)
 nSubData = 64
 nEpoch = 200
 
-sparsity = 0.4 # ∈ [0, 1.0]
-#####################################
+sparsity = 0.6 # ∈ [0, 1.0]
+#######################
 
 resultsdir_parent = joinpath(@__DIR__, "results")
 !isdir(resultsdir_parent) && mkdir(resultsdir_parent)
@@ -49,7 +52,7 @@ resultsdir = joinpath(resultsdir_parent, tm)
 logfile = joinpath(resultsdir, "log")
 datafile = joinpath(resultsdir, "nsolt")
 
-nsolt = Cnsolt(dt, df, ord, nch)
+nsolt = Nsolt(dt, df, ord, nch)
 MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false, isPropAng=false, isSymmetry=false)
 orgNsolt = deepcopy(nsolt)
 
@@ -62,7 +65,7 @@ end
 analyzer = createAnalyzer(nsolt, szSubData; shape=:vector)
 y0 = analyzer(orgImg[trainingIds[1]...])
 # nSparseCoefs = fld(length(y0), 2)
-nSparseCoefs = floor(Int, sparsity*length(y0))
+nSparseCoefs = floor(Int, sparsity*prod(szSubData))
 
 angs0, mus0 = getAngleParameters(nsolt)
 angs0s = angs0[nch[1]:end]
@@ -82,7 +85,7 @@ for epoch = 1:nEpoch
         pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
         θ, μ = getAngleParameters(nsolt)
 
-        f(t) = norm(pvx.data - synthesize(Cnsolt(df, ord, nch, t, μ), pvy).data)^2/2
+        f(t) = norm(pvx.data - synthesize(Nsolt(df, ord, nch, t, μ), pvy).data)^2/2
         g(t) = ForwardDiff.gradient(f, t)
 
         θ -= η*g(θ)

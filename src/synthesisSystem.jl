@@ -44,8 +44,8 @@ function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix
     yu = view(pvy, 1:fld(P,2), :)
     yl = view(pvy, (fld(P,2)+1):P, :)
     for k = ordd:-1:1
-        yu .= propMtsd[2*k-1]' * yu
-        yl .= propMtsd[2*k]'   * yl
+        yu .= propMtsd[2k-1]' * yu
+        yl .= propMtsd[2k]'   * yl
 
         B = getMatrixB(P, paramAngsd[k])
         y .= B' * y
@@ -74,19 +74,19 @@ function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatri
     yl2 = view(pvy, cld(P,2):P, :)
     for k = nStages:-1:1
         # second step
-        yu2 .= propMtsd[4*k-1]' * yu2
-        yl2 .= propMtsd[4*k]'   * yl2
+        yu2 .= propMtsd[4k-1]' * yu2
+        yl2 .= propMtsd[4k]'   * yl2
 
-        B = getMatrixB(P, paramAngsd[2*k])
+        B = getMatrixB(P, paramAngsd[2k])
         ye  .= B' * ye
         shiftForward!(Val{border}, yu1, nShift)
         ye  .= B * ye
 
         # first step
-        yu1 .= propMtsd[4*k-3]' * yu1
-        yl1 .= propMtsd[4*k-2]' * yl1
+        yu1 .= propMtsd[4k-3]' * yu1
+        yl1 .= propMtsd[4k-2]' * yl1
 
-        B = getMatrixB(P, paramAngsd[2*k-1])
+        B = getMatrixB(P, paramAngsd[2k-1])
         ye  .= B' * ye
         shiftBackward!(Val{border}, yl1, nShift)
         ye  .= B * ye
@@ -155,7 +155,7 @@ function concatenateAtomsPerDims_rnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatri
     ymn = view(pvy, chMinor, :)
     for k = nStages:-1:1
         # second step
-        ymj .= propMtsd[2*k]' * ymj
+        ymj .= propMtsd[2k]' * ymj
 
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
@@ -166,7 +166,7 @@ function concatenateAtomsPerDims_rnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatri
         yu .= tu; yl .= tl
 
         # first step
-        ymn .= propMtsd[2*k-1]' * ymn
+        ymn .= propMtsd[2k-1]' * ymn
 
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl

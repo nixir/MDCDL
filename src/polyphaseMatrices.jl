@@ -1,4 +1,4 @@
-using TiledIteration: TileIterator
+kusing TiledIteration: TileIterator
 
 function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     hP = fld(P,2)
@@ -42,8 +42,8 @@ function getAnalysisBank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
         propMats = cc.propMatrices[d]
         for k = 1:ord[d]
             B = MDCDL.getMatrixB(P, angs[k])
-            W = propMats[2*k-1]
-            U = propMats[2*k]
+            W = propMats[2k-1]
+            U = propMats[2k]
 
             # B Λ(z_d) B'
             ppm = B' * ppm
@@ -81,9 +81,9 @@ function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
             # first step
             chUpper = 1:fld(P,2)
             chLower = fld(P,2)+1:P-1
-            B = MDCDL.getMatrixB(P, angs[2*k-1])
-            W = propMats[4*k-3]
-            U = propMats[4*k-2]
+            B = MDCDL.getMatrixB(P, angs[2k-1])
+            W = propMats[4k-3]
+            U = propMats[4k-2]
 
             # B Λ(z_d) B'
             ppm[chEven,:] = B' * ppm[chEven,:]
@@ -97,9 +97,9 @@ function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
             chUpper = 1:cld(P,2)
             chLower = cld(P,2):P
 
-            B = MDCDL.getMatrixB(P, angs[2*k])
-            hW = propMats[4*k-1]
-            hU = propMats[4*k]
+            B = MDCDL.getMatrixB(P, angs[2k])
+            hW = propMats[4k-1]
+            hU = propMats[4k]
 
             # B Λ(z_d) B'
             ppm[chEven,:] = B' * ppm[chEven,:]
@@ -180,7 +180,7 @@ function getAnalysisBank(::Type{Val{:TypeII}}, rc::MDCDL.Rnsolt{T,D}) where {D,T
         for k = 1:nStages[d]
             # first step
 
-            U = propMats[2*k-1]
+            U = propMats[2k-1]
 
             # B Λ(z_d) B'
             butterfly!(ppm, minP)
@@ -190,7 +190,7 @@ function getAnalysisBank(::Type{Val{:TypeII}}, rc::MDCDL.Rnsolt{T,D}) where {D,T
             ppm[chMinor,:] = U * ppm[chMinor,:]
 
             # second step
-            W = propMats[2*k]
+            W = propMats[2k]
 
             # B Λ(z_d) B'
             butterfly!(ppm, minP)

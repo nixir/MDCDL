@@ -53,8 +53,8 @@ function extendAtomsPerDims_cnsolt(::Type{Val{:TypeI}}, pvx::AbstractMatrix, nBl
         end
         x .= B * x
 
-        xu .= propMtsd[2*k-1] * xu
-        xl .= propMtsd[2*k]   * xl
+        xu .= propMtsd[2k-1] * xu
+        xl .= propMtsd[2k]   * xl
     end
     return pvx
 end
@@ -71,24 +71,24 @@ function extendAtomsPerDims_cnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nB
     xl2 = view(pvx, cld(P,2):P, :)
     for k = 1:nStages
         # first step
-        B = getMatrixB(P, paramAngsd[2*k-1])
+        B = getMatrixB(P, paramAngsd[2k-1])
 
         xe  .= B' * xe
         shiftForward!(Val{border}, xl1, nShift)
         xe  .= B * xe
 
-        xu1 .= propMtsd[4*k-3] * xu1
-        xl1 .= propMtsd[4*k-2] * xl1
+        xu1 .= propMtsd[4k-3] * xu1
+        xl1 .= propMtsd[4k-2] * xl1
 
         # second step
-        B = getMatrixB(P, paramAngsd[2*k])
+        B = getMatrixB(P, paramAngsd[2k])
 
         xe  .= B' * xe
         shiftBackward!(Val{border}, xu1, nShift)
         xe  .= B * xe
 
-        xl2 .= propMtsd[4*k]   * xl2
-        xu2 .= propMtsd[4*k-1] * xu2
+        xl2 .= propMtsd[4k]   * xl2
+        xu2 .= propMtsd[4k-1] * xu2
     end
     return pvx
 end
@@ -169,7 +169,7 @@ function extendAtomsPerDims_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nB
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
         xu .= tu; xl .= tl
 
-        xmn .= propMtsd[2*k-1] * xmn
+        xmn .= propMtsd[2k-1] * xmn
 
         # second step
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
@@ -180,7 +180,7 @@ function extendAtomsPerDims_rnsolt(::Type{Val{:TypeII}}, pvx::AbstractMatrix, nB
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
         xu .= tu; xl .= tl
 
-        xmj .= propMtsd[2*k] * xmj
+        xmj .= propMtsd[2k] * xmj
     end
     return pvx
 end
