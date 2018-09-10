@@ -37,9 +37,9 @@ promote_rule(::Type{PolyphaseVector{TA,D}}, ::Type{PolyphaseVector{TB,D}}) where
 abstract type CodeBook{T,D} end
 abstract type FilterBank{T,D} <: CodeBook{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
-abstract type Nsolt{T,D} <: PolyphaseFB{T,D} end
+abstract type AbstractNsolt{T,D} <: PolyphaseFB{T,D} end
 
-struct Rnsolt{T,D} <: Nsolt{T,D}
+struct Rnsolt{T,D} <: AbstractNsolt{T,D}
     category::Symbol
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
@@ -94,7 +94,7 @@ end
 
 promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsolt{promote_type(TA,TB),D}
 
-struct Cnsolt{T,D} <: Nsolt{T,D}
+struct Cnsolt{T,D} <: AbstractNsolt{T,D}
     category::Symbol
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
@@ -178,14 +178,14 @@ struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple
     outsize::NTuple
 
-    nsolt::Nsolt{T,D}
+    nsolt::AbstractNsolt{T,D}
     border::Symbol
 
-    function NsoltOperator(mode::Symbol, ns::Nsolt{T,D}, insz::NTuple, outsz::NTuple; shape=:normal, border=:circular) where {T,D}
+    function NsoltOperator(mode::Symbol, ns::AbstractNsolt{T,D}, insz::NTuple, outsz::NTuple; shape=:normal, border=:circular) where {T,D}
         new{T,D}(mode, shape, insz, outsz, ns, border)
     end
 
-    function NsoltOperator(mode::Symbol, ns::Nsolt{T,D}, insz::NTuple; shape=:normal, kwargs...) where {T,D}
+    function NsoltOperator(mode::Symbol, ns::AbstractNsolt{T,D}, insz::NTuple; shape=:normal, kwargs...) where {T,D}
         # new{T,D}(mode, shape, insz, outsz, ns, border)
         dcsz = fld.(insz, ns.decimationFactor)
         outsz = if shape == :normal
@@ -200,14 +200,14 @@ struct NsoltOperator{T,D} <: AbstractOperator{T,D}
         NsoltOperator(mode, ns, insz, outsz; shape=shape, kwargs...)
     end
 
-    function NsoltOperator(mode::Symbol, ns::Nsolt, x::AbstractArray; kwargs...)
+    function NsoltOperator(mode::Symbol, ns::AbstractNsolt, x::AbstractArray; kwargs...)
         NsoltOperator(mode, ns, size(x); kwargs...)
     end
 end
 (nsop::NsoltOperator)(x::AbstractArray) = operate(nsop, x)
 
-createAnalyzer(ns::Nsolt, args...; kwargs...) = NsoltOperator(:analyzer, ns, args...; kwargs...)
-createSynthesizer(ns::Nsolt, args...; kwargs...) = NsoltOperator(:synthesizer, ns, args...; kwargs...)
+createAnalyzer(ns::AbstractNsolt, args...; kwargs...) = NsoltOperator(:analyzer, ns, args...; kwargs...)
+createSynthesizer(ns::AbstractNsolt, args...; kwargs...) = NsoltOperator(:synthesizer, ns, args...; kwargs...)
 
 struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     opmode::Symbol
@@ -279,13 +279,13 @@ struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     end
 end
 
-function createMultiscaleAnalyzer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
+function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
     ops = map(t->createAnalyzer(ns, t; shape=:normal, kwargs...), szxs)
     MultiscaleOperator(:analyzer, ops, sz; shape=shape)
 end
 
-function createMultiscaleSynthesizer(ns::Nsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
+function createMultiscaleSynthesizer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
     ops = map(t->createSynthesizer(ns, t; shape=shape, kwargs...), szxs)
     MultiscaleOperator(:synthesizer, ops, sz; shape=shape)

@@ -1,16 +1,16 @@
 using JSON
 using InteractiveUtils: subtypes
 
-function save(nsolt::Nsolt, filename::AbstractString, mode::AbstractString="w")
+function save(nsolt::AbstractNsolt, filename::AbstractString, mode::AbstractString="w")
     if match(r".*\.json$", filename) === nothing
         filename = string(filename, ".json")
     end
     open(io->save(io, nsolt), filename, mode)
 end
 
-save(io::IOStream, nsolt::Nsolt) = print(io, serialize(nsolt))
+save(io::IOStream, nsolt::AbstractNsolt) = print(io, serialize(nsolt))
 
-function serialize(cc::Nsolt{T,D}; format::AbstractString="JSON") where {T,D,S}
+function serialize(cc::AbstractNsolt{T,D}; format::AbstractString="JSON") where {T,D,S}
     configs = JSON.json(cc)
     fbname = if isa(cc, Cnsolt)
         "CNSOLT"

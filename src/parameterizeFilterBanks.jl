@@ -2,10 +2,10 @@
 #TODO: 角度パラメータのベクトル化手法の仕様をどこかに記述する．
 #TODO: コードが汚いのでリファクタリングする
 
-getAngleParameters(cc::Nsolt) = getAngleParameters(Val{cc.category}, cc)
-setAngleParameters!(cc::Nsolt, θ, μ) = setAngleParameters!(Val{cc.category}, cc, θ, μ)
+getAngleParameters(cc::AbstractNsolt) = getAngleParameters(Val{cc.category}, cc)
+setAngleParameters!(cc::AbstractNsolt, θ, μ) = setAngleParameters!(Val{cc.category}, cc, θ, μ)
 
-setAngleParameters(cc::Nsolt, args...) = setAngleParameters!(deepcopy(cc), args...)
+setAngleParameters(cc::AbstractNsolt, args...) = setAngleParameters!(deepcopy(cc), args...)
 
 function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}) where {D,T}
     P = cc.nChannels

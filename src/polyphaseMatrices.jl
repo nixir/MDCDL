@@ -18,7 +18,7 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-getAnalysisBank(cc::Nsolt) = getAnalysisBank(Val{cc.category}, cc)
+getAnalysisBank(cc::AbstractNsolt) = getAnalysisBank(Val{cc.category}, cc)
 
 function getAnalysisBank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor

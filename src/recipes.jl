@@ -2,7 +2,7 @@ using RecipesBase
 using ColorTypes, ColorSchemes
 using TiledIteration
 
-@recipe function atmimshow(cc::Cnsolt{T,2}; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10) where {T}
+@recipe function atmimshow(cc::Cnsolt{T,2}; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10, coordinate=:cartesian) where {T}
     nch = cc.nChannels
     ord = cc.polyphaseOrder
     df =  cc.decimationFactor
@@ -11,13 +11,24 @@ using TiledIteration
     size -->  20 .* df .* (ord .+ 1) .* (nch, 2)
 
     afs = getAnalysisFilters(cc)
-    afsre = map(f->real.(f), afs)
-    afsim = map(f->imag.(f), afs)
 
-    mafsre = map(f->get(cscheme, f, rangescale), afsre)
-    mafsim = map(f->get(cscheme, f, rangescale), afsim)
+    mafsup, mafslw = if coordinate == :cartesian
+        afsup = map(f->real.(f), afs)
+        afslw = map(f->imag.(f), afs)
+        mafsup = map(f->get(cscheme, f, rangescale), afsup)
+        mafslw = map(f->get(cscheme, f, rangescale), afslw)
+        (mafsup, mafslw)
+    elseif coordinate == :polar
+        mxv = norm(rangescale)
+        afsr = map(f->abs.(f), afs)
+        afsa = map(f->angle.(f), afs)
+        mafsup = map(f->get(cscheme, f, (0, mxv)), afsr)
+        mafslw = map((fr, fa)->RGB.(HSV.(180 .* (fa ./ pi .+ 1), 1.0, fr ./ mxv)), afsr, afsa)
 
-    atms = [ mafsre; mafsim ]
+        (mafsup, mafslw)
+    end
+
+    atms = [ mafsup; mafslw ]
     atmsup = resize_by_nn.(atms, atomscale)
 
     for idx = 1:2*nch
@@ -32,7 +43,7 @@ using TiledIteration
     end
 end
 
-@recipe function atmimshow(cc::Cnsolt{T,2}, p::Integer; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10) where {T}
+@recipe function atmimshow(cc::Cnsolt{T,2}, p::Integer; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10, coordinate=:cartesian) where {T}
     nch = cc.nChannels
     ord = cc.polyphaseOrder
     df =  cc.decimationFactor
@@ -43,10 +54,22 @@ end
     afs = getAnalysisFilters(cc)
     atm = afs[p]
 
-    mafsre = get(cscheme, real(atm), rangescale)
-    mafsim = get(cscheme, imag(atm), rangescale)
+    mafsup, mafslw = if coordinate == :cartesian
+        mafsup = get(cscheme, real(atm), rangescale)
+        mafslw = get(cscheme, imag(atm), rangescale)
+        (mafsup, mafslw)
+    elseif coordinate == :polar
+        mxv = norm(rangescale)
+        afsr = abs.(atm)
+        afsa = angle.(atm)
+        mafsup = get(cscheme, afsr, (0, mxv))
+        mafslw = RGB.(HSV.(180 .* (afsa ./ pi .+ 1), 1.0, afsr ./ mxv))
 
-    atms = [ mafsre, mafsim ]
+        (mafsup, mafslw)
+    end
+
+
+    atms = [ mafsup, mafslw ]
     atmsup = resize_by_nn.(atms, atomscale)
 
     for idx = 1:2
