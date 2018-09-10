@@ -1,6 +1,5 @@
 using ImageFiltering: imfilter, reflect, FIR, FFT
 using OffsetArrays: OffsetArray
-using ForwardDiff
 
 function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     y = analyze(A.nsolt, x; border=A.border)
@@ -20,8 +19,6 @@ operate(::Type{Val{:analyzer}}, nsop::NsoltOperator, x::AbstractArray) = analyze
 analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 
 analyze(fb::PolyphaseFB{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D} = PolyphaseVector(analyze(fb, pvx.data, pvx.nBlocks; kwargs...), pvx.nBlocks)
-
-analyze(fb::PolyphaseFB{ForwardDiff.Dual, D}, px::AbstractMatrix{T}, nBlocks::NTuple{D}; kwargs...) where {T,D} = analyze(fb, convert(ForwardDiff.Dual, px), nBlocks; kwargs...)
 
 analyze(cc::Cnsolt{TF,D}, px::AbstractMatrix{TX}, nBlocks::NTuple{D}; kwargs...) where {TF,TX,D} = analyze_cnsolt(Val{cc.category}, px, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 

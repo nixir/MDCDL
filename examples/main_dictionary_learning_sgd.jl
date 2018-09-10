@@ -2,6 +2,7 @@
 
 using LinearAlgebra
 using MDCDL
+using ForwardDiff
 using TestImages
 # using Images
 using ColorTypes
@@ -16,26 +17,26 @@ using Dates
 cnt = 0
 
 # output file name
-const doWriteResults = true
+doWriteResults = true
 
 # data dimension
-const D = 2
+D = 2
 # decimation factor
-const df = (4,4)
+df = (2,2)
 # polyphase order
-const ord = (2,2)
+ord = (2,2)
 # number of symmetric/antisymmetric channel
-const nch = 18
+nch = 6
 
-const dt = Float64
+dt = Float64
 
-const η = 1e-4
+η = 1e-5
 
-const szSubData = tuple(fill(16 ,D)...)
-const nSubData = 32
-const nEpoch = 2
+szSubData = tuple(fill(16 ,D)...)
+nSubData = 64
+nEpoch = 200
 
-const sparsity = 0.6 # ∈ [0, 1.0]
+sparsity = 0.4 # ∈ [0, 1.0]
 #####################################
 
 resultsdir_parent = joinpath(@__DIR__, "results")
@@ -49,7 +50,7 @@ logfile = joinpath(resultsdir, "log")
 datafile = joinpath(resultsdir, "nsolt")
 
 nsolt = Cnsolt(dt, df, ord, nch)
-MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false)
+MDCDL.rand!(nsolt; isInitMat=true, isPropMat=false, isPropAng=false, isSymmetry=false)
 orgNsolt = deepcopy(nsolt)
 
 orgImg = Array{dt}(testimage("cameraman"))
@@ -79,11 +80,13 @@ for epoch = 1:nEpoch
 
         pvx = mdarray2polyphase(x, df)
         pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
+        θ, μ = getAngleParameters(nsolt)
 
-        grad = MDCDL.gradSqrdError(nsolt, pvx, pvy)
-        angs, mus = getAngleParameters(nsolt)
-        angs = angs - η*grad
-        setAngleParameters!(nsolt, angs, mus)
+        f(t) = norm(pvx.data - synthesize(Cnsolt(df, ord, nch, t, μ), pvy).data)^2/2
+        g(t) = ForwardDiff.gradient(f, t)
+
+        θ -= η*g(θ)
+        setAngleParameters!(nsolt, θ, μ)
 
         synthesizer = createSynthesizer(nsolt, x; shape=:vector)
         adjsyn = createAnalyzer(nsolt, x; shape=:vector)

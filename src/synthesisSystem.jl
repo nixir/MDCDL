@@ -1,6 +1,5 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
-using ForwardDiff
 
 function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     pvy = if syn.shape == :normal
@@ -38,7 +37,7 @@ function concatenateAtoms_cnsolt(category::Type, pvy::AbstractMatrix, nBlocks::N
 end
 
 function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,D}
-    pvy = copy(pvy)
+    pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
     nShift = fld(size(pvy, 2), nBlock)
     # submatrices
     y  = view(pvy, :, :)
@@ -65,7 +64,7 @@ function concatenateAtomsPerDims_cnsolt(::Type{Val{:TypeII}}, pvy::AbstractMatri
     nStages = fld(ordd, 2)
     chEven = 1:(P-1)
 
-    pvy = copy(pvy)
+    pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
     nShift = fld(size(pvy,2), nBlock)
     # submatrices
     ye  = view(pvy, 1:(P-1), :)
