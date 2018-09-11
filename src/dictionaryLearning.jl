@@ -1,6 +1,6 @@
 using ForwardDiff
 
-function train!(nsolt::CB, trainingSet::AbstractArray; epochs=1, verbose=1, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
+function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
     dict_vlevels = Dict(:none => 0, :standard => 1, :specified => 2)
     vlevel = if verbose isa Integer; verbose else dict_vlevels[verbose] end
 
@@ -8,7 +8,7 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs=1, verbose=1, sc_o
     for itr = 1:epochs
         K = length(trainingSet)
         lossvs = fill(Inf, K)
-        vlevel >= 1 && println("---------- begin epoch #$itr ----------")
+        # vlevel >= 1 && println("--- begin epoch #$itr")
         for k = 1:K
             x = trainingSet[k]
             setAngleParameters!(nsolt, θ, μ)
@@ -20,8 +20,8 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs=1, verbose=1, sc_o
             vlevel >= 2 && println("epoch #$itr, data #$k: loss = $loss_du.")
         end
         if vlevel >= 1
-            println("total loss = $(sum(lossvs))")
-            println("---------- finish epoch #$itr ----------")
+            println("--- epoch #$itr, total loss = $(sum(lossvs))")
+            # println("---------- finish epoch #$itr ----------")
         end
     end
     vlevel >= 1 && println("training finished.")
@@ -44,18 +44,18 @@ end
 
 updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getAngleParameters(nsolt)...)
 
-function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::AbstractArray, μ::AbstractArray; step_size::Real=1e-5, kwargs...) where {NS<:AbstractNsolt}
-    cpnsolt = deepcopy(nsolt)
+function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::AbstractArray, μ::AbstractArray; stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt}
     lossfcn(t) = begin
-        syn = createSynthesizer(setAngleParameters!(cpnsolt, θ, μ), size(x); shape=:vector)
+        cpnsolt = setAngleParameters!(similar(nsolt, eltype(t)), t, μ)
+        syn = createSynthesizer(cpnsolt, size(x); shape=:vector)
         norm(x - synthesize(syn, hy))^2/2
     end
     ∇loss(t) = ForwardDiff.gradient(lossfcn, t)
 
-    hoge = ∇loss(θ)
-    fuga = lossfcn(θ)
-    @show hoge fuga
-    θopt = θ - step_size*hoge
+    θopt = θ
+    for itr = 1:iterations
+        θopt -= stepsize * ∇loss(θ)
+    end
     loss_opt = lossfcn(θopt)
     return (θopt, μ, loss_opt,)
 end

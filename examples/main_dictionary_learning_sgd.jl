@@ -20,7 +20,7 @@ cnt = 0
 doWriteResults = true
 
 # choose NSOLT type (Rnsolt | Cnsolt)
-Nsolt = Cnsolt
+Nsolt = Rnsolt
 
 # data dimension
 D = 2
@@ -35,8 +35,8 @@ dt = Float64
 
 η = 1e-4
 
-szSubData = tuple(fill(32 ,D)...)
-nSubData = 64
+szSubData = tuple(fill(16 ,D)...)
+nSubData = 8
 nEpoch = 200
 
 sparsity = 0.6 # ∈ [0, 1.0]
@@ -85,7 +85,7 @@ for epoch = 1:nEpoch
         pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
         θ, μ = getAngleParameters(nsolt)
 
-        f(t) = norm(pvx.data - synthesize(setAngleParameters!(Nsolt(eltype(θ), df, ord, nch), θ, μ), pvy).data)^2/2
+        f(t) = begin norm(pvx.data - synthesize(setAngleParameters!(similar(nsolt, eltype(t)), t, μ), pvy).data)^2/2 end
         g(t) = ForwardDiff.gradient(f, t)
 
         θ -= η*g(θ)

@@ -2,7 +2,7 @@ module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
 using LinearAlgebra
 
-import Base: promote_rule
+import Base: promote_rule, eltype, similar
 import Random: rand!
 
 include("basicComplexDSP.jl")
@@ -37,6 +37,8 @@ abstract type CodeBook{T,D} end
 abstract type FilterBank{T,D} <: CodeBook{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
 abstract type AbstractNsolt{T,D} <: PolyphaseFB{T,D} end
+
+eltype(::Type{CB}) where {T,D,CB<:CodeBook{T,D}} = T
 
 struct Rnsolt{T,D} <: AbstractNsolt{T,D}
     category::Symbol
@@ -96,6 +98,8 @@ end
 
 promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsolt{promote_type(TA,TB),D}
 
+similar(nsolt::Rnsolt{T,D}, element_type::Type=T) where {T,D} = Rnsolt(element_type, nsolt.decimationFactor, nsolt.polyphaseOrder, nsolt.nChannels)
+
 struct Cnsolt{T,D} <: AbstractNsolt{T,D}
     category::Symbol
     decimationFactor::NTuple{D, Int}
@@ -151,6 +155,8 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
 end
 
 promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
+
+similar(nsolt::Cnsolt{T,D}, element_type::Type=T) where {T,D} = Cnsolt(element_type, nsolt.decimationFactor, nsolt.polyphaseOrder, nsolt.nChannels)
 
 struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int
