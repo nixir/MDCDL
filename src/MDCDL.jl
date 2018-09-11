@@ -75,7 +75,7 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
         Rnsolt(df, ppo, nChs, initMts, propMts)
     end
 
-    function Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}, initMts::Vector{S}, propMts::Vector{Vector{S}}) where {T,D,S<:AbstractArray{T}}
+    function Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}, initMts::Vector{MT}, propMts::Vector{Vector{MT}}) where {T,D,MT<:AbstractArray{T}}
         P = sum(nChs)
         M = prod(df)
         if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
@@ -87,8 +87,8 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
 
         categ = if nChs[1] == nChs[2]; :TypeI else :TypeII end
 
-        TM = if T <: AbstractFloat; T else Float64 end
-        mtxc = reverse(MDCDL.permdctmtx(TM, df...); dims=2)
+        TC = if T <: AbstractFloat; T else Float64 end
+        mtxc = reverse(permdctmtx(TC, df...); dims=2)
 
         new{T,D}(categ, df, ppo, nChs, initMts, propMts, mtxc)
     end
@@ -131,20 +131,20 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
                 ], fld(ppo[pd],2))...)
             for pd in 1:D]
         end
-        paramAngs = Vector{Vector{T}}[ [ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
+        paramAngs = Vector{Vector{T}}[ [ zeros(fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
 
         Cnsolt(df, ppo, nChs, initMts, propMts, paramAngs)
     end
-    
+
     function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
         if prod(df) > nChs
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
 
         categ = if iseven(nChs); :TypeI else :TypeII end
-        TM = if T <: AbstractFloat; T else Float64 end
-        sym = Diagonal{Complex{TM}}(ones(nChs))
-        mtxf = reverse(MDCDL.cdftmtx(TM, df...); dims=2)
+        TF = if T <: AbstractFloat; T else Float64 end
+        sym = Diagonal{Complex{TF}}(ones(nChs))
+        mtxf = reverse(cdftmtx(TF, df...); dims=2)
 
         new{T,D}(categ, df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end
