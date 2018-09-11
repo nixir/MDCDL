@@ -223,7 +223,7 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     elseif cs.shape == :augumented
         [ y[fill(:,D)..., p] for p in 1:cs.nChannels ]
     elseif cs.shape == :vector
-        ry = reshape(y, cs.insize..., cs.nChannels)
+        ry = reshape(y, fld.(cs.insize, df)..., cs.nChannels)
         [ ry[fill(:,D)..., p] for p in 1:cs.nChannels ]
     else
         error("Invalid augument")

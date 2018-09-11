@@ -2,14 +2,13 @@ module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
 using LinearAlgebra
 
-import Base.promote_rule
-import LinearAlgebra.adjoint
+import Base: promote_rule
 import Random: rand!
 
 include("basicComplexDSP.jl")
 
 export PolyphaseVector
-export FilterBank, PolyphaseFB, ParallelFB, Cnsolt, Rnsolt
+export FilterBank, PolyphaseFB, ParallelFB, AbstractNsolt, Cnsolt, Rnsolt
 export Multiscale, MultiLayerCsc
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
@@ -50,7 +49,33 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
 
     matrixC::Matrix
 
-    function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int, Int}) where {T,D}
+    # Constructors
+    Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
+
+    Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {D,T} = Rnsolt(T, df, ppo, (cld(nChs,2), fld(nChs,2)))
+
+    function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}) where {T,D}
+        if nChs[1] == nChs[2]   # Type-I R-NSOLT
+            initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
+            propMts = Vector{Matrix{T}}[
+                [
+                    (iseven(n) ? 1 : -1) .* Matrix(I, nChs[1], nChs[1])
+                for n in 1:ppo[pd] ]
+            for pd in 1:D ]
+        else                    # Type-II R-NSOLT
+            initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
+            chx, chn = maximum(nChs), minimum(nChs)
+            propMts = Vector{Matrix{T}}[
+                vcat(
+                    fill([ -Matrix(I, chn, chn), Matrix(I, chx, chx) ], fld(ppo[pd],2))...
+                )
+            for pd in 1:D ]
+        end
+
+        Rnsolt(df, ppo, nChs, initMts, propMts)
+    end
+
+    function Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}, initMts::Vector{S}, propMts::Vector{Vector{S}}) where {T,D,S<:AbstractArray{T}}
         P = sum(nChs)
         M = prod(df)
         if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
@@ -60,35 +85,12 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
             throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet. received values: decimationFactor=$df, nChannels=$nChs, polyphaseOrder = $ppo"))
         end
 
-        if nChs[1] == nChs[2]
-            categ = :TypeI
-            initMts = Array[ Matrix{T}(I, p, p) for p in nChs ]
-            propMts = Array[
-                Array[
-                    (iseven(n) ? 1 : -1) * Matrix{T}(I, nChs[1], nChs[1])
-                for n in 1:ppo[pd] ]
-            for pd in 1:D ]
-        else
-            categ = :TypeII
-            initMts = Array[ Matrix{T}(I, p, p) for p in nChs ]
-            chx, chn = maximum(nChs), minimum(nChs)
-            propMts = [
-                vcat(
-                    fill(Array[ -Matrix{T}(I, chn, chn), Matrix{T}(I, chx, chx) ], fld(ppo[pd],2))...
-                )
-            for pd in 1:D ]
-        end
+        categ = if nChs[1] == nChs[2]; :TypeI else :TypeII end
 
         TM = if T <: AbstractFloat; T else Float64 end
         mtxc = reverse(MDCDL.permdctmtx(TM, df...); dims=2)
 
         new{T,D}(categ, df, ppo, nChs, initMts, propMts, mtxc)
-    end
-    Rnsolt(t::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {D,T} = Rnsolt(t, df, ppo, (cld(nChs,2), fld(nChs,2)))
-    Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
-
-    function Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Integer,Tuple{Int, Int}}, θ::AbstractArray{T}, μ::AbstractArray) where {T,D}
-        setAngleParameters!(Rnsolt(T, df, ppo, nChs), θ, μ)
     end
 end
 
@@ -106,47 +108,46 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
     symmetry::Diagonal
     matrixF::Matrix
 
-    # constructor
-    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
-        if prod(df) > nChs
-            throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
-        end
+    Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
 
-        if iseven(nChs)
-            categ = :TypeI
-            initMts = Array[ Matrix{T}(I,nChs,nChs) ]
-            propMts = Array[
-                Array[
-                    (iseven(n) ? -1 : 1) * Matrix{T}(I,fld(nChs,2),fld(nChs,2))
+    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
+        if iseven(nChs) # Type-I C-NSOLT
+            initMts = Matrix{T}[ Matrix(I,nChs,nChs) ]
+            propMts = Vector{Matrix{T}}[
+                [
+                    (iseven(n) ? -1 : 1) * Matrix(I,fld(nChs,2),fld(nChs,2))
                 for n in 1:2*ppo[pd] ]
             for pd in 1:D ]
-        else
+        else            # Type-II C-NSOLT
             if any(isodd.(ppo))
                 throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
             end
             cch = cld(nChs, 2)
             fch = fld(nChs, 2)
-            categ = :TypeII
-            initMts = Array[ Matrix{T}(I, nChs, nChs) ]
-            propMts = [
-                vcat(fill(Array[
-                    Matrix{T}(I,fch,fch), -Matrix{T}(I,fch,fch), Matrix{T}(I,cch,cch), Matrix(Diagonal(vcat(fill(T(-1), fld(nChs,2))..., T(1))))
+            initMts = Matrix{T}[ Matrix(I, nChs, nChs) ]
+            propMts = Vector{Matrix{T}}[
+                vcat(fill([
+                    Matrix(I,fch,fch), -Matrix(I,fch,fch), Matrix(I,cch,cch), Matrix(Diagonal(vcat(fill(-1, fld(nChs,2))..., 1)))
                 ], fld(ppo[pd],2))...)
             for pd in 1:D]
         end
-        paramAngs = Array[
-            Array[ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ]
-        for pd in 1:D ]
+        paramAngs = Vector{Vector{T}}[ [ zeros(T,fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
 
+        Cnsolt(df, ppo, nChs, initMts, propMts, paramAngs)
+    end
+    
+    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
+        if prod(df) > nChs
+            throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
+        end
+
+        categ = if iseven(nChs); :TypeI else :TypeII end
         TM = if T <: AbstractFloat; T else Float64 end
         sym = Diagonal{Complex{TM}}(ones(nChs))
         mtxf = reverse(MDCDL.cdftmtx(TM, df...); dims=2)
 
         new{T,D}(categ, df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end
-    Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
-
-    Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int, θ::AbstractArray{T}, μ::AbstractArray; kwargs...) where {T,D} = setAngleParameters!(Cnsolt(T, df, ppo, nChs; kwargs...), θ, μ)
 end
 
 promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
