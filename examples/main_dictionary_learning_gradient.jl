@@ -48,7 +48,7 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
     global y
     subx = trainingIds[nd]
     x = orgImg[subx...]
-    hy = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
+    hy, loss_iht = MDCDL.iht(nsolt, x, y, sparsity; maxIterations=100, viewStatus=false, lt=(lhs,rhs)->isless(norm(lhs), norm(rhs)))
 
     pvx = mdarray2polyphase(x, df)
     pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))

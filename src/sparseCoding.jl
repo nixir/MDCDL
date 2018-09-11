@@ -87,7 +87,7 @@ function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, abs
     len = length(y0)
     yₖ = y0
     εx = Inf
-    # εy = Inf
+    εy = Inf
 
     x̃ = Φ(yₖ)
     for k = 1:iterations
@@ -97,16 +97,17 @@ function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, abs
         x̃ = Φ(yₖ)
 
         εx = norm(x - x̃)^2 / 2
+        εy = norm(yₖ - yₖ₋₁)
 
         if isverbose
-            println("number of Iterations $k: err = $εx ")
+            println("number of Iterations $k: err = $εx, ||Δy|| = $εy.")
         end
 
-        if εx <= absTol
+        if εy <= absTol
             break
         end
     end
-    yₖ
+    (yₖ, εx)
 end
 
 # Fenchel-Moreau conjugate function

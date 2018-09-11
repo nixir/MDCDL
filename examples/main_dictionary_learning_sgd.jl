@@ -79,13 +79,13 @@ for epoch = 1:nEpoch
         global y
         subx = trainingIds[nd]
         x = orgImg[subx...]
-        hy = MDCDL.iht(nsolt, x, y, nSparseCoefs; iterations=100, isverbose=false)
+        hy, loss_iht = MDCDL.iht(nsolt, x, y, nSparseCoefs; iterations=100, isverbose=false)
 
         pvx = mdarray2polyphase(x, df)
         pvy = mdarray2polyphase(reshape(hy, fld.(szSubData, df)..., sum(nch)))
         θ, μ = getAngleParameters(nsolt)
 
-        f(t) = norm(pvx.data - synthesize(Nsolt(df, ord, nch, t, μ), pvy).data)^2/2
+        f(t) = norm(pvx.data - synthesize(setAngleParameters!(Nsolt(eltype(θ), df, ord, nch), θ, μ), pvy).data)^2/2
         g(t) = ForwardDiff.gradient(f, t)
 
         θ -= η*g(θ)
