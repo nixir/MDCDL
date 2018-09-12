@@ -10,6 +10,8 @@ using Dates
 Nsolt = Rnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64
+# NSOLT dimensions
+D = 2
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
 df = (2,2)
 # polyphase order: (<:NTuple{D,Int} where D)
@@ -24,20 +26,32 @@ szx = (16,16)
 nSubData = 32
 
 # path of log files (do nothing if isa(logdir, Nothing))
-# tm = Dates.format(now(), "yyyy_mm_dd_SS_sss")
-# logdir = joinpath(@__DIR__, "results", tm)
-logdir = nothing
+tm = Dates.format(now(), "yyyy_mm_dd_SS_sss")
+logdir = joinpath(@__DIR__, "results", tm)
+# logdir = nothing
 
 # options for sparse coding
-sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
+sc_options1 = ( iterations = 500, sparsity = 0.5, filter_domain=:convolution)
 # options for dictionary update
-du_options = ( iterations = 1, stepsize = 1e-3,)
+du_options1 = ( iterations = 100, stepsize = 1e-3,)
 
 # general options of dictionary learning
-options = ( epochs  = 100,
+options1 = ( epochs  = 30,
             verbose = :standard,
-            sc_options = sc_options,
-            du_options = du_options,
+            sc_options = sc_options1,
+            du_options = du_options1,
+            logdir = logdir,)
+
+# options for sparse coding
+sc_options2 = ( iterations = 500, sparsity = 0.5, filter_domain=:convolution)
+# options for dictionary update
+du_options2 = ( iterations = 100, stepsize = 1e-4,)
+
+# general options of dictionary learning
+options2 = ( epochs  = 3000,
+            verbose = :standard,
+            sc_options = sc_options2,
+            du_options = du_options2,
             logdir = logdir,)
 ####################################
 
@@ -53,13 +67,16 @@ trainingIds = map(1:nSubData) do nsd
 end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
 
+nsolt_core = Nsolt(TP, df, (fill(0,D)...,), nch)
+MDCDL.rand!(nsolt_core, isSymmetry = false)
+MDCDL.train!(nsolt_core, trainingSet; options1...)
+
 # create NSOLT instance
-nsolt = Nsolt(TP, df, ord, nch)
-# set initial matrices as random orthonormal ones.
-MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
+nsolt = similar(nsolt_core, TP, df, ord, nch)
+nsolt.initMatrices .= nsolt_core.initMatrices
 
 # dictionary learning
-MDCDL.train!(nsolt, trainingSet; options...)
+MDCDL.train!(nsolt, trainingSet; options2...)
 
-# 
+#
 #plot(nsolt)
