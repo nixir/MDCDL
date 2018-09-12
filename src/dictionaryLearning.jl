@@ -1,14 +1,13 @@
 using ForwardDiff
 
 function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
-    dict_vlevels = Dict(:none => 0, :standard => 1, :specified => 2)
+    dict_vlevels = Dict(:none => 0, :standard => 1, :specified => 2, :loquacious => 3)
     vlevel = if verbose isa Integer; verbose else dict_vlevels[verbose] end
 
     θ, μ = getAngleParameters(nsolt)
     for itr = 1:epochs
         K = length(trainingSet)
         lossvs = fill(Inf, K)
-        # vlevel >= 1 && println("--- begin epoch #$itr")
         for k = 1:K
             x = trainingSet[k]
             setAngleParameters!(nsolt, θ, μ)
@@ -17,11 +16,10 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
             θ, μ, loss_du = updateDictionary(nsolt, x, hy, θ, μ; du_options...)
             lossvs[k] = loss_du
 
-            vlevel >= 2 && println("epoch #$itr, data #$k: loss = $loss_du.")
+            vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $loss_sp, loss(Dic. update) = $loss_du.")
         end
         if vlevel >= 1
             println("--- epoch #$itr, total loss = $(sum(lossvs))")
-            # println("---------- finish epoch #$itr ----------")
         end
     end
     vlevel >= 1 && println("training finished.")
