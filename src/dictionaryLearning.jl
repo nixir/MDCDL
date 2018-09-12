@@ -28,18 +28,22 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
     return setAngleParameters!(nsolt, θ, μ)
 end
 
-function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; sparsity=1.0, iterations::Integer=400, kwargs...)
-    # ana = ConvolutionalOperator(:analyzer, nsolt, size(x); shape=:vector)
-    # syn = ConvolutionalOperator(:synthesizer, nsolt, size(x); shape=:vector)
-    ana = createAnalyzer(nsolt, size(x); shape=:vector)
-    syn = createSynthesizer(nsolt, size(x); shape=:vector)
+function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, kwargs...)
+    ana, syn = if filter_domain == :convolution
+        (ConvolutionalOperator(:analyzer, nsolt, size(x); shape=:vector),
+        ConvolutionalOperator(:synthesizer, nsolt, size(x); shape=:vector),)
+    else # == :polyphase
+        (createAnalyzer(nsolt, size(x); shape=:vector),
+        createSynthesizer(nsolt, size(x); shape=:vector),)
+    end
     y0 = analyze(ana, x)
 
+    # number of non-zero coefficients
     K = trunc(Int, sparsity * length(x))
 
     y_opt, loss_iht = iht(syn, ana, x, y0, K; iterations=iterations)
 
-    return(y_opt, loss_iht)
+    return (y_opt, loss_iht)
 end
 
 updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getAngleParameters(nsolt)...)

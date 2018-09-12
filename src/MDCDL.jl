@@ -260,7 +260,11 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     end
 
     function ConvolutionalOperator(mode::Symbol, pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}; kwargs...) where {T,D}
-        afs = getAnalysisFilters(pfb)
+        afs = if mode == :analyzer
+            getAnalysisFilters(pfb)
+        elseif mode == :synthesizer
+            getSynthesisFilters(pfb)
+        end
         ConvolutionalOperator(mode, afs, sz, pfb.decimationFactor, pfb.polyphaseOrder, sum(pfb.nChannels); kwargs...)
     end
 

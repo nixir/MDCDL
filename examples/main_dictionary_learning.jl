@@ -20,8 +20,9 @@ end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
 
 nsolt = Nsolt(df, ord, nch)
+MDCDL.rand!(nsolt, isPropMat = false, isSymmetry = false)
 
-sc_options = ( iterations = 400, sparsity = 0.6,)
+sc_options = ( iterations = 400, sparsity = 0.4, filter_domain=:convolution)
 du_options = ( iterations = 1, stepsize = 1e-3,)
 
 options = ( epochs  = 100,
