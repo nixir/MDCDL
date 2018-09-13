@@ -1,11 +1,12 @@
-function mat2rotations(mtx::AbstractMatrix{T}) where T <: Real
-    sz = size(mtx)
+function mat2rotations(mtx0::AbstractMatrix{T}) where T <: Real
+    sz = size(mtx0)
     P = sz[1]
 
     # res = Array{T}(undef, fld(P*(P-1),2))
-    res = similar(mtx, fld(P*(P-1),2))
+    res = similar(mtx0, fld(P*(P-1),2))
     ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
 
+    mtx = Array(mtx0)
     for nr in 1:length(ids)
         a = givens(mtx, ids[nr][1], ids[nr][2], ids[nr][1])
         g = a[1]
@@ -17,7 +18,7 @@ function mat2rotations(mtx::AbstractMatrix{T}) where T <: Real
         R[g.i1, g.i2] =  g.s
         R[g.i2, g.i1] = -g.s
         R[g.i2, g.i2] =  g.c
-        mtx = R*mtx
+        mtx .= R*mtx
     end
     (res, round.(diag(mtx)))
 end
@@ -38,7 +39,7 @@ function rotations2mat(θs::AbstractArray{TA}, sig::AbstractArray{TS}) where {TA
         R[idx2, idx1] =  s
         R[idx2, idx2] =  c
 
-        mtx = mtx*R
+        mtx .= mtx*R
     end
     mtx * diagm(0 => sig)
 end
