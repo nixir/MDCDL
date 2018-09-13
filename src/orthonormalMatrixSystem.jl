@@ -2,7 +2,8 @@ function mat2rotations(mtx::AbstractMatrix{T}) where T <: Real
     sz = size(mtx)
     P = sz[1]
 
-    res = Array{T}(undef, fld(P*(P-1),2))
+    # res = Array{T}(undef, fld(P*(P-1),2))
+    res = similar(mtx, fld(P*(P-1),2))
     ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
 
     for nr in 1:length(ids)

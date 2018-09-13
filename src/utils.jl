@@ -10,13 +10,13 @@ function rand!(cnsolt::Cnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=tr
         cnsolt.symmetry .= Diagonal(exp.(1im*rand(P)))
     end
     if isInitMat
-        cnsolt.initMatrices[1] = Array{T}(qr(rand(P,P)).Q)
+        cnsolt.initMatrices[1] = T.(qr(rand(P,P)).Q)
     end
 
     for d = 1:D
         if isPropMat
             map!(cnsolt.propMatrices[d], cnsolt.propMatrices[d]) do A
-                Array(qr(rand(T,size(A))).Q)
+                T.(qr(rand(T,size(A))).Q)
             end
         end
 
@@ -32,14 +32,14 @@ function rand!(rnsolt::Rnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=tr
     hP = fld(P,2)
 
     if isInitMat
-        rnsolt.initMatrices[1] = Array{T}(qr(rand(size(rnsolt.initMatrices[1])...)).Q)
-        rnsolt.initMatrices[2] = Array{T}(qr(rand(size(rnsolt.initMatrices[2])...)).Q)
+        rnsolt.initMatrices[1] = T.(qr(rand(size(rnsolt.initMatrices[1])...)).Q)
+        rnsolt.initMatrices[2] = T.(qr(rand(size(rnsolt.initMatrices[2])...)).Q)
     end
 
     for d = 1:D
         if isPropMat
             map!(rnsolt.propMatrices[d], rnsolt.propMatrices[d]) do A
-                Array(qr(rand(T,size(A))).Q)
+                T.(qr(rand(T,size(A))).Q)
             end
         end
     end
