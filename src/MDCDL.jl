@@ -13,9 +13,9 @@ export Multiscale, MultiLayerCsc
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
 export serialize, deserialize
-# export getAnalysisBank
-export getAnalysisFilters, getSynthesisFilters
-export getAngleParameters, setAngleParameters!
+export analysisbank
+export kernels, analysiskernels, synthesiskernels
+export getrotations, setrotations!
 export mdarray2polyphase, polyphase2mdarray
 export iht
 # export Analyzer, VecAnalyzer
@@ -263,9 +263,9 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
 
     function ConvolutionalOperator(mode::Symbol, pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}; kwargs...) where {T,D}
         afs = if mode == :analyzer
-            getAnalysisFilters(pfb)
+            analysiskernels(pfb)
         elseif mode == :synthesizer
-            getSynthesisFilters(pfb)
+            synthesiskernels(pfb)
         end
         ConvolutionalOperator(mode, afs, sz, pfb.decimationFactor, pfb.polyphaseOrder, sum(pfb.nChannels); kwargs...)
     end

@@ -42,7 +42,7 @@ end
 y0 = msanalyzer(orgImg[trainingIds[1]...])
 sparsity = fld(length(y0),4)
 
-angs0, mus0 = getAngleParameters(nsolt)
+angs0, mus0 = getrotations(nsolt)
 angs0s = angs0[sum(nch):end]
 
 opt = Opt(:GN_CRS2_LM, length(angs0s))
@@ -70,7 +70,7 @@ for epoch = 1:nEpoch
             # cnt::Int += 1
 
             angsvm1 = vcat(zeros(sum(nch)-1), angs)
-            setAngleParameters!(nsolt, angsvm1, mus0)
+            setrotations!(nsolt, angsvm1, mus0)
             dist = x .- mssynthesizer(hy)
             cst = norm(dist)^2
 
@@ -83,7 +83,7 @@ for epoch = 1:nEpoch
         errs[idx] = minf
 
         minxt = vcat(zeros(sum(nch)-1), minx);
-        setAngleParameters!(nsolt, minxt, mus0)
+        setrotations!(nsolt, minxt, mus0)
         y = msanalyzer(x)
         @printf("dataset %3d: cost = %.4e\n", idx, errs[idx])
     end

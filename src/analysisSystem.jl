@@ -47,9 +47,9 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvx::AbstractMatrix
 
         x .= B' * x
         if isodd(k)
-            shiftForward!(Val{border}, xl, nShift)
+            shiftforward!(Val{border}, xl, nShift)
         else
-            shiftBackward!(Val{border}, xu, nShift)
+            shiftbackward!(Val{border}, xu, nShift)
         end
         x .= B * x
 
@@ -74,7 +74,7 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvx::AbstractMatri
         B = getMatrixB(P, paramAngsd[2k-1])
 
         xe  .= B' * xe
-        shiftForward!(Val{border}, xl1, nShift)
+        shiftforward!(Val{border}, xl1, nShift)
         xe  .= B * xe
 
         xu1 .= propMtsd[4k-3] * xu1
@@ -84,7 +84,7 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvx::AbstractMatri
         B = getMatrixB(P, paramAngsd[2k])
 
         xe  .= B' * xe
-        shiftBackward!(Val{border}, xu1, nShift)
+        shiftbackward!(Val{border}, xu1, nShift)
         xe  .= B * xe
 
         xl2 .= propMtsd[4k]   * xl2
@@ -127,9 +127,9 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvx::AbstractMatrix
         xu .= tu; xl .= tl
 
         if isodd(k)
-            shiftForward!(Val{border}, xl, nShift)
+            shiftforward!(Val{border}, xl, nShift)
         else
-            shiftBackward!(Val{border}, xu, nShift)
+            shiftbackward!(Val{border}, xu, nShift)
         end
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
         xu .= tu; xl .= tl
@@ -162,7 +162,7 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvx::AbstractMatri
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
         xu .= tu; xl .= tl
 
-        shiftForward!(Val{border}, xs1, nShift)
+        shiftforward!(Val{border}, xs1, nShift)
 
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
         xu .= tu; xl .= tl
@@ -173,7 +173,7 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvx::AbstractMatri
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
         xu .= tu; xl .= tl
 
-        shiftBackward!(Val{border}, xs2, nShift)
+        shiftbackward!(Val{border}, xs2, nShift)
 
         tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
         xu .= tu; xl .= tl

@@ -79,7 +79,7 @@ using Random
             nsolt = Cnsolt(df, ord, nch)
             rand!(nsolt)
 
-            afb = MDCDL.getAnalysisBank(nsolt)
+            afb = MDCDL.analysisbank(nsolt)
             hsafb = nsolt.symmetry' * afb
 
             @test hsafb ≈ conj(reverse(hsafb; dims=2))
@@ -120,7 +120,7 @@ using Random
             analyzer = createAnalyzer(nsolt, x; shape=:normal)
             ya = analyzer(x)
 
-            afs = getAnalysisFilters(nsolt)
+            afs = analysiskernels(nsolt)
             myfilter(A, h) = begin
                 ha = zero(A)
                 ha[UnitRange.(1, size(h))...] = h
@@ -148,7 +148,7 @@ using Random
             synthesizer = createSynthesizer(nsolt, ord.+1; shape=:normal)
             x = synthesizer(y)
 
-            sfs = getSynthesisFilters(nsolt)
+            sfs = synthesiskernels(nsolt)
             myfilter(A, h) = begin
                 ha = zero(A)
                 ha[UnitRange.(1, size(h))...] = h
@@ -169,8 +169,8 @@ using Random
             dst = Cnsolt(df, ord, nch)
             rand!(src)
 
-            (angs, mus) = getAngleParameters(src)
-            setAngleParameters!(dst, angs, mus)
+            (angs, mus) = getrotations(src)
+            setrotations!(dst, angs, mus)
 
             @test all(src.initMatrices .≈ dst.initMatrices)
             foreach(src.propMatrices, dst.propMatrices) do propSrc, propDst

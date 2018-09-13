@@ -49,5 +49,3 @@ end
 function rand(cb::CodeBook; kwargs...)
     rand!(deepcopy(cb); kwargs...)
 end
-
-randomInit!(cb::CodeBook; kwargs...) = rand!(cb; kwargs...)

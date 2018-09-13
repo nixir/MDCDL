@@ -40,7 +40,7 @@ end
 y0 = analyze(nsolt, orgImg[trainingIds[1]...]; shape=:vector)
 sparsity = fld(length(y0), 8)
 
-angs0, mus0 = getAngleParameters(nsolt)
+angs0, mus0 = getrotations(nsolt)
 # angs0s = angs0[nch[1]:end]
 
 y = y0
@@ -60,7 +60,7 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
         cnt::Int += 1
         tfb = Rnsolt(dt, df, ord, nch)
 
-        setAngleParameters!(tfb, angs, mus0)
+        setrotations!(tfb, angs, mus0)
 
         grad .= MDCDL.gradSqrdError(tfb, pvx, pvy)
 
@@ -90,7 +90,7 @@ for epoch = 1:nEpoch, nd in 1:length(trainingIds)
     ##### #####
 
     # minxt = vcat(zeros(dt, sum(nch)-1), minx);
-    setAngleParameters!(nsolt, minx, mus0)
+    setrotations!(nsolt, minx, mus0)
     y = analyze(nsolt, x; shape=:vector)
     # println("Epoch: $epoch, No.: $nd, cost = $(minf)")
     @printf("Epoch: %4d, No.: %3d, cost = %.6e\n", epoch, nd, minf)

@@ -18,9 +18,9 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-getAnalysisBank(cc::AbstractNsolt) = getAnalysisBank(Val{cc.category}, cc)
+analysisbank(cc::AbstractNsolt) = analysisbank(Val{cc.category}, cc)
 
-function getAnalysisBank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
+function analysisbank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -58,7 +58,7 @@ function getAnalysisBank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
     cc.symmetry * ppm
 end
 
-function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
+function analysisbank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -114,7 +114,7 @@ function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     cc.symmetry * ppm
 end
 
-function getAnalysisBank(::Type{Val{:TypeI}}, rc::Rnsolt{T,D}) where {D,T}
+function analysisbank(::Type{Val{:TypeI}}, rc::Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     nch = rc.nChannels
     P = sum(nch)
@@ -151,7 +151,7 @@ function getAnalysisBank(::Type{Val{:TypeI}}, rc::Rnsolt{T,D}) where {D,T}
     ppm
 end
 
-function getAnalysisBank(::Type{Val{:TypeII}}, rc::Rnsolt{T,D}) where {D,T}
+function analysisbank(::Type{Val{:TypeII}}, rc::Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     M = prod(df)
     ord = rc.polyphaseOrder
@@ -204,11 +204,13 @@ function getAnalysisBank(::Type{Val{:TypeII}}, rc::Rnsolt{T,D}) where {D,T}
     ppm
 end
 
-function getAnalysisFilters(pfb::PolyphaseFB)
+kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))
+
+function analysiskernels(pfb::PolyphaseFB)
     df = pfb.decimationFactor
     P = sum(pfb.nChannels)
 
-    afb = getAnalysisBank(pfb)
+    afb = analysisbank(pfb)
     ordm = pfb.polyphaseOrder .+ 1
 
     return map(1:P) do p
@@ -223,8 +225,8 @@ function getAnalysisFilters(pfb::PolyphaseFB)
     end
 end
 
-function getSynthesisFilters(cc::AbstractNsolt)
-    map(getAnalysisFilters(cc)) do af
+function synthesiskernels(cc::AbstractNsolt)
+    map(analysiskernels(cc)) do af
         reshape(af .|> conj |> vec |> reverse, size(af))
     end
 end
@@ -301,23 +303,23 @@ function butterfly!(x::AbstractMatrix, p::Integer)
     x[end-(p-1):end,:] .= (xu - xl) / sqrt(2)
 end
 
-function shiftForward!(::Type{Val{:circular}}, mtx::AbstractMatrix, nShift::Integer)
+function shiftforward!(::Type{Val{:circular}}, mtx::AbstractMatrix, nShift::Integer)
     mtx .= circshift(mtx, (0, nShift))
 end
-shiftBackward!(::Type{Val{:circular}}, mtx, nShift) = shiftForward!(Val{:circular}, mtx, -nShift)
+shiftbackward!(::Type{Val{:circular}}, mtx, nShift) = shiftforward!(Val{:circular}, mtx, -nShift)
 
-function shiftForward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
+function shiftforward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
     mtx[:,1+nShift:end] .= mtx[:,1:end-nShift]
     mtx[:,1:nShift] .= 0
     mtx
 end
 
-function shiftBackward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
+function shiftbackward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
     mtx[:,1:end-nShift] .= mtx[:,1+nShift:end]
     mtx[:,end-nShift+1:end] .= 0
     mtx
 end
 
-shiftForward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftForward!(tp, deepcopy(mtx), nShift)
+shiftforward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftforward!(tp, deepcopy(mtx), nShift)
 
-shiftBackward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftBackward!(tp, deepcopy(mtx), nShift)
+shiftbackward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftbackward!(tp, deepcopy(mtx), nShift)

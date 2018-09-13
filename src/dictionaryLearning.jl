@@ -7,7 +7,7 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
     dict_vlevels = Dict(:none => 0, :standard => 1, :specified => 2, :loquacious => 3)
     vlevel = if verbose isa Integer; verbose else dict_vlevels[verbose] end
 
-    θ, μ = getAngleParameters(nsolt)
+    θ, μ = getrotations(nsolt)
     for itr = 1:epochs
         K = length(trainingSet)
         loss_sps = fill(Inf, K)
@@ -20,7 +20,7 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
 
-            setAngleParameters!(nsolt, θ, μ)
+            setrotations!(nsolt, θ, μ)
         end
         if vlevel >= 1
             println("--- epoch #$itr, total sum(loss) = $(sum(loss_dus)), var(loss) = $(var(loss_dus))")
@@ -31,7 +31,7 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
         savelogs(logdir, nsolt, itr, log_params...)
     end
     vlevel >= 1 && println("training finished.")
-    return setAngleParameters!(nsolt, θ, μ)
+    return setrotations!(nsolt, θ, μ)
 end
 
 function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, kwargs...)
@@ -52,11 +52,11 @@ function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; sparsity=1.0, 
     return (y_opt, loss_iht)
 end
 
-updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getAngleParameters(nsolt)...)
+updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getrotations(nsolt)...)
 
 function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::AbstractArray, μ::AbstractArray; stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt}
     lossfcn(t) = begin
-        cpnsolt = setAngleParameters!(similar(nsolt, eltype(t)), t, μ)
+        cpnsolt = setrotations!(similar(nsolt, eltype(t)), t, μ)
         syn = createSynthesizer(cpnsolt, size(x); shape=:vector)
         norm(x - synthesize(syn, hy))^2/2
     end

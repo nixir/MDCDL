@@ -2,12 +2,12 @@
 #TODO: 角度パラメータのベクトル化手法の仕様をどこかに記述する．
 #TODO: コードが汚いのでリファクタリングする
 
-getAngleParameters(cc::AbstractNsolt) = getAngleParameters(Val{cc.category}, cc)
-setAngleParameters!(cc::AbstractNsolt, θ, μ) = setAngleParameters!(Val{cc.category}, cc, θ, μ)
+getrotations(cc::AbstractNsolt) = getrotations(Val{cc.category}, cc)
+setrotations!(cc::AbstractNsolt, θ, μ) = setrotations!(Val{cc.category}, cc, θ, μ)
 
-setAngleParameters(cc::AbstractNsolt, args...) = setAngleParameters!(deepcopy(cc), args...)
+setrotations(cc::AbstractNsolt, args...) = setrotations!(deepcopy(cc), args...)
 
-function getAngleParameters(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
+function getrotations(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -46,7 +46,7 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -95,7 +95,7 @@ function setAngleParameters!(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}, angs::Abstrac
     return cc
 end
 
-function getAngleParameters(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
+function getrotations(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -137,7 +137,7 @@ function getAngleParameters(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setAngleParameters!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -201,7 +201,7 @@ function setAngleParameters!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::Abstra
     return cc
 end
 
-function getAngleParameters(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}) where {D,T}
+function getrotations(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}) where {D,T}
     P = sum(cc.nChannels)
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -242,7 +242,7 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = sum(cc.nChannels)
     df = cc.decimationFactor
@@ -288,7 +288,7 @@ function setAngleParameters!(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}, angs::Abstrac
     return cc
 end
 
-function getAngleParameters(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}) where {D,T}
+function getrotations(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}) where {D,T}
     nch = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -330,7 +330,7 @@ function getAngleParameters(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setAngleParameters!(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     nch = cc.nChannels
     df = cc.decimationFactor

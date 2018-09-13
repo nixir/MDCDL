@@ -51,9 +51,9 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvy::AbstractM
         y .= B' * y
 
         if isodd(k)
-            shiftBackward!(Val{border}, yl, nShift)
+            shiftbackward!(Val{border}, yl, nShift)
         else
-            shiftForward!(Val{border}, yu, nShift)
+            shiftforward!(Val{border}, yu, nShift)
         end
         y .= B * y
     end
@@ -79,7 +79,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
 
         B = getMatrixB(P, paramAngsd[2k])
         ye  .= B' * ye
-        shiftForward!(Val{border}, yu1, nShift)
+        shiftforward!(Val{border}, yu1, nShift)
         ye  .= B * ye
 
         # first step
@@ -88,7 +88,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
 
         B = getMatrixB(P, paramAngsd[2k-1])
         ye  .= B' * ye
-        shiftBackward!(Val{border}, yl1, nShift)
+        shiftbackward!(Val{border}, yl1, nShift)
         ye  .= B * ye
     end
     return ipermutedimspv(pvy, nBlock)
@@ -125,9 +125,9 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvy::AbstractM
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
         if isodd(k)
-            shiftBackward!(Val{border}, yl, nShift)
+            shiftbackward!(Val{border}, yl, nShift)
         else
-            shiftForward!(Val{border}, yu, nShift)
+            shiftforward!(Val{border}, yu, nShift)
         end
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
@@ -160,7 +160,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
 
-        shiftForward!(Val{border}, ys2, nShift)
+        shiftforward!(Val{border}, ys2, nShift)
 
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
@@ -171,7 +171,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
 
-        shiftBackward!(Val{border}, ys1, nShift)
+        shiftbackward!(Val{border}, ys1, nShift)
 
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
