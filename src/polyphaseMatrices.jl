@@ -225,7 +225,7 @@ end
 
 function getSynthesisFilters(cc::AbstractNsolt)
     map(getAnalysisFilters(cc)) do af
-        reshape(reverse(vec(conj.(af));dims=1), size(af))
+        reshape(af .|> conj |> vec |> reverse, size(af))
     end
 end
 
@@ -235,7 +235,6 @@ function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where 
         error("size error. input data: $(size(x)), block size: $(szBlock).")
     end
 
-    # outdata = Matrix{TX}(undef, prod(szBlock), prod(nBlocks))
     outdata = similar(x, prod(szBlock), prod(nBlocks))
     tiles = collect(TileIterator(axes(x), szBlock))
     for idx in LinearIndices(nBlocks)
@@ -245,7 +244,6 @@ function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where 
 end
 
 function mdarray2polyphase(x::AbstractArray{T,D}) where {T,D}
-    # outdata = Matrix{T}(undef, size(x,D), prod(size(x)[1:D-1]))
     nBlocks = size(x)[1:D-1]
     outdata = similar(x, size(x,D), prod(nBlocks))
     for p = 1:size(x,D)
@@ -269,7 +267,6 @@ end
 
 function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
     P = size(x.data,1)
-    # output = Array{T,D+1}(undef, x.nBlocks..., P)
     output = similar(x.data, x.nBlocks..., P)
 
     for p = 1:P
@@ -296,7 +293,7 @@ function ipermutedimspv(x::AbstractMatrix, nShift::Integer)
     data
 end
 
-function butterfly!(x::AbstractArray{T,2}, p::Integer) where T
+function butterfly!(x::AbstractMatrix, p::Integer)
     xu = x[1:p,:]
     xl = x[end-(p-1):end,:]
 

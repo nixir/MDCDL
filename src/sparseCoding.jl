@@ -124,38 +124,32 @@ function iht(a::AbstractOperator, s::AbstractOperator, x, args...; kwargs...)
 end
 
 # prox of l2-norm
-function proxL2(x, λ::Real)
-    max(1.0 - λ/norm(x), 0) .* x
-end
+proxL2(x::AbstractArray, λ::Real) = max(1.0 - λ/norm(x), 0) .* x
 
 # prox. of mixed l1- and l2- norm
-function groupshrink(x, λ::Real)
-    proxL2.(x, λ)
-end
+groupshrink(x, λ::Real) = proxL2.(x, λ)
 
 # prox. of l1-norm
-softshrink(x::AbstractArray{T}, λ::Real) where T = softshrink.(x, λ)
-function softshrink(x, λ::Real)
-    max(1.0 - λ / abs(x), 0) * x
-end
+softshrink(x::AbstractArray, λ::Real) = softshrink.(x, λ)
+softshrink(x, λ::Real) = max(1.0 - λ / abs(x), 0) * x
 
 # prox. of nuclear norm.
-function shrinkSingularValue(A::Matrix, λ::Real)
-    U, S, V = svd(A,thin=true)
-    U * diagm(softshrink(S, λ)) * V'
+function shrinkSingularValue(A::AbstractMatrix, λ::Real)
+    X = svd(A, full=false)
+    X.U * Diagonal(softshrink(X.S, λ)) * X.Vt
 end
 
-function boxProj(x, lowerBound::Real, upperBound::Real)
+function boxProj(x::AbstractArray, lowerBound::Real, upperBound::Real)
     max.(min.(x,upperBound),lowerBound)
 end
 
-function l2ballProj(x::T, radius::Real, centerVec::T) where T
+function l2ballProj(x::AbstractArray, radius::Real, c::AbstractArray)
     dist = norm(x - centerVec)
 
     if dist <= radius
         x
     else
-        centerVec + λ/dist*(x - centerVec)
+        (λ / dist) * (x - c) + c
     end
 end
 
