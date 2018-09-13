@@ -3,7 +3,7 @@ using Random
 import Random.rand
 import Random.rand!
 
-function rand!(cnsolt::MDCDL.Cnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T}
+function rand!(cnsolt::Cnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T}
     P = sum(cnsolt.nChannels)
 
     if isSymmetry
@@ -27,7 +27,7 @@ function rand!(cnsolt::MDCDL.Cnsolt{T,D}; isInitMat=true, isPropMat=true, isProp
     cnsolt
 end
 
-function rand!(rnsolt::MDCDL.Rnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T} # "isPropAng" and "isSymmetry" are not used.
+function rand!(rnsolt::Rnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T} # "isPropAng" and "isSymmetry" are not used.
     P = sum(rnsolt.nChannels)
     hP = fld(P,2)
 
@@ -47,7 +47,7 @@ function rand!(rnsolt::MDCDL.Rnsolt{T,D}; isInitMat=true, isPropMat=true, isProp
 end
 
 function rand(cb::CodeBook; kwargs...)
-    MDCDL.rand!(deepcopy(cb); kwargs...)
+    rand!(deepcopy(cb); kwargs...)
 end
 
 randomInit!(cb::CodeBook; kwargs...) = rand!(cb; kwargs...)

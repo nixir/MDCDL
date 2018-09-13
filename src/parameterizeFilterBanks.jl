@@ -7,7 +7,7 @@ setAngleParameters!(cc::AbstractNsolt, θ, μ) = setAngleParameters!(Val{cc.cate
 
 setAngleParameters(cc::AbstractNsolt, args...) = setAngleParameters!(deepcopy(cc), args...)
 
-function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}) where {D,T}
+function getAngleParameters(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -18,7 +18,7 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}) where {D
     # nParams = vcat(nParamsInit, nParamsProps...)
 
     # Angles ang MUS
-    angsInit, musInit = MDCDL.mat2rotations(cc.initMatrices[1])
+    angsInit, musInit = mat2rotations(cc.initMatrices[1])
 
     angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
@@ -26,8 +26,8 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}) where {D
         angsPropPerDim = Array{Vector{T}}(undef, ord[d])
         musPropPerDim = Array{Vector{T}}(undef, ord[d])
         for k = 1:ord[d]
-            (apw, mpw) = MDCDL.mat2rotations(cc.propMatrices[d][2*k-1])
-            (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][2*k])
+            (apw, mpw) = mat2rotations(cc.propMatrices[d][2*k-1])
+            (apu, mpu) = mat2rotations(cc.propMatrices[d][2*k])
             apb = cc.paramAngles[d][k]
 
             angsPropPerDim[k] = vcat(apw,apu,apb)
@@ -46,7 +46,7 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}) where {D
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setAngleParameters!(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -60,7 +60,7 @@ function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}, angs::A
     # set Cnsolt.initMatrices
     angsInit = angs[1:nParamsInit]
     musInit = mus[1:P]
-    cc.initMatrices[1] = MDCDL.rotations2mat(angsInit, musInit)
+    cc.initMatrices[1] = rotations2mat(angsInit, musInit)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -86,8 +86,8 @@ function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}, angs::A
             mpw = subMusOrd[1:nMuswu]
             mpu = subMusOrd[(nMuswu+1):2*nMuswu]
 
-            cc.propMatrices[d][2*k-1] = MDCDL.rotations2mat(apw, mpw)
-            cc.propMatrices[d][2*k]   = MDCDL.rotations2mat(apu, mpu)
+            cc.propMatrices[d][2*k-1] = rotations2mat(apw, mpw)
+            cc.propMatrices[d][2*k]   = rotations2mat(apu, mpu)
             cc.paramAngles[d][k]      = apb
         end
     end
@@ -95,7 +95,7 @@ function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Cnsolt{T,D}, angs::A
     return cc
 end
 
-function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Cnsolt{T,D}) where {D,T}
+function getAngleParameters(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -106,7 +106,7 @@ function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Cnsolt{T,D}) where {
     # nParams = vcat(nParamsInit, nParamsProps...)
 
     # Angles ang MUS
-    angsInit, musInit = MDCDL.mat2rotations(cc.initMatrices[1])
+    angsInit, musInit = mat2rotations(cc.initMatrices[1])
 
     angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
     musPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
@@ -115,10 +115,10 @@ function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Cnsolt{T,D}) where {
         angsPropPerDim = Array{Vector{T}}(undef, nStages)
         musPropPerDim = Array{Vector{T}}(undef, nStages)
         for k = 1:nStages
-            (apw1, mpw1) = MDCDL.mat2rotations(cc.propMatrices[d][4*k-3])
-            (apu1, mpu1) = MDCDL.mat2rotations(cc.propMatrices[d][4*k-2])
-            (apw2, mpw2) = MDCDL.mat2rotations(cc.propMatrices[d][4*k-1])
-            (apu2, mpu2) = MDCDL.mat2rotations(cc.propMatrices[d][4*k])
+            (apw1, mpw1) = mat2rotations(cc.propMatrices[d][4*k-3])
+            (apu1, mpu1) = mat2rotations(cc.propMatrices[d][4*k-2])
+            (apw2, mpw2) = mat2rotations(cc.propMatrices[d][4*k-1])
+            (apu2, mpu2) = mat2rotations(cc.propMatrices[d][4*k])
             apb1 = cc.paramAngles[d][2*k-1]
             apb2 = cc.paramAngles[d][2*k]
 
@@ -151,7 +151,7 @@ function setAngleParameters!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::Abstra
     # set Cnsolt.initMatrices
     angsInit = angs[1:nParamsInit]
     musInit = mus[1:P]
-    cc.initMatrices[1] = MDCDL.rotations2mat(angsInit, musInit)
+    cc.initMatrices[1] = rotations2mat(angsInit, musInit)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -189,10 +189,10 @@ function setAngleParameters!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::Abstra
             mpw2 = subMusOrd2[1:nMuswu2]
             mpu2 = subMusOrd2[nMuswu2+1:2*nMuswu2]
 
-            cc.propMatrices[d][4*k-3] = MDCDL.rotations2mat(apw1, mpw1)
-            cc.propMatrices[d][4*k-2] = MDCDL.rotations2mat(apu1, mpu1)
-            cc.propMatrices[d][4*k-1] = MDCDL.rotations2mat(apw2, mpw2)
-            cc.propMatrices[d][4*k]   = MDCDL.rotations2mat(apu2, mpu2)
+            cc.propMatrices[d][4*k-3] = rotations2mat(apw1, mpw1)
+            cc.propMatrices[d][4*k-2] = rotations2mat(apu1, mpu1)
+            cc.propMatrices[d][4*k-1] = rotations2mat(apw2, mpw2)
+            cc.propMatrices[d][4*k]   = rotations2mat(apu2, mpu2)
             cc.paramAngles[d][2*k-1]  = apb1
             cc.paramAngles[d][2*k]    = apb2
         end
@@ -201,7 +201,7 @@ function setAngleParameters!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::Abstra
     return cc
 end
 
-function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}) where {D,T}
+function getAngleParameters(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}) where {D,T}
     P = sum(cc.nChannels)
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -212,8 +212,8 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}) where {D
     # nParams = vcat(nParamsInit, nParamsProps...)
 
     # Angles ang MUS
-    angsInitW, musInitW = MDCDL.mat2rotations(cc.initMatrices[1])
-    angsInitU, musInitU = MDCDL.mat2rotations(cc.initMatrices[2])
+    angsInitW, musInitW = mat2rotations(cc.initMatrices[1])
+    angsInitU, musInitU = mat2rotations(cc.initMatrices[2])
 
     angsInit = vcat(angsInitW, angsInitU)
     musInit = vcat(musInitW, musInitU)
@@ -224,7 +224,7 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}) where {D
         angsPropPerDim = Array{Vector{T}}(undef, ord[d])
         musPropPerDim = Array{Vector{T}}(undef, ord[d])
         for k = 1:ord[d]
-            (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][k])
+            (apu, mpu) = mat2rotations(cc.propMatrices[d][k])
 
             angsPropPerDim[k] = apu
             musPropPerDim[k] = mpu
@@ -242,7 +242,7 @@ function getAngleParameters(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}) where {D
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setAngleParameters!(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = sum(cc.nChannels)
     df = cc.decimationFactor
@@ -258,8 +258,8 @@ function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}, angs::A
     musInitW = mus[1:fld(P,2)]
     angsInitU = angs[fld(nParamsInit,2)+1:nParamsInit]
     musInitU = mus[fld(P,2)+1:P]
-    cc.initMatrices[1] = MDCDL.rotations2mat(angsInitW, musInitW)
-    cc.initMatrices[2] = MDCDL.rotations2mat(angsInitU, musInitU)
+    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW)
+    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -281,14 +281,14 @@ function setAngleParameters!(::Type{Val{:TypeI}}, cc::MDCDL.Rnsolt{T,D}, angs::A
             apu = subAngsOrd[1:nAngsu]
             mpu = subMusOrd[1:nMusu]
 
-            cc.propMatrices[d][k] = MDCDL.rotations2mat(apu, mpu)
+            cc.propMatrices[d][k] = rotations2mat(apu, mpu)
         end
     end
 
     return cc
 end
 
-function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}) where {D,T}
+function getAngleParameters(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}) where {D,T}
     nch = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -299,8 +299,8 @@ function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}) where {
     # nParams = vcat(nParamsInit, nParamsProps...)
 
     # Angles ang MUS
-    angsInitW, musInitW = MDCDL.mat2rotations(cc.initMatrices[1])
-    angsInitU, musInitU = MDCDL.mat2rotations(cc.initMatrices[2])
+    angsInitW, musInitW = mat2rotations(cc.initMatrices[1])
+    angsInitU, musInitU = mat2rotations(cc.initMatrices[2])
 
     angsInit = vcat(angsInitW, angsInitU)
     musInit = vcat(musInitW, musInitU)
@@ -312,8 +312,8 @@ function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}) where {
         angsPropPerDim = Array{Vector{T}}(undef, nStages)
         musPropPerDim = Array{Vector{T}}(undef, nStages)
         for k = 1:nStages
-            (apu, mpu) = MDCDL.mat2rotations(cc.propMatrices[d][2*k-1])
-            (apw, mpw) = MDCDL.mat2rotations(cc.propMatrices[d][2*k])
+            (apu, mpu) = mat2rotations(cc.propMatrices[d][2*k-1])
+            (apw, mpw) = mat2rotations(cc.propMatrices[d][2*k])
 
             angsPropPerDim[k] = vcat(apu,apw)
             musPropPerDim[k] = vcat(mpu,mpw)
@@ -330,7 +330,7 @@ function getAngleParameters(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}) where {
     (angs, mus)
 end
 
-function setAngleParameters!(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setAngleParameters!(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     nch = cc.nChannels
     df = cc.decimationFactor
@@ -353,8 +353,8 @@ function setAngleParameters!(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}, angs::
     angsInitU = angs[(1:nParamsInit[2]) .+ nParamsInit[1]]
     musInitU = mus[(1:nch[2]) .+ nch[1]]
 
-    cc.initMatrices[1] = MDCDL.rotations2mat(angsInitW, musInitW)
-    cc.initMatrices[2] = MDCDL.rotations2mat(angsInitU, musInitU)
+    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW)
+    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -381,8 +381,8 @@ function setAngleParameters!(::Type{Val{:TypeII}}, cc::MDCDL.Rnsolt{T,D}, angs::
             mpu = subMusOrd1[1:minP]
             mpw = subMusOrd2[1:maxP]
 
-            cc.propMatrices[d][2*k-1] = MDCDL.rotations2mat(apu, mpu)
-            cc.propMatrices[d][2*k]   = MDCDL.rotations2mat(apw, mpw)
+            cc.propMatrices[d][2*k-1] = rotations2mat(apu, mpu)
+            cc.propMatrices[d][2*k]   = rotations2mat(apw, mpw)
         end
     end
 

@@ -41,7 +41,7 @@ function getAnalysisBank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
         angs = cc.paramAngles[d]
         propMats = cc.propMatrices[d]
         for k = 1:ord[d]
-            B = MDCDL.getMatrixB(P, angs[k])
+            B = getMatrixB(P, angs[k])
             W = propMats[2k-1]
             U = propMats[2k]
 
@@ -81,7 +81,7 @@ function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
             # first step
             chUpper = 1:fld(P,2)
             chLower = fld(P,2)+1:P-1
-            B = MDCDL.getMatrixB(P, angs[2k-1])
+            B = getMatrixB(P, angs[2k-1])
             W = propMats[4k-3]
             U = propMats[4k-2]
 
@@ -97,7 +97,7 @@ function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
             chUpper = 1:cld(P,2)
             chLower = cld(P,2):P
 
-            B = MDCDL.getMatrixB(P, angs[2k])
+            B = getMatrixB(P, angs[2k])
             hW = propMats[4k-1]
             hU = propMats[4k]
 
@@ -114,7 +114,7 @@ function getAnalysisBank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     cc.symmetry * ppm
 end
 
-function getAnalysisBank(::Type{Val{:TypeI}}, rc::MDCDL.Rnsolt{T,D}) where {D,T}
+function getAnalysisBank(::Type{Val{:TypeI}}, rc::Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     nch = rc.nChannels
     P = sum(nch)
@@ -151,7 +151,7 @@ function getAnalysisBank(::Type{Val{:TypeI}}, rc::MDCDL.Rnsolt{T,D}) where {D,T}
     ppm
 end
 
-function getAnalysisBank(::Type{Val{:TypeII}}, rc::MDCDL.Rnsolt{T,D}) where {D,T}
+function getAnalysisBank(::Type{Val{:TypeII}}, rc::Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     M = prod(df)
     ord = rc.polyphaseOrder
@@ -204,11 +204,11 @@ function getAnalysisBank(::Type{Val{:TypeII}}, rc::MDCDL.Rnsolt{T,D}) where {D,T
     ppm
 end
 
-function getAnalysisFilters(pfb::MDCDL.PolyphaseFB)
+function getAnalysisFilters(pfb::PolyphaseFB)
     df = pfb.decimationFactor
     P = sum(pfb.nChannels)
 
-    afb = MDCDL.getAnalysisBank(pfb)
+    afb = getAnalysisBank(pfb)
     ordm = pfb.polyphaseOrder .+ 1
 
     return map(1:P) do p
@@ -223,14 +223,14 @@ function getAnalysisFilters(pfb::MDCDL.PolyphaseFB)
     end
 end
 
-function getSynthesisFilters(cc::MDCDL.Cnsolt)
+function getSynthesisFilters(cc::Cnsolt)
     map(getAnalysisFilters(cc)) do af
         sz = size(af)
         reshape(reverse(vec(conj.(af));dims=1),sz)
     end
 end
 
-function getSynthesisFilters(rc::MDCDL.Rnsolt)
+function getSynthesisFilters(rc::Rnsolt)
     map(getAnalysisFilters(rc)) do af
         sz = size(af)
         reshape(reverse(vec(af);dims=1),sz)
