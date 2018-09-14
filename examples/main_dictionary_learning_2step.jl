@@ -1,6 +1,6 @@
 using MDCDL
 using LinearAlgebra
-using TestImages
+using Images, TestImages
 
 using Base.Filesystem
 using Dates
@@ -24,10 +24,14 @@ nch = 8
 szx = (16,16)
 # number of minibatches (<:Integer)
 nSubData = 32
+#
+do_save_trainingset = false
 
 # path of log files (do nothing if isa(logdir, Nothing))
-tm = Dates.format(now(), "yyyy_mm_dd_SS_sss")
-logdir = joinpath(@__DIR__, "results", tm)
+logdir = begin
+    tm = Dates.format(now(), "yyyymmdd_HH_MM_SS_sss")
+    joinpath(@__DIR__, "results", tm)
+end
 # logdir = nothing
 
 # options for sparse coding
@@ -48,7 +52,7 @@ sc_options2 = ( iterations = 500, sparsity = 0.5, filter_domain=:convolution)
 du_options2 = ( iterations = 100, stepsize = 1e-4,)
 
 # general options of dictionary learning
-options2 = ( epochs  = 3000,
+options2 = ( epochs  = 300,
             verbose = :standard,
             sc_options = sc_options2,
             du_options = du_options2,
@@ -66,6 +70,11 @@ trainingIds = map(1:nSubData) do nsd
     UnitRange.(1 .+ pos, szx .+ pos)
 end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
+if do_save_trainingset
+    datadir = joinpath(logdir, "data")
+    !isdir(datadir) && mkdir(datadir)
+    map(idx->save(joinpath(datadir, "$idx.png"), trainingSet[idx]), 1:nSubData)
+end
 
 nsolt_core = Nsolt(TP, df, (fill(0,D)...,), nch)
 MDCDL.rand!(nsolt_core, isSymmetry = false)
