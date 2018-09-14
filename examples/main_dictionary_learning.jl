@@ -22,8 +22,6 @@ nch = 8
 szx = (16,16)
 # number of minibatches (<:Integer)
 nSubData = 4
-#
-do_save_trainingset = true
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = begin
@@ -31,21 +29,23 @@ do_save_trainingset = true
 #     joinpath(@__DIR__, "results", tm)
 # end
 logdir = nothing
+# save minibatches?
+do_save_trainingset = false
 
 # options for sparse coding
 sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
 # options for dictionary update
-du_options = ( iterations = 1, stepsize = 1e-3,)
+du_options = ( iterations = 100, stepsize = 1e-3,)
 
 # general options of dictionary learning
 options = ( epochs  = 100,
-            verbose = :standard,
+            verbose = :standard, # :none, :standard, :specified, :loquacious
             sc_options = sc_options,
             du_options = du_options,
             logdir = logdir,)
 ####################################
-
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
+do_save_trainingset = do_save_trainingset && logdir != nothing
 
 # original image
 orgImg = TP.(testimage("cameraman"))

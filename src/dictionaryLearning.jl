@@ -4,13 +4,15 @@ using Statistics
 using Dates
 
 function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
-    dict_vlevels = Dict(:none => 0, :standard => 1, :specified => 2, :loquacious => 3)
-    vlevel = if verbose isa Integer; verbose else dict_vlevels[verbose] end
+    vlevel = verboselevel(verbose)
 
     savesettings(logdir, nsolt, trainingSet;
+        vlevel=vlevel,
         epochs=epochs,
         sc_options=sc_options,
         du_options=du_options)
+
+    vlevel >= 1 && println("beginning NSOLT dictionary training...")
 
     θ, μ = getrotations(nsolt)
     for itr = 1:epochs
@@ -20,8 +22,13 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
         for k = 1:K
             x = trainingSet[k]
 
-            hy, loss_sps[k] = stepSparseCoding(nsolt, x; sc_options...)
-            θ, μ, loss_dus[k] = updateDictionary(nsolt, x, hy, θ, μ; du_options...)
+            vlevel >= 3 && println("start Sparse Coding Stage.")
+            hy, loss_sps[k] = stepSparseCoding(nsolt, x; vlevel=vlevel, sc_options...)
+            vlevel >= 3 && println("end Sparse Coding Stage.")
+
+            vlevel >= 3 && println("start Dictionary Update.")
+            θ, μ, loss_dus[k] = updateDictionary(nsolt, x, hy, θ, μ; vlevel=vlevel, du_options...)
+            vlevel >= 3 && println("end Dictionary Update Stage.")
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
 
@@ -31,6 +38,7 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
             println("--- epoch #$itr, total sum(loss) = $(sum(loss_dus)), var(loss) = $(var(loss_dus))")
         end
         savelogs(logdir, nsolt, itr;
+            vlevel=vlevel,
             time=string(now()),
             loss_sparse_coding=loss_sps,
             loss_dictionary_update=loss_dus)
@@ -39,7 +47,7 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
     return setrotations!(nsolt, θ, μ)
 end
 
-function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, kwargs...)
+function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, kwargs...)
     ana, syn = if filter_domain == :convolution
         (ConvolutionalOperator(:analyzer, nsolt, size(x); shape=:vector),
         ConvolutionalOperator(:synthesizer, nsolt, size(x); shape=:vector),)
@@ -52,14 +60,14 @@ function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; sparsity=1.0, 
     # number of non-zero coefficients
     K = trunc(Int, sparsity * length(x))
 
-    y_opt, loss_iht = iht(syn, ana, x, y0, K; iterations=iterations)
+    y_opt, loss_iht = iht(syn, ana, x, y0, K; iterations=iterations, isverbose=(vlevel>=3))
 
     return (y_opt, loss_iht)
 end
 
-updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getrotations(nsolt)...)
+updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray; kwargs...) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getrotations(nsolt)..., kwargs...)
 
-function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::AbstractArray, μ::AbstractArray; stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt}
+function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::AbstractArray, μ::AbstractArray; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt}
     lossfcn(t) = begin
         cpnsolt = setrotations!(similar(nsolt, eltype(t)), t, μ)
         syn = createSynthesizer(cpnsolt, size(x); shape=:vector)
@@ -69,14 +77,17 @@ function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::Ab
 
     θopt = θ
     for itr = 1:iterations
-        θopt -= stepsize * ∇loss(θ)
+        ∇θ = ∇loss(θopt)
+        θopt -= stepsize * ∇θ
+
+        vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, ||∇loss|| (w.r.t. θ) = $(norm(∇θ))")
     end
     loss_opt = lossfcn(θopt)
     return (θopt, μ, loss_opt,)
 end
 
 savesettings(::Nothing, args...; kwargs...) = nothing
-function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, trainingset::AbstractArray; epochs, sc_options=(), du_options=(), kwargs...) where {T,D}
+function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), kwargs...) where {T,D}
     filename = joinpath(dirname, "settings")
 
     txt_general = """
@@ -98,6 +109,7 @@ function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, traini
     open(filename, write=true) do io
         println(io, txt_general, txt_others...)
     end
+    vlevel >= 2 && println("Settings was written in $filename.")
 end
 
 savelogs(::Nothing, args...; kwargs...) = nothing
@@ -116,3 +128,7 @@ end
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")
 namestring(nsolt::Cnsolt) = namestring(nsolt, "Complex NSOLT")
 namestring(nsolt::AbstractNsolt{T,D}, strnsolt::AbstractString) where {T,D} = "$D-dimensional $(nsolt.category) $strnsolt"
+
+verbosenames() = Dict(:none => 0, :standard => 1, :specified => 2, :loquacious => 3)
+verboselevel(sym::Symbol) = verbosenames()[sym]
+verboselevel(lv::Integer) = lv

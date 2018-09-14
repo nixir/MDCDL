@@ -33,6 +33,8 @@ do_save_trainingset = false
 #     joinpath(@__DIR__, "results", tm)
 # end
 logdir = nothing
+# save minibatches?
+do_save_trainingset = false
 
 # options for sparse coding
 sc_options1 = ( iterations = 500, sparsity = 0.5, filter_domain=:convolution)
@@ -58,8 +60,8 @@ options2 = ( epochs  = 300,
             du_options = du_options2,
             logdir = logdir,)
 ####################################
-
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
+do_save_trainingset = do_save_trainingset && logdir != nothing
 
 # original image
 orgImg = TP.(testimage("cameraman"))
