@@ -26,11 +26,11 @@ nSubData = 4
 do_save_trainingset = true
 
 # path of log files (do nothing if isa(logdir, Nothing))
-logdir = begin
-    tm = Dates.format(now(), "yyyymmdd_HH_MM_SS_sss")
-    joinpath(@__DIR__, "results", tm)
-end
-# logdir = nothing
+# logdir = begin
+#     tm = Dates.format(now(), "yyyymmdd_HH_MM_SS_sss")
+#     joinpath(@__DIR__, "results", tm)
+# end
+logdir = nothing
 
 # options for sparse coding
 sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
@@ -58,7 +58,7 @@ end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
 if do_save_trainingset
     datadir = joinpath(logdir, "data")
-    !isdir(datadir) && mkdir(datadir)
+    !isdir(datadir) && mkpath(datadir)
     map(idx->save(joinpath(datadir, "$idx.png"), trainingSet[idx]), 1:nSubData)
 end
 
