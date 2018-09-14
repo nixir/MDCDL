@@ -64,7 +64,7 @@ end
 
 # create NSOLT instance
 nsolt = Nsolt(TP, df, ord, nch)
-# set initial matrices as random orthonormal ones.
+# set random orthonormal matrices to the initial matrices.
 MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
 
 # dictionary learning

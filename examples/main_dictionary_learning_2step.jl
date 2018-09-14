@@ -12,7 +12,7 @@ Nsolt = Rnsolt
 TP = Float64
 # NSOLT dimensions
 D = 2
-# decimation factor: (<:NTuple{D,Int} where D is #dims)
+# decimation factor: (<:NTuple{D,Int} where D)
 df = (2,2)
 # polyphase order: (<:NTuple{D,Int} where D)
 ord = (4,4)
