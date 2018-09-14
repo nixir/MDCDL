@@ -10,8 +10,7 @@ function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbos
     savesettings(logdir, nsolt, trainingSet;
         epochs=epochs,
         sc_options=sc_options,
-        du_options=du_options,
-        jalksdfja=3)
+        du_options=du_options)
 
     θ, μ = getrotations(nsolt)
     for itr = 1:epochs
