@@ -24,8 +24,6 @@ nch = 8
 szx = (16,16)
 # number of minibatches (<:Integer)
 nSubData = 32
-#
-do_save_trainingset = false
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = begin
