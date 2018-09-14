@@ -107,7 +107,6 @@ function savelogs(dirname::AbstractString, nsolt::AbstractNsolt, epoch::Integer;
 
     strparams = [ " $(prm.first) = $(prm.second)," for prm in params ]
     strlogs = string("epoch $epoch:", strparams...)
-    @show strlogs
     open(filename_logs, append=true) do io
         println(io, strlogs)
     end
