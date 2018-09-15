@@ -10,7 +10,7 @@ using TiledIteration
     layout :=  (2,nch)
     size -->  20 .* df .* (ord .+ 1) .* (nch, 2)
 
-    afs = analysiskernel(cc)
+    afs = analysiskernels(cc)
 
     mafsup, mafslw = if coordinate == :cartesian
         afsup = map(f->real.(f), afs)
@@ -51,7 +51,7 @@ end
     layout :=  (2,1)
     size -->  20 .* df .* (ord .+ 1) .* (1,2)
 
-    afs = analysiskernel(cc)
+    afs = analysiskernels(cc)
     atm = afs[p]
 
     mafsup, mafslw = if coordinate == :cartesian
@@ -95,7 +95,7 @@ end
     nch = cc.nChannels
     difch = nch[2]-nch[1]
 
-    afs = analysiskernel(cc)
+    afs = analysiskernels(cc)
 
     dummyimg = fill(-Inf, size(afs[1]))
     afssym = [ afs[1:nch[1]]; fill(dummyimg, max(difch, 0)) ]
@@ -138,7 +138,7 @@ end
     aspect_ratio := :equal
     size -->  20 .* df .* (ord .+ 1)
 
-    afs = analysiskernel(cc)
+    afs = analysiskernels(cc)
     atm = afs[p]
 
     mafssym = get(cscheme, atm, rangescale)
