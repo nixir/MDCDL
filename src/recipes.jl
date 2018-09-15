@@ -8,28 +8,15 @@ using TiledIteration
     df =  cc.decimationFactor
 
     layout :=  (2,nch)
-    size -->  20 .* df .* (ord .+ 1) .* (nch, 2)
+    size -->  100 .* df .* (ord .+ 1) .* (nch, 2)
 
     afs = analysiskernels(cc)
 
-    mafsup, mafslw = if coordinate == :cartesian
-        afsup = map(f->real.(f), afs)
-        afslw = map(f->imag.(f), afs)
-        mafsup = map(f->get(cscheme, f, rangescale), afsup)
-        mafslw = map(f->get(cscheme, f, rangescale), afslw)
-        (mafsup, mafslw)
-    elseif coordinate == :polar
-        mxv = norm(rangescale)
-        afsr = map(f->abs.(f), afs)
-        afsa = map(f->angle.(f), afs)
-        mafsup = map(f->get(cscheme, f, (0, mxv)), afsr)
-        mafslw = map((fr, fa)->RGB.(HSV.(180 .* (fa ./ pi .+ 1), 1.0, fr ./ mxv)), afsr, afsa)
-
-        (mafsup, mafslw)
+    atmsreim = map(analysiskernels(cc)) do fp
+        apply_colorscheme(Val{coordinate}, fp, cscheme, rangescale, atomscale)
     end
 
-    atms = [ mafsup; mafslw ]
-    atmsup = resize_by_nn.(atms, atomscale)
+    atmsup = [ [ f[1] for f in atmsreim ]..., [ f[2] for f in atmsreim ]... ]
 
     for idx = 1:2*nch
         @series begin
@@ -49,28 +36,11 @@ end
     df =  cc.decimationFactor
 
     layout :=  (2,1)
-    size -->  20 .* df .* (ord .+ 1) .* (1,2)
+    size -->  100 .* df .* (ord .+ 1) .* (1,2)
 
     afs = analysiskernels(cc)
-    atm = afs[p]
 
-    mafsup, mafslw = if coordinate == :cartesian
-        mafsup = get(cscheme, real(atm), rangescale)
-        mafslw = get(cscheme, imag(atm), rangescale)
-        (mafsup, mafslw)
-    elseif coordinate == :polar
-        mxv = norm(rangescale)
-        afsr = abs.(atm)
-        afsa = angle.(atm)
-        mafsup = get(cscheme, afsr, (0, mxv))
-        mafslw = RGB.(HSV.(180 .* (afsa ./ pi .+ 1), 1.0, afsr ./ mxv))
-
-        (mafsup, mafslw)
-    end
-
-
-    atms = [ mafsup, mafslw ]
-    atmsup = resize_by_nn.(atms, atomscale)
+    atmsup = apply_colorscheme(Val{coordinate}, afs[p], cscheme, rangescale, atomscale)
 
     for idx = 1:2
         @series begin
@@ -88,24 +58,20 @@ end
     mxP = maximum(cc.nChannels)
     ord = cc.polyphaseOrder
     df =  cc.decimationFactor
-
-    layout     :=  (2,mxP)
-    size -->  20 .* df .* (ord .+ 1) .* (mxP, 2)
-
     nch = cc.nChannels
     difch = nch[2]-nch[1]
 
-    afs = analysiskernels(cc)
+    layout     :=  (2,mxP)
+    size -->  100 .* df .* (ord .+ 1) .* (mxP, 2)
 
+    afs = analysiskernels(cc)
     dummyimg = fill(-Inf, size(afs[1]))
     afssym = [ afs[1:nch[1]]; fill(dummyimg, max(difch, 0)) ]
     afsasym = [ afs[(nch[1]+1):end]; fill(dummyimg, max(-difch, 0)) ]
 
-    mafssym = map(f->get(cscheme, f, rangescale), afssym)
-    mafsasym = map(f->get(cscheme, f, rangescale), afsasym)
-
-    mafssymup = resize_by_nn.(mafssym, atomscale)
-    mafsasymup = resize_by_nn.(mafsasym, atomscale)
+    afsup, afslw = map((afssym, afsasym,)) do fs
+        map(f->apply_colorscheme(f, cscheme, rangescale, atomscale), fs)
+    end
 
     for idx = 1:mxP
         @series begin
@@ -114,7 +80,7 @@ end
             grid    := false
             aspect_ratio := :equal
 
-            mafssym[idx]
+            afsup[idx]
         end
 
         @series begin
@@ -123,7 +89,7 @@ end
             grid    := false
             aspect_ratio := :equal
 
-            mafsasym[idx]
+            afslw[idx]
         end
     end
 end
@@ -136,15 +102,24 @@ end
     grid    := false
 
     aspect_ratio := :equal
-    size -->  20 .* df .* (ord .+ 1)
+    size -->  100 .* df .* (ord .+ 1)
 
     afs = analysiskernels(cc)
-    atm = afs[p]
 
-    mafssym = get(cscheme, atm, rangescale)
-    mafssymup = resize_by_nn(mafssym, atomscale)
+    apply_colorscheme(afs[p], cscheme, rangescale, atomscale)
+end
 
-    mafssymup
+apply_colorscheme(x::AbstractArray, args...; kwargs...) = apply_colorscheme(Val{:cartesian}, x, args...; kwargs...)
+apply_colorscheme(::Type{Val{:cartesian}}, x::AbstractArray{T}, cscheme::AbstractVector{C}, rangescale::Tuple{R,R}, atomscale::Integer) where {T<:Complex,C<:Colorant,R<:Real} = map(t->apply_colorscheme(t, cscheme, rangescale, atomscale), reim(x))
+function apply_colorscheme(::Type{Val{:cartesian}}, x::AbstractArray{T}, cscheme::AbstractVector{C}, rangescale::Tuple{R,R}, atomscale::Integer) where {T<:Real,C<:Colorant,R<:Real}
+    resize_by_nn(get(cscheme, x, rangescale), atomscale)
+end
+
+function apply_colorscheme(::Type{Val{:polar}}, x::AbstractArray{T}, cscheme::AbstractVector{C}, rangescale::Tuple{R,R}, atomscale::Integer) where {T,C<:Colorant,R<:Real}
+    mxv = norm(rangescale)
+    rx = get(cscheme, abs.(x), (0, mxv))
+    ax = RGB.(HSV.(x .|> angle .|> rad2deg .|> wrapdeg, 1.0, abs.(x) / mxv))
+    resize_by_nn.((rx, ax), atomscale)
 end
 
 function resize_by_nn(x::AbstractArray{T,D}, scale::Integer) where {T,D}
@@ -156,3 +131,5 @@ function resize_by_nn(x::AbstractArray{T,D}, scale::Integer) where {T,D}
     end
     output
 end
+
+wrapdeg(x::Real) = ifelse(x < 0, x+360, x)
