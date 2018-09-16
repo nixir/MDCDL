@@ -89,11 +89,11 @@ using LinearAlgebra
             x = rand(Float64, szx...)
 
             foreach(oms) do om
-                analyzer = createAnalyzer(nsolt, x; shape=om)
-                synthesizer = createSynthesizer(nsolt, x; shape=om)
+                ana = createAnalyzer(nsolt, x; shape=om)
+                syn = createSynthesizer(nsolt, x; shape=om)
 
-                y = analyzer(x)
-                rx = synthesizer(y)
+                y = analyze(ana, x)
+                rx = synthesize(syn, y)
 
                 @test size(x) == size(rx)
                 @test rx ≈ x
@@ -109,8 +109,8 @@ using LinearAlgebra
             nsolt = Rnsolt(df, ord, nch)
             rand!(nsolt)
 
-            analyzer = createAnalyzer(nsolt, x; shape = :normal)
-            ya = analyzer(x)
+            ana = createAnalyzer(nsolt, x; shape = :normal)
+            ya = analyze(ana, x)
 
             afs = analysiskernels(nsolt)
             myfilter(A, h) = begin
@@ -138,8 +138,8 @@ using LinearAlgebra
 
             y = [ rand(Float64,((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            synthesizer = createSynthesizer(nsolt, ord.+1)
-            x = synthesizer(y)
+            syn = createSynthesizer(nsolt, ord.+1)
+            x = synthesize(syn, y)
 
             sfs = synthesiskernels(nsolt)
             myfilter(A, h) = begin

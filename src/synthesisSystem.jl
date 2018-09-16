@@ -2,22 +2,19 @@ using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
 function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
-    pvy = if syn.shape == :normal
-        nBlocks = size(y[1])
-        PolyphaseVector( Matrix(transpose(hcat(map(vec, y)...))), nBlocks)
-    elseif syn.shape == :augumented
-        mdarray2polyphase(y)
-    elseif syn.shape == :vector
-        ty = reshape(y, fld.(syn.insize, syn.nsolt.decimationFactor)..., sum(syn.nsolt.nChannels))
-        mdarray2polyphase(ty)
-    else
-        error("Invalid argument.")
-    end
+    pvy = reshape_coefs(Val{syn.shape}, syn, y)
 
     pvx = synthesize(syn.nsolt, pvy; border=syn.border)
     polyphase2mdarray(pvx, syn.nsolt.decimationFactor)
 end
-operate(::Type{Val{:synthesizer}}, syn::NsoltOperator, y::AbstractArray) = synthesize(syn, y)
+
+reshape_coefs(::Type{Val{:normal}}, ::NsoltOperator, y::AbstractArray) = PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
+reshape_coefs(::Type{Val{:augumented}}, ::NsoltOperator, y::AbstractArray) = mdarray2polyphase(y)
+function reshape_coefs(::Type{Val{:vector}}, nsop::NsoltOperator, y::AbstractArray)
+    szout = fld.(nsop.insize, nsop.nsolt.decimationFactor)
+    ty = reshape(y, szout..., sum(nsop.nsolt.nChannels))
+    mdarray2polyphase(ty)
+end
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
@@ -206,22 +203,11 @@ function subsynthesize(v::Type{Val{:vector}}, abop::AbstractVector, sy::Abstract
     synthesize(abop[1], ya)
 end
 
-operate(::Type{Val{:synthesizer}}, msop::MultiscaleOperator, y::AbstractArray) = synthesize(msop, y)
-
 function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
     df = cs.decimationFactor
     ord = cs.polyphaseOrder
 
-    ty = if cs.shape == :normal
-        y
-    elseif cs.shape == :augumented
-        [ y[fill(:,D)..., p] for p in 1:cs.nChannels ]
-    elseif cs.shape == :vector
-        ry = reshape(y, fld.(cs.insize, df)..., cs.nChannels)
-        [ ry[fill(:,D)..., p] for p in 1:cs.nChannels ]
-    else
-        error("Invalid augument")
-    end
+    ty = reshape_coefs(Val{cs.shape}, cs, y)
 
     nShift = df .* cld.(ord, 2) .+ 1
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
@@ -234,4 +220,9 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     sum(sxs)
 end
 
-operate(::Type{Val{:synthesizer}}, cvop::ConvolutionalOperator, y::AbstractArray) = synthesize(cvop, y)
+reshape_coefs(::Type{Val{:normal}}, ::ConvolutionalOperator, y::AbstractArray) = y
+reshape_coefs(::Type{Val{:augumented}}, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D} = [ y[fill(:,D)..., p] for p in 1:co.nChannels]
+function reshape_coefs(::Type{Val{:vector}}, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
+    ry = reshape(y, fld.(co.insize, co.decimationFactor)..., co.nChannels)
+    [ ry[fill(:,D)..., p] for p in 1:co.nChannels ]
+end

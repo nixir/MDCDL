@@ -3,18 +3,12 @@ using OffsetArrays: OffsetArray
 
 function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     y = analyze(A.nsolt, x; border=A.border)
-
-    if A.shape == :normal
-        [ reshape(y.data[p,:], y.nBlocks) for p in 1:size(y.data,1) ]
-    elseif A.shape == :augumented
-        polyphase2mdarray(y)
-    elseif A.shape == :vector
-        vec(transpose(y.data))
-    else
-        error("Invalid augument.")
-    end
+    reshape_polyvec(Val{A.shape}, A, y)
 end
-operate(::Type{Val{:analyzer}}, nsop::NsoltOperator, x::AbstractArray) = analyze(nsop, x)
+
+reshape_polyvec(::Type{Val{:normal}}, ::NsoltOperator, pvy::PolyphaseVector) = [ reshape(pvy.data[p,:], pvy.nBlocks) for p in 1:size(pvy.data,1) ]
+reshape_polyvec(::Type{Val{:augumented}}, ::NsoltOperator, pvy::PolyphaseVector) = polyphase2mdarray(pvy)
+reshape_polyvec(::Type{Val{:vector}}, ::NsoltOperator, pvy::PolyphaseVector) = vec(transpose(pvy.data))
 
 analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 
@@ -208,8 +202,6 @@ function subanalyze(abop::AbstractVector, sx::AbstractArray{TS,D}) where {TS,D}
     end
 end
 
-operate(::Type{Val{:analyzer}}, msop::MultiscaleOperator, x::AbstractArray) = analyze(msop, x)
-
 function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     df = ca.decimationFactor
     ord = ca.polyphaseOrder
@@ -223,16 +215,9 @@ function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where 
         fltimg = imfilter(ca.resource, x, ker, "circular")
         downsample(fltimg, df, offset)
     end
-
-    if ca.shape == :normal
-        y
-    elseif ca.shape == :augumented
-        cat(D+1, y...)
-    elseif ca.shape == :vector
-        vcat(vec.(y)...)
-    else
-        error("Invalid augument")
-    end
+    reshape_polyvec(Val{ca.shape}, ca, y)
 end
 
-operate(::Type{Val{:analyzer}}, cvop::ConvolutionalOperator, x::AbstractArray) = analyze(cvop, x)
+reshape_polyvec(::Type{Val{:normal}}, ::ConvolutionalOperator, y::AbstractArray) = y
+reshape_polyvec(::Type{Val{:augumented}}, ::ConvolutionalOperator{TF,D}, y::AbstractArray{TY,D}) where {TF,TY,D} = cat(D+1, y...)
+reshape_polyvec(::Type{Val{:vector}}, ::ConvolutionalOperator, y::AbstractArray) = vcat(vec.(y)...)

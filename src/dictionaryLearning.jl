@@ -49,8 +49,8 @@ end
 
 function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...)
     ana, syn = if filter_domain == :convolution
-        (ConvolutionalOperator(:analyzer, nsolt, size(x); shape=:vector, resource=resource),
-        ConvolutionalOperator(:synthesizer, nsolt, size(x); shape=:vector, resource=resource),)
+        (ConvolutionalOperator(nsolt, size(x), :analyzer; shape=:vector, resource=resource),
+        ConvolutionalOperator(nsolt, size(x), :synthesizer; shape=:vector, resource=resource),)
     else # == :polyphase
         (createAnalyzer(nsolt, size(x); shape=:vector),
         createSynthesizer(nsolt, size(x); shape=:vector),)
