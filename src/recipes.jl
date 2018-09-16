@@ -9,9 +9,7 @@ using TiledIteration
 
     layout :=  (2,nch)
     size -->  100 .* df .* (ord .+ 1) .* (nch, 2)
-
-    afs = analysiskernels(cc)
-
+    
     atmsreim = map(analysiskernels(cc)) do fp
         apply_colorscheme(Val{coordinate}, fp, cscheme, rangescale, atomscale)
     end
