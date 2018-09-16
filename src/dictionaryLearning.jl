@@ -68,21 +68,17 @@ end
 updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray; kwargs...) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getrotations(nsolt)..., kwargs...)
 
 function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::AbstractArray, μ::AbstractArray; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt}
-    lossfcn(t) = begin
-        cpnsolt = setrotations!(similar(nsolt, eltype(t)), t, μ)
-        syn = createSynthesizer(cpnsolt, size(x); shape=:vector)
-        norm(x - synthesize(syn, hy))^2/2
-    end
-    ∇loss(t) = ForwardDiff.gradient(lossfcn, t)
+    f(t) = lossfcn(nsolt, x, hy, t, μ)
+    ∇f(t) = ForwardDiff.gradient(f, t)
 
     θopt = θ
     for itr = 1:iterations
-        ∇θ = ∇loss(θopt)
-        θopt -= stepsize * ∇θ
+        Δθ = ∇f(θopt)
+        θopt -= stepsize * Δθ
 
-        vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, ||∇loss|| (w.r.t. θ) = $(norm(∇θ))")
+        vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, ||∇loss|| (w.r.t. θ) = $(norm(Δθ))")
     end
-    loss_opt = lossfcn(θopt)
+    loss_opt = f(θopt)
     return (θopt, μ, loss_opt,)
 end
 
@@ -123,6 +119,12 @@ function savelogs(dirname::AbstractString, nsolt::AbstractNsolt, epoch::Integer;
         println(io, strlogs)
     end
     save(nsolt, filename_nsolt)
+end
+
+function lossfcn(nsolt::AbstractNsolt, x::AbstractArray, y::AbstractArray, θ::AbstractArray, μ::AbstractArray)
+    cpnsolt = setrotations!(similar(nsolt, eltype(θ)), θ, μ)
+    syn = createSynthesizer(cpnsolt, size(x); shape=:vector)
+    norm(x - synthesize(syn, y))^2/2
 end
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")
