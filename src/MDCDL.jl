@@ -1,6 +1,9 @@
 module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
 using LinearAlgebra
+using ImageFiltering
+using ImageFiltering.Algorithm: Alg, FIR, FFT
+using ComputationalResources: AbstractResource, CPU1
 
 import Base: promote_rule, eltype, ndims, similar
 import Random: rand!
@@ -231,10 +234,10 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     nChannels::Int
 
     border::Symbol
-    domain::Symbol
+    resource::AbstractResource
 
-    function ConvolutionalOperator(mode::Symbol, kernels::Vector{Array{T,D}}, insz::NTuple, outsz::NTuple, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, border=:circular, domain=:spacial) where {T,D}
-        new{T,D}(mode, insz, outsz, shape, kernels, df, ord, nch, border, domain)
+    function ConvolutionalOperator(mode::Symbol, kernels::Vector{Array{T,D}}, insz::NTuple, outsz::NTuple, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, border=:circular, resource=CPU1(FIR())) where {T,D}
+        new{T,D}(mode, insz, outsz, shape, kernels, df, ord, nch, border, resource)
     end
 
     function ConvolutionalOperator(mode::Symbol, kernels::Vector{Array{T,D}}, insz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, kwargs...) where {T,D}

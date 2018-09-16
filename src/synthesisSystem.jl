@@ -212,12 +212,6 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     df = cs.decimationFactor
     ord = cs.polyphaseOrder
 
-    alg = if cs.domain == :spacial
-        FIR()
-    elseif cs.domain == :frequency
-        FFT()
-    end
-
     ty = if cs.shape == :normal
         y
     elseif cs.shape == :augumented
@@ -235,7 +229,7 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     sxs = map(ty, cs.kernels) do yp, sfp
         upimg = upsample(yp, df)
         ker = reflect(OffsetArray(sfp, region...))
-        imfilter(upimg, ker, "circular", alg)
+        imfilter(cs.resource, upimg, ker, "circular")
     end
     sum(sxs)
 end

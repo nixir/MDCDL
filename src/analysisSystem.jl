@@ -214,19 +214,13 @@ function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where 
     df = ca.decimationFactor
     ord = ca.polyphaseOrder
 
-    alg = if ca.domain == :spacial
-        FIR()
-    elseif ca.domain == :frequency
-        FFT()
-    end
-
     nShift = df .* fld.(ord, 2) .+ 1
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
 
     offset = df .- 1
     y = map(ca.kernels) do f
         ker = reflect(OffsetArray(f, region...))
-        fltimg = imfilter(x, ker, "circular", alg)
+        fltimg = imfilter(ca.resource, x, ker, "circular")
         downsample(fltimg, df, offset)
     end
 
