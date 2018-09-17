@@ -80,7 +80,7 @@ using LinearAlgebra
 
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
-        oms = [ :normal, :augumented ]
+        oms = [ Shapes.Default(), Shapes.Augumented(), Shapes.Vec() ]
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Rnsolt(df, ord, nch)
@@ -109,7 +109,7 @@ using LinearAlgebra
             nsolt = Rnsolt(df, ord, nch)
             rand!(nsolt)
 
-            ana = createAnalyzer(nsolt, x; shape = :normal)
+            ana = createAnalyzer(nsolt, x; shape = Shapes.Default())
             ya = analyze(ana, x)
 
             afs = analysiskernels(nsolt)
@@ -138,7 +138,7 @@ using LinearAlgebra
 
             y = [ rand(Float64,((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            syn = createSynthesizer(nsolt, ord.+1)
+            syn = createSynthesizer(nsolt, ord.+1; shape = Shapes.Default())
             x = synthesize(syn, y)
 
             sfs = synthesiskernels(nsolt)

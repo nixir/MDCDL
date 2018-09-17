@@ -28,6 +28,14 @@ export NsoltOperator
 export ConvolutionalOperator
 export createAnalyzer, createSynthesizer
 export createMultiscaleAnalyzer, createMultiscaleSynthesizer
+export Shapes
+
+module Shapes
+    abstract type Shape end
+    struct Default <: Shape end
+    struct Vec <: Shape end
+    struct Augumented <: Shape end
+end
 
 struct PolyphaseVector{T,D}
     data::AbstractMatrix{T}
@@ -183,25 +191,25 @@ end
 abstract type AbstractOperator{T,D} end
 
 struct NsoltOperator{T,D} <: AbstractOperator{T,D}
-    shape::Symbol
+    shape::Shapes.Shape
     insize::NTuple
     outsize::NTuple
 
     nsolt::AbstractNsolt{T,D}
     border::Symbol
 
-    function NsoltOperator(ns::AbstractNsolt{T,D}, insz::NTuple, outsz::NTuple; shape=:normal, border=:circular) where {T,D}
+    function NsoltOperator(ns::AbstractNsolt{T,D}, insz::NTuple, outsz::NTuple; shape=Shapes.Default(), border=:circular) where {T,D}
         new{T,D}(shape, insz, outsz, ns, border)
     end
 
-    function NsoltOperator(ns::AbstractNsolt{T,D}, insz::NTuple; shape=:normal, kwargs...) where {T,D}
+    function NsoltOperator(ns::AbstractNsolt{T,D}, insz::NTuple; shape=Shapes.Default(), kwargs...) where {T,D}
         # new{T,D}(mode, shape, insz, outsz, ns, border)
         dcsz = fld.(insz, ns.decimationFactor)
-        outsz = if shape == :normal
+        outsz = if shape isa Shapes.Default
             (sum(ns.nChannels), dcsz...,)
-        elseif shape == :augumented
+        elseif shape isa Shapes.Augumented
             (dcsz..., sum(ns.nChannels),)
-        elseif shape == :vector
+        elseif shape isa Shapes.Vec
             (prod(dcsz) * sum(ns.nChannels),)
         else
             error("Invalid augument")
@@ -220,7 +228,7 @@ createSynthesizer(ns::AbstractNsolt, args...; kwargs...) = NsoltOperator(ns, arg
 struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple
     outsize::NTuple
-    shape::Symbol
+    shape::Shapes.Shape
 
     kernels::Vector{Array{T,D}}
 
@@ -231,17 +239,17 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     border::Symbol
     resource::AbstractResource
 
-    function ConvolutionalOperator(kernels::Vector{Array{T,D}}, insz::NTuple, outsz::NTuple, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, border=:circular, resource=CPU1(FIR())) where {T,D}
+    function ConvolutionalOperator(kernels::Vector{Array{T,D}}, insz::NTuple, outsz::NTuple, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=Shapes.Default(), border=:circular, resource=CPU1(FIR())) where {T,D}
         new{T,D}(insz, outsz, shape, kernels, df, ord, nch, border, resource)
     end
 
-    function ConvolutionalOperator(kernels::Vector{Array{T,D}}, insz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=:normal, kwargs...) where {T,D}
+    function ConvolutionalOperator(kernels::Vector{Array{T,D}}, insz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=Shapes.Default(), kwargs...) where {T,D}
         dcsz = fld.(insz, df)
-        outsz = if shape == :normal
+        outsz = if shape isa Shapes.Default
             (sum(nch), dcsz...,)
-        elseif shape == :augumented
+        elseif shape isa Shapes.Augumented
             (dcsz..., nch,)
-        elseif shape == :vector
+        elseif shape isa Shapes.Vec
             (prod(dcsz) * nch,)
         else
             error("Invalid augument")
@@ -278,22 +286,22 @@ createSynthesizer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = Con
 
 struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple{D,T}
-    shape::Symbol
+    shape::Shapes.Shape
 
     operators::Vector{AbstractOperator{T,D}}
 
-    function MultiscaleOperator(ops::Vector{X}, sz::NTuple{D,Int}; shape=:normal) where {T,D,X<:AbstractOperator{T,D}}
+    function MultiscaleOperator(ops::Vector{X}, sz::NTuple{D,Int}; shape=Shapes.Default()) where {T,D,X<:AbstractOperator{T,D}}
         new{T,D}(sz, shape, ops)
     end
 end
 
-function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
+function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=Shapes.Default, kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
-    ops = map(t->createAnalyzer(ns, t; shape=:normal, kwargs...), szxs)
+    ops = map(t->createAnalyzer(ns, t; shape=Shapes.Default, kwargs...), szxs)
     MultiscaleOperator(ops, sz; shape=shape)
 end
 
-function createMultiscaleSynthesizer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=:normal, kwargs...) where {T,D}
+function createMultiscaleSynthesizer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=Shapes.Default(), kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
     ops = map(t->createSynthesizer(ns, t; shape=shape, kwargs...), szxs)
     MultiscaleOperator(ops, sz; shape=shape)

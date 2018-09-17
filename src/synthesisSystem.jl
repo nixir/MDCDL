@@ -2,15 +2,15 @@ using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
 function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
-    pvy = reshape_coefs(Val{syn.shape}, syn, y)
+    pvy = reshape_coefs(syn.shape, syn, y)
 
     pvx = synthesize(syn.nsolt, pvy; border=syn.border)
     polyphase2mdarray(pvx, syn.nsolt.decimationFactor)
 end
 
-reshape_coefs(::Type{Val{:normal}}, ::NsoltOperator, y::AbstractArray) = PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
-reshape_coefs(::Type{Val{:augumented}}, ::NsoltOperator, y::AbstractArray) = mdarray2polyphase(y)
-function reshape_coefs(::Type{Val{:vector}}, nsop::NsoltOperator, y::AbstractArray)
+reshape_coefs(::Shapes.Default, ::NsoltOperator, y::AbstractArray) = PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
+reshape_coefs(::Shapes.Augumented, ::NsoltOperator, y::AbstractArray) = mdarray2polyphase(y)
+function reshape_coefs(::Shapes.Vec, nsop::NsoltOperator, y::AbstractArray)
     szout = fld.(nsop.insize, nsop.nsolt.decimationFactor)
     ty = reshape(y, szout..., sum(nsop.nsolt.nChannels))
     mdarray2polyphase(ty)
@@ -177,14 +177,14 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
 end
 
 function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,D}
-    if msop.shape == :normal
-        subsynthesize(Val{msop.shape}, msop.operators, y)
-    elseif msop.shape == :vector
-        subsynthesize(Val{msop.shape}, msop.operators, y)
+    if msop.shape isa Shapes.Default
+        subsynthesize(msop.shape, msop.operators, y)
+    elseif msop.shape isa Shapes.Default
+        subsynthesize(msop.shape, msop.operators, y)
     end
 end
 
-function subsynthesize(v::Type{Val{:normal}}, abop::AbstractVector, sy::AbstractArray)
+function subsynthesize(v::Shapes.Default, abop::AbstractVector, sy::AbstractArray)
     ya = if length(abop) <= 1
         sy[1]
     else
@@ -193,7 +193,7 @@ function subsynthesize(v::Type{Val{:normal}}, abop::AbstractVector, sy::Abstract
     synthesize(abop[1], ya)
 end
 
-function subsynthesize(v::Type{Val{:vector}}, abop::AbstractVector, sy::AbstractArray)
+function subsynthesize(v::Shapes.Vec, abop::AbstractVector, sy::AbstractArray)
     ya = if length(abop) <= 1
         sy
     else
@@ -207,7 +207,7 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     df = cs.decimationFactor
     ord = cs.polyphaseOrder
 
-    ty = reshape_coefs(Val{cs.shape}, cs, y)
+    ty = reshape_coefs(cs.shape, cs, y)
 
     nShift = df .* cld.(ord, 2) .+ 1
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
@@ -220,9 +220,9 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     sum(sxs)
 end
 
-reshape_coefs(::Type{Val{:normal}}, ::ConvolutionalOperator, y::AbstractArray) = y
-reshape_coefs(::Type{Val{:augumented}}, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D} = [ y[fill(:,D)..., p] for p in 1:co.nChannels]
-function reshape_coefs(::Type{Val{:vector}}, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
+reshape_coefs(::Shapes.Default, ::ConvolutionalOperator, y::AbstractArray) = y
+reshape_coefs(::Shapes.Augumented, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D} = [ y[fill(:,D)..., p] for p in 1:co.nChannels]
+function reshape_coefs(::Shapes.Vec, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
     ry = reshape(y, fld.(co.insize, co.decimationFactor)..., co.nChannels)
     [ ry[fill(:,D)..., p] for p in 1:co.nChannels ]
 end

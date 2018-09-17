@@ -88,7 +88,7 @@ using Random
 
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
-        oms = [ :normal, :augumented, :vector ]
+        oms = [ Shapes.Default(), Shapes.Augumented(), Shapes.Vec() ]
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Cnsolt(df, ord, nch)
@@ -117,7 +117,7 @@ using Random
             nsolt = Cnsolt(df, ord, nch)
             rand!(nsolt)
 
-            ana = createAnalyzer(nsolt, x; shape=:normal)
+            ana = createAnalyzer(nsolt, x; shape=Shapes.Default())
             ya = analyze(ana, x)
 
             afs = analysiskernels(nsolt)
@@ -145,7 +145,7 @@ using Random
 
             y = [ rand(Complex{Float64},((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            syn = createSynthesizer(nsolt, ord.+1; shape=:normal)
+            syn = createSynthesizer(nsolt, ord.+1; shape=Shapes.Default())
             x = synthesize(syn, y)
 
             sfs = synthesiskernels(nsolt)

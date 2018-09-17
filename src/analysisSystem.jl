@@ -3,12 +3,12 @@ using OffsetArrays: OffsetArray
 
 function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     y = analyze(A.nsolt, x; border=A.border)
-    reshape_polyvec(Val{A.shape}, A, y)
+    reshape_polyvec(A.shape, A, y)
 end
 
-reshape_polyvec(::Type{Val{:normal}}, ::NsoltOperator, pvy::PolyphaseVector) = [ reshape(pvy.data[p,:], pvy.nBlocks) for p in 1:size(pvy.data,1) ]
-reshape_polyvec(::Type{Val{:augumented}}, ::NsoltOperator, pvy::PolyphaseVector) = polyphase2mdarray(pvy)
-reshape_polyvec(::Type{Val{:vector}}, ::NsoltOperator, pvy::PolyphaseVector) = vec(transpose(pvy.data))
+reshape_polyvec(::Shapes.Default, ::NsoltOperator, pvy::PolyphaseVector) = [ reshape(pvy.data[p,:], pvy.nBlocks) for p in 1:size(pvy.data,1) ]
+reshape_polyvec(::Shapes.Augumented, ::NsoltOperator, pvy::PolyphaseVector) = polyphase2mdarray(pvy)
+reshape_polyvec(::Shapes.Vec, ::NsoltOperator, pvy::PolyphaseVector) = vec(transpose(pvy.data))
 
 analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
 
@@ -215,9 +215,9 @@ function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where 
         fltimg = imfilter(ca.resource, x, ker, "circular")
         downsample(fltimg, df, offset)
     end
-    reshape_polyvec(Val{ca.shape}, ca, y)
+    reshape_polyvec(ca.shape, ca, y)
 end
 
-reshape_polyvec(::Type{Val{:normal}}, ::ConvolutionalOperator, y::AbstractArray) = y
-reshape_polyvec(::Type{Val{:augumented}}, ::ConvolutionalOperator{TF,D}, y::AbstractArray{TY,D}) where {TF,TY,D} = cat(D+1, y...)
-reshape_polyvec(::Type{Val{:vector}}, ::ConvolutionalOperator, y::AbstractArray) = vcat(vec.(y)...)
+reshape_polyvec(::Shapes.Default, ::ConvolutionalOperator, y::AbstractArray) = y
+reshape_polyvec(::Shapes.Augumented, ::ConvolutionalOperator{TF,D}, y::AbstractArray{TY,D}) where {TF,TY,D} = cat(D+1, y...)
+reshape_polyvec(::Shapes.Vec, ::ConvolutionalOperator, y::AbstractArray) = vcat(vec.(y)...)
