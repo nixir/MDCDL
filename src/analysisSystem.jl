@@ -179,13 +179,13 @@ end
 
 function analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     y = subanalyze(msop.operators, x)
-    if msop.shape == :normal
+    if msop.shape isa Shapes.Default
         y
-    elseif msop.shape == :augumented
+    elseif msop.shape isa Shapes.Augumented
         map(y) do sy
             cat(D+1, sy...)
         end
-    elseif msop.shape == :vector
+    elseif msop.shape isa Shapes.Vec
         vty = map(y) do sy
             vcat(vec.(sy)...)
         end

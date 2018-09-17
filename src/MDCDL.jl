@@ -295,9 +295,9 @@ struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     end
 end
 
-function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=Shapes.Default, kwargs...) where {T,D}
+function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=Shapes.Default(), kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
-    ops = map(t->createAnalyzer(ns, t; shape=Shapes.Default, kwargs...), szxs)
+    ops = map(t->createAnalyzer(ns, t; shape=Shapes.Default(), kwargs...), szxs)
     MultiscaleOperator(ops, sz; shape=shape)
 end
 
