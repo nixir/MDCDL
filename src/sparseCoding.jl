@@ -114,7 +114,7 @@ end
 fmconj(f) = (x_, s_) -> (x_ - f(x_,s_))
 
 function iht(cb::CodeBook, x, args...; kwargs...)
-    syn = createSynthesizer(cb, x; shape=:vector)
+    syn = createSynthesize(cb, x; shape=:vector)
     adj = createAnalyzer(cb, x; shape=:vector)
     iht(syn, adj, x, args...; kwargs...)
 end

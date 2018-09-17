@@ -2,7 +2,7 @@ using ImageFiltering: imfilter, reflect, FIR, FFT
 using OffsetArrays: OffsetArray
 
 function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    pvx = mdarray2polyphase(x, A.nsolt.decimationFactor)
+    pvx = mdarray2polyphase(x, decimations(A.nsolt))
     y = analyze(A.nsolt, pvx; border=A.border)
     reshape_polyvec(A.shape, A, y)
 end

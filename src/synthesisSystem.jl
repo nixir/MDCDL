@@ -4,7 +4,7 @@ using OffsetArrays: OffsetArray
 function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     pvy = reshape_coefs(syn.shape, syn, y)
     pvx = synthesize(syn.nsolt, pvy; border=syn.border)
-    polyphase2mdarray(pvx, syn.nsolt.decimationFactor)
+    polyphase2mdarray(pvx, decimations(syn.nsolt))
 end
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)

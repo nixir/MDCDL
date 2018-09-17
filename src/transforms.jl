@@ -33,7 +33,7 @@ end
 
 function reshape_coefs(::Shapes.Vec, nsop::NsoltOperator, y::AbstractArray)
     szout = fld.(nsop.insize, nsop.nsolt.decimationFactor)
-    ty = reshape(y, szout..., sum(nsop.nsolt.nChannels))
+    ty = reshape(y, szout..., nchannels(nsop.nsolt))
     mdarray2polyphase(ty)
 end
 
