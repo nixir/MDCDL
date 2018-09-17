@@ -3,7 +3,9 @@ using Base.Filesystem
 using Statistics
 using Dates
 
-function train!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
+train!(nsolt::AbstractNsolt, ts::AbstractArray; kwargs...) = train_nsolt!(nsolt, ts; kwargs...)
+
+function train_nsolt!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
     vlevel = verboselevel(verbose)
 
     savesettings(logdir, nsolt, trainingSet;
@@ -52,8 +54,6 @@ function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Intege
         (ConvolutionalOperator(nsolt, size(x), :analyzer; shape=Shapes.Vec(), resource=resource),
         ConvolutionalOperator(nsolt, size(x), :synthesizer; shape=Shapes.Vec(), resource=resource),)
     else # == :polyphase
-        # (createAnalyzer(nsolt, size(x); shape=Shapes.Vec()),
-        # createSynthesizer(nsolt, size(x); shape=Shapes.Vec()),)
         (fill(createOperator(nsolt, size(x); shape=Shapes.Vec()),2)...,)
     end
     y0 = analyze(ana, x)
