@@ -97,11 +97,10 @@ using Random
             x = rand(Complex{Float64}, szx...)
 
             foreach(oms) do om
-                ana = createAnalyzer(nsolt, x; shape=om)
-                syn = createSynthesizer(nsolt, x; shape=om)
+                nsop = createOperator(nsolt, x; shape=om)
 
-                y = analyze(ana, x)
-                rx = synthesize(syn, y)
+                y = analyze(nsop, x)
+                rx = synthesize(nsop, y)
 
                 @test size(x) == size(rx)
                 @test rx ≈ x
@@ -117,7 +116,7 @@ using Random
             nsolt = Cnsolt(df, ord, nch)
             rand!(nsolt)
 
-            ana = createAnalyzer(nsolt, x; shape=Shapes.Default())
+            ana = createOperator(nsolt, x; shape=Shapes.Default())
             ya = analyze(ana, x)
 
             afs = analysiskernels(nsolt)
@@ -145,7 +144,7 @@ using Random
 
             y = [ rand(Complex{Float64},((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            syn = createSynthesizer(nsolt, ord.+1; shape=Shapes.Default())
+            syn = createOperator(nsolt, ord.+1; shape=Shapes.Default())
             x = synthesize(syn, y)
 
             sfs = synthesiskernels(nsolt)
