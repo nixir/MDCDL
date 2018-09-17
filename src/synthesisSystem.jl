@@ -3,18 +3,17 @@ using OffsetArrays: OffsetArray
 
 function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     pvy = reshape_coefs(syn.shape, syn, y)
-
     pvx = synthesize(syn.nsolt, pvy; border=syn.border)
     polyphase2mdarray(pvx, syn.nsolt.decimationFactor)
 end
 
-reshape_coefs(::Shapes.Default, ::NsoltOperator, y::AbstractArray) = PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
-reshape_coefs(::Shapes.Augumented, ::NsoltOperator, y::AbstractArray) = mdarray2polyphase(y)
-function reshape_coefs(::Shapes.Vec, nsop::NsoltOperator, y::AbstractArray)
-    szout = fld.(nsop.insize, nsop.nsolt.decimationFactor)
-    ty = reshape(y, szout..., sum(nsop.nsolt.nChannels))
-    mdarray2polyphase(ty)
-end
+# reshape_coefs(::Shapes.Default, ::NsoltOperator, y::AbstractArray) = PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
+# reshape_coefs(::Shapes.Augumented, ::NsoltOperator, y::AbstractArray) = mdarray2polyphase(y)
+# function reshape_coefs(::Shapes.Vec, nsop::NsoltOperator, y::AbstractArray)
+#     szout = fld.(nsop.insize, nsop.nsolt.decimationFactor)
+#     ty = reshape(y, szout..., sum(nsop.nsolt.nChannels))
+#     mdarray2polyphase(ty)
+# end
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
@@ -177,11 +176,6 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
 end
 
 function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,D}
-    # if msop.shape isa Shapes.Default
-    #     subsynthesize(msop.shape, msop.operators, y)
-    # elseif msop.shape isa Shapes.Vec
-    #     subsynthesize(msop.shape, msop.operators, y)
-    # end
     subsynthesize(msop.shape, msop.operators, y)
 end
 
@@ -190,6 +184,16 @@ function subsynthesize(v::Shapes.Default, abop::AbstractVector, sy::AbstractArra
         sy[1]
     else
         [ subsynthesize(v, abop[2:end], sy[2:end]), sy[1]... ]
+    end
+    synthesize(abop[1], ya)
+end
+
+function subsynthesize(v::Shapes.Augumented, abop::AbstractVector, sy::AbstractArray)
+    ya = if length(abop) <= 1
+        sy[1]
+    else
+        rx = subsynthesize(v, abop[2:end], sy[2:end])
+        cat(rx, sy[1], dims=ndims(sy[1]))
     end
     synthesize(abop[1], ya)
 end
@@ -221,9 +225,9 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     sum(sxs)
 end
 
-reshape_coefs(::Shapes.Default, ::ConvolutionalOperator, y::AbstractArray) = y
-reshape_coefs(::Shapes.Augumented, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D} = [ y[fill(:,D)..., p] for p in 1:co.nChannels]
-function reshape_coefs(::Shapes.Vec, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
-    ry = reshape(y, fld.(co.insize, co.decimationFactor)..., co.nChannels)
-    [ ry[fill(:,D)..., p] for p in 1:co.nChannels ]
-end
+# reshape_coefs(::Shapes.Default, ::ConvolutionalOperator, y::AbstractArray) = y
+# reshape_coefs(::Shapes.Augumented, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D} = [ y[fill(:,D)..., p] for p in 1:co.nChannels]
+# function reshape_coefs(::Shapes.Vec, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
+#     ry = reshape(y, fld.(co.insize, co.decimationFactor)..., co.nChannels)
+#     [ ry[fill(:,D)..., p] for p in 1:co.nChannels ]
+# end

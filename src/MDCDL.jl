@@ -53,6 +53,10 @@ eltype(::Type{CB}) where {T,D,CB<:CodeBook{T,D}} = T
 ndims(::Type{CB}) where {T,D,CB<:CodeBook{T,D}} = D
 ndims(cb::CodeBook) = ndims(typeof(cb))
 
+decimations(fb::FilterBank) = fb.decimationFactor
+nchannels(fb::FilterBank) = fb.nChannels
+orders(fb::FilterBank) = fb.polyphaseOrder
+
 struct Rnsolt{T,D} <: AbstractNsolt{T,D}
     category::Symbol
     decimationFactor::NTuple{D, Int}
@@ -222,6 +226,8 @@ struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     end
 end
 
+nchannels(nsop::NsoltOperator) = sum(nsop.nsolt.nChannels)
+
 createAnalyzer(ns::AbstractNsolt, args...; kwargs...) = NsoltOperator(ns, args...; kwargs...)
 createSynthesizer(ns::AbstractNsolt, args...; kwargs...) = NsoltOperator(ns, args...; kwargs...)
 
@@ -281,6 +287,8 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     end
 end
 
+nchannels(coop::ConvolutionalOperator) = coop.nChannels
+
 createAnalyzer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalOperator(ker, args...; kwargs...)
 createSynthesizer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalOperator(ker, args...; kwargs...)
 
@@ -295,13 +303,15 @@ struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     end
 end
 
-function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=Shapes.Default(), kwargs...) where {T,D}
+nchannels(msop::MultiscaleOperator) = nchannels.(msop.operators)
+
+function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}, level::Integer; shape=Shapes.Default(), kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
-    ops = map(t->createAnalyzer(ns, t; shape=Shapes.Default(), kwargs...), szxs)
+    ops = map(t->createAnalyzer(ns, t; shape=shape, kwargs...), szxs)
     MultiscaleOperator(ops, sz; shape=shape)
 end
 
-function createMultiscaleSynthesizer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}; level, shape=Shapes.Default(), kwargs...) where {T,D}
+function createMultiscaleSynthesizer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}, level::Integer; shape=Shapes.Default(), kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
     ops = map(t->createSynthesizer(ns, t; shape=shape, kwargs...), szxs)
     MultiscaleOperator(ops, sz; shape=shape)
@@ -314,6 +324,7 @@ include("polyphaseMatrices.jl")
 
 include("analysisSystem.jl")
 include("synthesisSystem.jl")
+include("transforms.jl")
 
 include("parameterizeFilterBanks.jl")
 
