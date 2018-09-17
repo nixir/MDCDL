@@ -11,7 +11,7 @@ import Random: rand!
 include("basicComplexDSP.jl")
 
 export PolyphaseVector
-export FilterBank, PolyphaseFB, ParallelFB, AbstractNsolt, Cnsolt, Rnsolt
+export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt
 export Multiscale, MultiLayerCsc
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
@@ -51,7 +51,7 @@ ndims(::Type{CB}) where {T,D,CB<:CodeBook{T,D}} = D
 ndims(cb::CodeBook) = ndims(typeof(cb))
 
 decimations(fb::FilterBank) = fb.decimationFactor
-nchannels(fb::FilterBank) = fb.nChannels
+nchannels(fb::FilterBank) = sum(fb.nChannels)
 orders(fb::FilterBank) = fb.polyphaseOrder
 
 struct Rnsolt{T,D} <: AbstractNsolt{T,D}
@@ -172,6 +172,22 @@ promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsol
 
 similar(nsolt::Cnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimationFactor, ord::NTuple{DD}=nsolt.polyphaseOrder, nch::Integer=nsolt.nChannels) where {T,DS,DD} = Cnsolt(element_type, df, ord, nch)
 
+struct ParallelFilters{T,D} <: FilterBank{T,D}
+    decimationFactor::NTuple{D,Int}
+    polyphaseOrder::NTuple{D,Int}
+    nChannels::Integer
+
+    kernels::Vector{AbstractArray{T,D}}
+
+    function ParallelFilters(df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer, ker::Vector{A}) where {T,D,A<:AbstractArray{T,D}}
+        new{T,D}(df, ord, nch, ker)
+    end
+
+    function ParallelFilters(::Type{T}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer) where {T,D}
+        new{T,D}(df, ord, nch, fill(zeros(df .* (ord .+ 1)), nch))
+    end
+end
+
 struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     nLayers::Int
 
@@ -189,6 +205,12 @@ struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     end
 end
 
+get_outputsize(s::Shapes.Shape, pfb::PolyphaseFB, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
+
+get_outputsize(::Shapes.Default, dcsz::NTuple, insz::NTuple, nch::Integer) = (nch, dcsz...)
+get_outputsize(::Shapes.Augumented, dcsz::NTuple, insz::NTuple, nch::Integer) = (dcsz..., nch)
+get_outputsize(::Shapes.Vec, dcsz::NTuple, insz::NTuple, nch::Integer) = (prod(dcsz) * nch,)
+
 abstract type AbstractOperator{T,D} end
 
 struct NsoltOperator{T,D} <: AbstractOperator{T,D}
@@ -204,17 +226,7 @@ struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     end
 
     function NsoltOperator(ns::AbstractNsolt{T,D}, insz::NTuple; shape=Shapes.Default(), kwargs...) where {T,D}
-        # new{T,D}(mode, shape, insz, outsz, ns, border)
-        dcsz = fld.(insz, ns.decimationFactor)
-        outsz = if shape isa Shapes.Default
-            (sum(ns.nChannels), dcsz...,)
-        elseif shape isa Shapes.Augumented
-            (dcsz..., sum(ns.nChannels),)
-        elseif shape isa Shapes.Vec
-            (prod(dcsz) * sum(ns.nChannels),)
-        else
-            error("Invalid augument")
-        end
+        outsz = get_outputsize(shape, ns, insz)
         NsoltOperator(ns, insz, outsz; shape=shape, kwargs...)
     end
 
@@ -247,15 +259,7 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
 
     function ConvolutionalOperator(kernels::Vector{Array{T,D}}, insz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=Shapes.Default(), kwargs...) where {T,D}
         dcsz = fld.(insz, df)
-        outsz = if shape isa Shapes.Default
-            (sum(nch), dcsz...,)
-        elseif shape isa Shapes.Augumented
-            (dcsz..., nch,)
-        elseif shape isa Shapes.Vec
-            (prod(dcsz) * nch,)
-        else
-            error("Invalid augument")
-        end
+        outsz = get_outputsize(shape, dcsz, insz, nch)
         ConvolutionalOperator(kernels, insz, outsz, df, ord, nch; shape=shape, kwargs...)
     end
 
