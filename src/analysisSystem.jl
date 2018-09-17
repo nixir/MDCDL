@@ -198,18 +198,22 @@ end
 
 subanalyze(::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator) = analyze(abop, sx)
 
-function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    df = ca.decimationFactor
-    ord = ca.polyphaseOrder
+function analyze(pfs::ParallelFilters{TF,D}, x::AbstractArray{TX,D}; resource=nothing) where {TF,TX,D}
+    df = pfs.decimationFactor
+    ord = pfs.polyphaseOrder
 
     nShift = df .* fld.(ord, 2) .+ 1
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
 
     offset = df .- 1
-    y = map(ca.kernels) do f
+    map(pfs.kernels) do f
         ker = reflect(OffsetArray(f, region...))
-        fltimg = imfilter(ca.resource, x, ker, "circular")
+        fltimg = imfilter(resource, x, ker, "circular")
         downsample(fltimg, df, offset)
     end
+end
+
+function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
+    y = analyze(ca.parallelFilters, x; resource=ca.resource)
     reshape_polyvec(ca.shape, ca, y)
 end

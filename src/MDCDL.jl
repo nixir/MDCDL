@@ -11,7 +11,7 @@ import Random: rand!
 include("basicComplexDSP.jl")
 
 export PolyphaseVector
-export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt
+export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt, ParallelFilters
 export Multiscale, MultiLayerCsc
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
@@ -235,7 +235,9 @@ struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     end
 end
 
-nchannels(nsop::NsoltOperator) = sum(nsop.nsolt.nChannels)
+decimations(nsop::NsoltOperator) = decimations(nsop.nsolt)
+orders(nsop::NsoltOperator) = orders(nsop.nsolt)
+nchannels(nsop::NsoltOperator) = nchannels(nsop.nsolt)
 
 createOperator(ns::AbstractNsolt, x; kwargs...) = NsoltOperator(ns, x; kwargs...)
 
@@ -244,50 +246,35 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     outsize::NTuple
     shape::Shapes.Shape
 
-    kernels::Vector{Array{T,D}}
-
-    decimationFactor::NTuple{D,Int}
-    polyphaseOrder::NTuple{D,Int}
-    nChannels::Int
+    parallelFilters::ParallelFilters{T,D}
 
     border::Symbol
     resource::AbstractResource
 
-    function ConvolutionalOperator(kernels::Vector{Array{T,D}}, insz::NTuple, outsz::NTuple, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=Shapes.Default(), border=:circular, resource=CPU1(FIR())) where {T,D}
-        new{T,D}(insz, outsz, shape, kernels, df, ord, nch, border, resource)
+    function ConvolutionalOperator(filters::ParallelFilters{T,D}, insz::NTuple, outsz::NTuple; shape=Shapes.Default(), border=:circular, resource=CPU1(FIR())) where {T,D}
+        new{T,D}(insz, outsz, shape, filters, border, resource)
     end
 
-    function ConvolutionalOperator(kernels::Vector{Array{T,D}}, insz::NTuple{D,Int}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Int; shape=Shapes.Default(), kwargs...) where {T,D}
-        dcsz = fld.(insz, df)
-        outsz = get_outputsize(shape, dcsz, insz, nch)
-        ConvolutionalOperator(kernels, insz, outsz, df, ord, nch; shape=shape, kwargs...)
-    end
-
-    function ConvolutionalOperator(kernels::Vector{Array{T,D}}, sz::NTuple{D,Int}; decimation::NTuple{D,Int}, kwargs...) where {T,D}
-        nch = length(kernels)
-        szFilter = size(kernels[1])
-        # if any(map(ker->size(ker) != szFilter, kernels))
-        #     error("size mismatch")
-        # end
-        ord = fld.(szFilter, decimation) .- 1
-        ConvolutionalOperator(kernels, sz, decimation, ord, nch)
+    function ConvolutionalOperator(pfs::ParallelFilters{T,D}, insz::NTuple{D,Int}; shape=Shapes.Default(), kwargs...) where {T,D}
+        dcsz = fld.(insz, decimations(pfs))
+        outsz = get_outputsize(shape, dcsz, insz, nchannels(pfs))
+        ConvolutionalOperator(pfs, insz, outsz; shape=shape, kwargs...)
     end
 
     function ConvolutionalOperator(pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}, mode::Symbol; kwargs...) where {T,D}
-        afs = if mode == :analyzer
+        ker = if mode == :analyzer
             analysiskernels(pfb)
         elseif mode == :synthesizer
             synthesiskernels(pfb)
         end
-        ConvolutionalOperator(afs, sz, pfb.decimationFactor, pfb.polyphaseOrder, sum(pfb.nChannels); kwargs...)
-    end
-
-    function ConvolutionalOperator(pfb::PolyphaseFB, x::AbstractArray, args...; kwargs...)
-        ConvolutionalOperator(pfb, size(x), args...; kwargs...)
+        pfs = ParallelFilters(decimations(pfb), orders(pfb), nchannels(pfb), ker)
+        ConvolutionalOperator(pfs, sz; kwargs...)
     end
 end
 
-nchannels(coop::ConvolutionalOperator) = coop.nChannels
+decimations(co::ConvolutionalOperator) = decimations(co.parallelFilters)
+orders(co::ConvolutionalOperator) = orders(co.parallelFilters)
+nchannels(co::ConvolutionalOperator) = nchannels(co.parallelFilters)
 
 struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple{D,T}

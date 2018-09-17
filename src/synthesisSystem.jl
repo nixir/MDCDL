@@ -193,19 +193,22 @@ end
 
 subsynthesize(::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy)
 
-function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
-    df = cs.decimationFactor
-    ord = cs.polyphaseOrder
-
-    ty = reshape_coefs(cs.shape, cs, y)
+function synthesize(pfs::ParallelFilters{TF,D}, y::AbstractArray; resource=nothing) where {TF,D}
+    df = pfs.decimationFactor
+    ord = pfs.polyphaseOrder
 
     nShift = df .* cld.(ord, 2) .+ 1
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
 
-    sxs = map(ty, cs.kernels) do yp, sfp
+    sxs = map(y, pfs.kernels) do yp, sfp
         upimg = upsample(yp, df)
         ker = reflect(OffsetArray(sfp, region...))
-        imfilter(cs.resource, upimg, ker, "circular")
+        imfilter(resource, upimg, ker, "circular")
     end
     sum(sxs)
+end
+
+function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
+    ty = reshape_coefs(cs.shape, cs, y)
+    synthesize(cs.parallelFilters, ty; resource=cs.resource)
 end
