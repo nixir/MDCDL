@@ -7,12 +7,6 @@ function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     reshape_polyvec(A.shape, A, y)
 end
 
-# reshape_polyvec(::Shapes.Default, ::NsoltOperator, pvy::PolyphaseVector) = [ reshape(pvy.data[p,:], pvy.nBlocks) for p in 1:size(pvy.data,1) ]
-# reshape_polyvec(::Shapes.Augumented, ::NsoltOperator, pvy::PolyphaseVector) = polyphase2mdarray(pvy)
-# reshape_polyvec(::Shapes.Vec, ::NsoltOperator, pvy::PolyphaseVector) = vec(transpose(pvy.data))
-
-# analyze(fb::PolyphaseFB{TF,D}, x::AbstractArray{TX,D}, args...; kwargs...) where {TF,TX,D} = analyze(fb, mdarray2polyphase(x, fb.decimationFactor), args...; kwargs...)
-
 analyze(fb::PolyphaseFB{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D} = PolyphaseVector(analyze(fb, pvx.data, pvx.nBlocks; kwargs...), pvx.nBlocks)
 
 analyze(cc::NS, px::AbstractMatrix{TX}, nBlocks::NTuple{D}; kwargs...) where {TF,TX,D,NS<:Cnsolt{TF,D}} = analyze(NS, Val{cc.category}, px, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
@@ -178,31 +172,6 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvx::AbstractMatri
     return pvx
 end
 
-# function analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-#     y = subanalyze(msop.operators, x)
-#     if msop.shape isa Shapes.Default
-#         y
-#     elseif msop.shape isa Shapes.Augumented
-#         map(y) do sy
-#             cat(D+1, sy...)
-#         end
-#     elseif msop.shape isa Shapes.Vec
-#         vty = map(y) do sy
-#             vcat(vec.(sy)...)
-#         end
-#         vcat(vty...)
-#     end
-# end
-#
-# function subanalyze(abop::AbstractVector, sx::AbstractArray{TS,D}) where {TS,D}
-#     sy = analyze(abop[1], sx)
-#     if length(abop) <= 1
-#         [sy]
-#     else
-#         [sy[2:end], subanalyze(abop[2:end], sy[1])...]
-#     end
-# end
-
 function analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     subanalyze(msop.shape, msop.operators, x)
 end
@@ -216,14 +185,14 @@ function subanalyze(shape::Shapes.Default, abop::AbstractVector, sx::AbstractArr
     end
 end
 
-# function subanalyze(shape::Shapes.Augumented, abop::AbstractVector, sx::AbstractArray{T,D}) where {T,D}
-#     sy = analyze(abop[1], sx)
-#     if length(abop) <= 1
-#         [sy]
-#     else
-#         [sy[fill(:,D)...,2:end], subanalyze(shape, abop[2:end], sy[fill(:,D)...,1])...]
-#     end
-# end
+function subanalyze(shape::Shapes.Augumented, abop::AbstractVector, sx::AbstractArray{T,D}) where {T,D}
+    sy = analyze(abop[1], sx)
+    if length(abop) <= 1
+        [sy]
+    else
+        [sy[fill(:,D)...,2:end], subanalyze(shape, abop[2:end], sy[fill(:,D)...,1])...]
+    end
+end
 
 function subanalyze(shape::Shapes.Vec, abop::AbstractVector, sx::AbstractArray)
     sy = analyze(abop[1], sx)
@@ -251,7 +220,3 @@ function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where 
     end
     reshape_polyvec(ca.shape, ca, y)
 end
-#
-# reshape_polyvec(::Shapes.Default, ::ConvolutionalOperator, y::AbstractArray) = y
-# reshape_polyvec(::Shapes.Augumented, ::ConvolutionalOperator{TF,D}, y::AbstractArray{TY,D}) where {TF,TY,D} = cat(D+1, y...)
-# reshape_polyvec(::Shapes.Vec, ::ConvolutionalOperator, y::AbstractArray) = vcat(vec.(y)...)

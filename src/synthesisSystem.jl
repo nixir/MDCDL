@@ -7,14 +7,6 @@ function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     polyphase2mdarray(pvx, syn.nsolt.decimationFactor)
 end
 
-# reshape_coefs(::Shapes.Default, ::NsoltOperator, y::AbstractArray) = PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
-# reshape_coefs(::Shapes.Augumented, ::NsoltOperator, y::AbstractArray) = mdarray2polyphase(y)
-# function reshape_coefs(::Shapes.Vec, nsop::NsoltOperator, y::AbstractArray)
-#     szout = fld.(nsop.insize, nsop.nsolt.decimationFactor)
-#     ty = reshape(y, szout..., sum(nsop.nsolt.nChannels))
-#     mdarray2polyphase(ty)
-# end
-
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
 synthesize(cc::NS, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D,NS<:Cnsolt{TF,D}} = synthesize(NS, Val{cc.category}, py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
@@ -224,10 +216,3 @@ function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {T
     end
     sum(sxs)
 end
-
-# reshape_coefs(::Shapes.Default, ::ConvolutionalOperator, y::AbstractArray) = y
-# reshape_coefs(::Shapes.Augumented, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D} = [ y[fill(:,D)..., p] for p in 1:co.nChannels]
-# function reshape_coefs(::Shapes.Vec, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
-#     ry = reshape(y, fld.(co.insize, co.decimationFactor)..., co.nChannels)
-#     [ ry[fill(:,D)..., p] for p in 1:co.nChannels ]
-# end
