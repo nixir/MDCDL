@@ -179,14 +179,14 @@ end
 function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,D}
     if msop.shape isa Shapes.Default
         subsynthesize(msop.shape, msop.operators, y)
-    elseif msop.shape isa Shapes.Default
+    elseif msop.shape isa Shapes.Vec
         subsynthesize(msop.shape, msop.operators, y)
     end
 end
 
 function subsynthesize(v::Shapes.Default, abop::AbstractVector, sy::AbstractArray)
     ya = if length(abop) <= 1
-        sy[1]
+        sy[1] 
     else
         [ subsynthesize(v, abop[2:end], sy[2:end]), sy[1]... ]
     end
