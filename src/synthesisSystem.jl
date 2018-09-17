@@ -168,37 +168,30 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
 end
 
 function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,D}
-    subsynthesize(msop.shape, msop.operators, y)
+    subsynthesize(msop.shape, y, msop.operators...)
 end
 
-function subsynthesize(v::Shapes.Default, abop::AbstractVector, sy::AbstractArray)
-    ya = if length(abop) <= 1
-        sy[1]
-    else
-        [ subsynthesize(v, abop[2:end], sy[2:end]), sy[1]... ]
-    end
-    synthesize(abop[1], ya)
+function subsynthesize(shape::Shapes.Default, sy::AbstractArray, abop::AbstractOperator, args...)
+    ya = [ subsynthesize(shape, sy[2:end], args...), sy[1]... ]
+    synthesize(abop, ya)
 end
 
-function subsynthesize(v::Shapes.Augumented, abop::AbstractVector, sy::AbstractArray)
-    ya = if length(abop) <= 1
-        sy[1]
-    else
-        rx = subsynthesize(v, abop[2:end], sy[2:end])
-        cat(rx, sy[1], dims=ndims(sy[1]))
-    end
-    synthesize(abop[1], ya)
+subsynthesize(::Shapes.Default, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
+
+function subsynthesize(shape::Shapes.Augumented, sy::AbstractArray, abop::AbstractOperator, args...)
+    rx = subsynthesize(shape, sy[2:end], args...)
+    synthesize(abop, cat(rx, sy[1]; dims=ndims(sy[1]) ))
 end
 
-function subsynthesize(v::Shapes.Vec, abop::AbstractVector, sy::AbstractArray)
-    ya = if length(abop) <= 1
-        sy
-    else
-        lny = prod(abop[1].outsize) - prod(abop[2].insize)
-        [ vec(subsynthesize(v, abop[2:end], sy[lny+1:end])); sy[1:lny] ]
-    end
-    synthesize(abop[1], ya)
+subsynthesize(::Shapes.Augumented, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
+
+function subsynthesize(shape::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator, args...)
+    lny = prod(abop.outsize) - prod(args[1].insize)
+    ya = [ vec(subsynthesize(shape, sy[lny+1:end], args...)); sy[1:lny] ]
+    synthesize(abop, ya)
 end
+
+subsynthesize(::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy)
 
 function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
     df = cs.decimationFactor

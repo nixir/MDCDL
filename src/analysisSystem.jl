@@ -172,38 +172,31 @@ function extendAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvx::AbstractMatri
     return pvx
 end
 
-function analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    subanalyze(msop.shape, msop.operators, x)
+analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D} = subanalyze(msop.shape, x, msop.operators...)
+
+function subanalyze(shape::Shapes.Default, sx::AbstractArray, abop::AbstractOperator, args...)
+    sy = analyze(abop, sx)
+    [sy[2:end], subanalyze(shape, sy[1], args...)...]
 end
 
-function subanalyze(shape::Shapes.Default, abop::AbstractVector, sx::AbstractArray)
-    sy = analyze(abop[1], sx)
-    if length(abop) <= 1
-        [sy]
-    else
-        [sy[2:end], subanalyze(shape, abop[2:end], sy[1])...]
-    end
+subanalyze(::Shapes.Default, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
+
+function subanalyze(shape::Shapes.Augumented, sx::AbstractArray{T,D}, abop::AbstractOperator, args...) where {T,D}
+    sy = analyze(abop, sx)
+    clns = fill(:,D)
+    [ sy[clns...,2:end], subanalyze(shape, sy[clns...,1], args...)... ]
 end
 
-function subanalyze(shape::Shapes.Augumented, abop::AbstractVector, sx::AbstractArray{T,D}) where {T,D}
-    sy = analyze(abop[1], sx)
-    if length(abop) <= 1
-        [sy]
-    else
-        [sy[fill(:,D)...,2:end], subanalyze(shape, abop[2:end], sy[fill(:,D)...,1])...]
-    end
+subanalyze(::Shapes.Augumented, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
+
+function subanalyze(shape::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator, args...)
+    sy = analyze(abop, sx)
+    lndc = fld(length(sy), nchannels(abop))
+    dcdata = reshape(sy[1:lndc], args[1].insize...)
+    vcat(sy[lndc+1:end], subanalyze(shape, dcdata, args...))
 end
 
-function subanalyze(shape::Shapes.Vec, abop::AbstractVector, sx::AbstractArray)
-    sy = analyze(abop[1], sx)
-    if length(abop) <= 1
-        sy
-    else
-        lndc = fld(length(sy), nchannels(abop[1]))
-        dcdata = reshape(sy[1:lndc], abop[2].insize...)
-        vcat(sy[lndc+1:end], subanalyze(shape, abop[2:end], dcdata))
-    end
-end
+subanalyze(::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator) = analyze(abop, sx)
 
 function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     df = ca.decimationFactor

@@ -21,13 +21,10 @@ export kernels, analysiskernels, synthesiskernels
 export getrotations, setrotations!
 export mdarray2polyphase, polyphase2mdarray
 export iht
-# export Analyzer, VecAnalyzer
-# export Synthesizer, VecSynthesizer
 export AbstractOperator
 export NsoltOperator
 export ConvolutionalOperator
-export createAnalyzer, createSynthesizer
-export createMultiscaleAnalyzer, createMultiscaleSynthesizer
+export createOperator
 export Shapes
 
 module Shapes
@@ -228,8 +225,7 @@ end
 
 nchannels(nsop::NsoltOperator) = sum(nsop.nsolt.nChannels)
 
-createAnalyzer(ns::AbstractNsolt, args...; kwargs...) = NsoltOperator(ns, args...; kwargs...)
-createSynthesizer(ns::AbstractNsolt, args...; kwargs...) = NsoltOperator(ns, args...; kwargs...)
+createOperator(ns::AbstractNsolt, x; kwargs...) = NsoltOperator(ns, x; kwargs...)
 
 struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple
@@ -289,9 +285,6 @@ end
 
 nchannels(coop::ConvolutionalOperator) = coop.nChannels
 
-createAnalyzer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalOperator(ker, args...; kwargs...)
-createSynthesizer(ker::Vector{Array{T,D}}, args...; kwargs...) where {T,D} = ConvolutionalOperator(ker, args...; kwargs...)
-
 struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple{D,T}
     shape::Shapes.Shape
@@ -305,15 +298,9 @@ end
 
 nchannels(msop::MultiscaleOperator) = nchannels.(msop.operators)
 
-function createMultiscaleAnalyzer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}, level::Integer; shape=Shapes.Default(), kwargs...) where {T,D}
+function createOperator(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}, level::Integer; shape=Shapes.Default(), kwargs...) where {T,D}
     szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
-    ops = map(t->createAnalyzer(ns, t; shape=shape, kwargs...), szxs)
-    MultiscaleOperator(ops, sz; shape=shape)
-end
-
-function createMultiscaleSynthesizer(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}, level::Integer; shape=Shapes.Default(), kwargs...) where {T,D}
-    szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
-    ops = map(t->createSynthesizer(ns, t; shape=shape, kwargs...), szxs)
+    ops = map(t->createOperator(ns, t; shape=shape, kwargs...), szxs)
     MultiscaleOperator(ops, sz; shape=shape)
 end
 

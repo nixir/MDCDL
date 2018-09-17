@@ -52,8 +52,9 @@ function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Intege
         (ConvolutionalOperator(nsolt, size(x), :analyzer; shape=Shapes.Vec(), resource=resource),
         ConvolutionalOperator(nsolt, size(x), :synthesizer; shape=Shapes.Vec(), resource=resource),)
     else # == :polyphase
-        (createAnalyzer(nsolt, size(x); shape=Shapes.Vec()),
-        createSynthesizer(nsolt, size(x); shape=Shapes.Vec()),)
+        # (createAnalyzer(nsolt, size(x); shape=Shapes.Vec()),
+        # createSynthesizer(nsolt, size(x); shape=Shapes.Vec()),)
+        (fill(createOperator(nsolt, size(x); shape=Shapes.Vec()),2)...,)
     end
     y0 = analyze(ana, x)
 
@@ -123,7 +124,7 @@ end
 
 function lossfcn(nsolt::AbstractNsolt, x::AbstractArray, y::AbstractArray, θ::AbstractArray, μ::AbstractArray)
     cpnsolt = setrotations!(similar(nsolt, eltype(θ)), θ, μ)
-    syn = createSynthesizer(cpnsolt, size(x); shape=Shapes.Vec())
+    syn = createOperator(cpnsolt, size(x); shape=Shapes.Vec())
     norm(x - synthesize(syn, y))^2/2
 end
 
