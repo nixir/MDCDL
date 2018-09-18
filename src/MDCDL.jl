@@ -205,7 +205,7 @@ struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     end
 end
 
-get_outputsize(s::Shapes.Shape, pfb::PolyphaseFB, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
+get_outputsize(s::Shapes.Shape, pfb, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
 
 get_outputsize(::Shapes.Default, dcsz::NTuple, insz::NTuple, nch::Integer) = (nch, dcsz...)
 get_outputsize(::Shapes.Augumented, dcsz::NTuple, insz::NTuple, nch::Integer) = (dcsz..., nch)
@@ -256,8 +256,7 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     end
 
     function ConvolutionalOperator(pfs::ParallelFilters{T,D}, insz::NTuple{D,Int}; shape=Shapes.Default(), kwargs...) where {T,D}
-        dcsz = fld.(insz, decimations(pfs))
-        outsz = get_outputsize(shape, dcsz, insz, nchannels(pfs))
+        outsz = get_outputsize(shape, pfs, insz)
         ConvolutionalOperator(pfs, insz, outsz; shape=shape, kwargs...)
     end
 

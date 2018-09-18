@@ -198,14 +198,14 @@ end
 
 subanalyze(::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator) = analyze(abop, sx)
 
-function analyze(pfs::ParallelFilters{TF,D}, x::AbstractArray{TX,D}; resource=nothing) where {TF,TX,D}
+function analyze(pfs::ParallelFilters{TF,D}, x::AbstractArray{TX,D}; resource=CPU1(FIR())) where {TF,TX,D}
     df = pfs.decimationFactor
     ord = pfs.polyphaseOrder
 
     nShift = df .* fld.(ord, 2) .+ 1
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
-
     offset = df .- 1
+    
     map(pfs.kernels) do f
         ker = reflect(OffsetArray(f, region...))
         fltimg = imfilter(resource, x, ker, "circular")

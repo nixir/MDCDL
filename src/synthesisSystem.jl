@@ -193,7 +193,7 @@ end
 
 subsynthesize(::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy)
 
-function synthesize(pfs::ParallelFilters{TF,D}, y::AbstractArray; resource=nothing) where {TF,D}
+function synthesize(pfs::ParallelFilters{TF,D}, y::AbstractArray; resource=CPU1(FIR())) where {TF,D}
     df = pfs.decimationFactor
     ord = pfs.polyphaseOrder
 
