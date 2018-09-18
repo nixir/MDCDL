@@ -29,9 +29,9 @@ function load(io::IOStream)
     deserialize(dic)
 end
 
-deserialize(dic::Dict; format::AbstractString="JSON") = deserialize(Val{Symbol(dic["Name"])}, dic)
+deserialize(dic::Dict; format::AbstractString="JSON") = deserialize(Val(Symbol(dic["Name"])), dic)
 
-function deserialize(::Type{Val{:CNSOLT}}, dic::Dict)
+function deserialize(::Val{:CNSOLT}, dic::Dict)
     dtSet = Dict([ string(Complex{slf}) => slf for slf in subtypes(AbstractFloat) ])
 
     T = dtSet[dic["DataType"]]
@@ -80,7 +80,7 @@ function deserialize(::Type{Val{:CNSOLT}}, dic::Dict)
     nsolt
 end
 
-function deserialize(::Type{Val{:RNSOLT}}, dic::Dict)
+function deserialize(::Val{:RNSOLT}, dic::Dict)
     dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
 
     T = dtSet[dic["DataType"]]

@@ -50,9 +50,9 @@ using LinearAlgebra
                 #     @test isa(nsolt, Rnsolt{defaultType,d,:TypeII})
                 # end
                 if nch[1] == nch[2]
-                    @test nsolt.category == :TypeI
+                    @test istype1(nsolt) == true && istype2(nsolt) == false
                 else
-                    @test nsolt.category == :TypeII
+                    @test istype1(nsolt) == false && istype2(nsolt) == true
                 end
             end
         end

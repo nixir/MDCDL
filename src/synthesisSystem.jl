@@ -9,22 +9,22 @@ end
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
-synthesize(cc::NS, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D,NS<:Cnsolt{TF,D}} = synthesize(NS, Val{cc.category}, py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
+synthesize(cc::NS, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D,NS<:Cnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
 
-function synthesize(::Type{NS}, ::Type{CT}, y::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Cnsolt{TF,D},CT}
-    uy = concatenateAtoms(NS, CT, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
+function synthesize(::Type{NS}, tp::Val, y::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Cnsolt{TF,D}}
+    uy = concatenateAtoms(NS, tp, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
 
     # output = (V0 * F * J)' * uy == J * F' * V0' * uy
     (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2))' * uy
 end
 
-function concatenateAtoms(::Type{NS}, ::Type{CT}, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {TF,D,NS<:Cnsolt{TF,D},CT}
+function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}}
     foldr(1:D; init=pvy) do d, ty
-        concatenateAtomsPerDims(NS, CT, ty, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
+        concatenateAtomsPerDims(NS, tp, ty, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
     end
 end
 
-function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
+function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
     pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
     nShift = fld(size(pvy, 2), nBlock)
     # submatrices
@@ -39,16 +39,16 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvy::AbstractM
         y .= B' * y
 
         if isodd(k)
-            shiftbackward!(Val{border}, yl, nShift)
+            shiftbackward!(Val(border), yl, nShift)
         else
-            shiftforward!(Val{border}, yu, nShift)
+            shiftforward!(Val(border), yu, nShift)
         end
         y .= B * y
     end
     return ipermutedimspv(pvy, nBlock)
 end
 
-function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
+function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
     nStages = fld(ordd, 2)
     chEven = 1:(P-1)
 
@@ -67,7 +67,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
 
         B = getMatrixB(P, paramAngsd[2k])
         ye  .= B' * ye
-        shiftforward!(Val{border}, yu1, nShift)
+        shiftforward!(Val(border), yu1, nShift)
         ye  .= B * ye
 
         # first step
@@ -76,31 +76,31 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
 
         B = getMatrixB(P, paramAngsd[2k-1])
         ye  .= B' * ye
-        shiftbackward!(Val{border}, yl1, nShift)
+        shiftbackward!(Val(border), yl1, nShift)
         ye  .= B * ye
     end
     return ipermutedimspv(pvy, nBlock)
 end
 
-synthesize(cc::NS, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D,NS<:Rnsolt{TF,D}} = synthesize(NS, Val{cc.category}, py, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
+synthesize(cc::NS, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D,NS<:Rnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 
-function synthesize(cc::Type{NS}, ::Type{CT}, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Rnsolt{TF,D},CT}
+function synthesize(cc::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Rnsolt{TF,D}}
     M = prod(df)
 
-    y = concatenateAtoms(NS, CT, pvy, nBlocks, propMts, ord, nch; kwargs...)
+    y = concatenateAtoms(NS, tp, pvy, nBlocks, propMts, ord, nch; kwargs...)
 
     W0 = initMts[1] * Matrix(I, nch[1], cld(M,2))
     U0 = initMts[2] * Matrix(I, nch[2], fld(M,2))
     reverse(matrixC, dims=2)' * vcat(W0' * y[1:nch[1],:], U0' * y[(nch[1]+1):end,:])
 end
 
-function concatenateAtoms(::Type{NS}, ::Type{CT}, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D},CT}
+function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}}
     foldr(1:D; init=pvy) do d, ty
-        concatenateAtomsPerDims(NS, CT, ty, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
+        concatenateAtomsPerDims(NS, tp, ty, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
     end
 end
 
-function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
+function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
     hP = nch[1]
     pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
     nShift = fld(size(pvy, 2), nBlock)
@@ -113,9 +113,9 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvy::AbstractM
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
         if isodd(k)
-            shiftbackward!(Val{border}, yl, nShift)
+            shiftbackward!(Val(border), yl, nShift)
         else
-            shiftforward!(Val{border}, yu, nShift)
+            shiftforward!(Val(border), yu, nShift)
         end
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
@@ -123,7 +123,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeI}}, pvy::AbstractM
     return ipermutedimspv(pvy, nBlock)
 end
 
-function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
+function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
     nStages = fld(ordd, 2)
     P = sum(nch)
     maxP, minP, chMajor, chMinor = if nch[1] > nch[2]
@@ -148,7 +148,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
 
-        shiftforward!(Val{border}, ys2, nShift)
+        shiftforward!(Val(border), ys2, nShift)
 
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
@@ -159,7 +159,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::Type{Val{:TypeII}}, pvy::Abstract
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl
 
-        shiftbackward!(Val{border}, ys1, nShift)
+        shiftbackward!(Val(border), ys1, nShift)
 
         tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
         yu .= tu; yl .= tl

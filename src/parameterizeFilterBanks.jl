@@ -2,12 +2,12 @@
 #TODO: 角度パラメータのベクトル化手法の仕様をどこかに記述する．
 #TODO: コードが汚いのでリファクタリングする
 
-getrotations(cc::AbstractNsolt) = getrotations(Val{cc.category}, cc)
-setrotations!(cc::AbstractNsolt, θ, μ) = setrotations!(Val{cc.category}, cc, θ, μ)
+getrotations(cc::AbstractNsolt) = getrotations(Val(istype1(cc)), cc)
+setrotations!(cc::AbstractNsolt, θ, μ) = setrotations!(Val(istype1(cc)), cc, θ, μ)
 
 setrotations(cc::AbstractNsolt, args...) = setrotations!(deepcopy(cc), args...)
 
-function getrotations(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
+function getrotations(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -46,7 +46,7 @@ function getrotations(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setrotations!(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -95,7 +95,7 @@ function setrotations!(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}, angs::AbstractArray
     return cc
 end
 
-function getrotations(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
+function getrotations(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -137,7 +137,7 @@ function getrotations(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setrotations!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -201,7 +201,7 @@ function setrotations!(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}, angs::AbstractArra
     return cc
 end
 
-function getrotations(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}) where {D,T}
+function getrotations(::TypeI, cc::Rnsolt{T,D}) where {D,T}
     P = sum(cc.nChannels)
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -242,7 +242,7 @@ function getrotations(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}) where {D,T}
 end
 
 #TODO: コードが汚いのでリファクタリングする
-function setrotations!(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = sum(cc.nChannels)
     df = cc.decimationFactor
@@ -288,7 +288,7 @@ function setrotations!(::Type{Val{:TypeI}}, cc::Rnsolt{T,D}, angs::AbstractArray
     return cc
 end
 
-function getrotations(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}) where {D,T}
+function getrotations(::TypeII, cc::Rnsolt{T,D}) where {D,T}
     nch = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -330,7 +330,7 @@ function getrotations(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setrotations!(::Type{Val{:TypeII}}, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(::TypeII, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     nch = cc.nChannels
     df = cc.decimationFactor

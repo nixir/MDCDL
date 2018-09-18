@@ -18,9 +18,9 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-analysisbank(cc::AbstractNsolt) = analysisbank(Val{cc.category}, cc)
+analysisbank(cc::AbstractNsolt) = analysisbank(Val(istype1(cc)), cc)
 
-function analysisbank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
+function analysisbank(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -58,7 +58,7 @@ function analysisbank(::Type{Val{:TypeI}}, cc::Cnsolt{T,D}) where {D,T}
     cc.symmetry * ppm
 end
 
-function analysisbank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
+function analysisbank(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -114,7 +114,7 @@ function analysisbank(::Type{Val{:TypeII}}, cc::Cnsolt{T,D}) where {D,T}
     cc.symmetry * ppm
 end
 
-function analysisbank(::Type{Val{:TypeI}}, rc::Rnsolt{T,D}) where {D,T}
+function analysisbank(::TypeI, rc::Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     nch = rc.nChannels
     P = sum(nch)
@@ -151,7 +151,7 @@ function analysisbank(::Type{Val{:TypeI}}, rc::Rnsolt{T,D}) where {D,T}
     ppm
 end
 
-function analysisbank(::Type{Val{:TypeII}}, rc::Rnsolt{T,D}) where {D,T}
+function analysisbank(::TypeII, rc::Rnsolt{T,D}) where {D,T}
     df = rc.decimationFactor
     M = prod(df)
     ord = rc.polyphaseOrder
@@ -303,23 +303,23 @@ function butterfly!(x::AbstractMatrix, p::Integer)
     x[end-(p-1):end,:] .= (xu - xl) / sqrt(2)
 end
 
-function shiftforward!(::Type{Val{:circular}}, mtx::AbstractMatrix, nShift::Integer)
+function shiftforward!(::Val{:circular}, mtx::AbstractMatrix, nShift::Integer)
     mtx .= circshift(mtx, (0, nShift))
 end
-shiftbackward!(::Type{Val{:circular}}, mtx, nShift) = shiftforward!(Val{:circular}, mtx, -nShift)
+shiftbackward!(tp::Val{:circular}, mtx, nShift) = shiftforward!(tp, mtx, -nShift)
 
-function shiftforward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
+function shiftforward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
     mtx[:,1+nShift:end] .= mtx[:,1:end-nShift]
     mtx[:,1:nShift] .= 0
     mtx
 end
 
-function shiftbackward!(::Type{Val{:zero}}, mtx::AbstractMatrix, nShift::Integer)
+function shiftbackward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
     mtx[:,1:end-nShift] .= mtx[:,1+nShift:end]
     mtx[:,end-nShift+1:end] .= 0
     mtx
 end
 
-shiftforward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftforward!(tp, deepcopy(mtx), nShift)
+shiftforward(tp::Val, mtx::AbstractMatrix, nShift) = shiftforward!(tp, deepcopy(mtx), nShift)
 
-shiftbackward(tp::Type{T}, mtx::AbstractMatrix, nShift) where {T} = shiftbackward!(tp, deepcopy(mtx), nShift)
+shiftbackward(tp::Val, mtx::AbstractMatrix, nShift) = shiftbackward!(tp, deepcopy(mtx), nShift)

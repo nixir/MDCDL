@@ -13,6 +13,8 @@ include("basicComplexDSP.jl")
 export PolyphaseVector
 export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt, ParallelFilters
 export Multiscale, MultiLayerCsc
+
+export istype1, istype2
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
 export serialize, deserialize
@@ -55,7 +57,6 @@ nchannels(fb::FilterBank) = sum(fb.nChannels)
 orders(fb::FilterBank) = fb.polyphaseOrder
 
 struct Rnsolt{T,D} <: AbstractNsolt{T,D}
-    category::Symbol
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Tuple{Int,Int}
@@ -101,12 +102,10 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
             throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet. received values: decimationFactor=$df, nChannels=$nChs, polyphaseOrder = $ppo"))
         end
 
-        categ = if nChs[1] == nChs[2]; :TypeI else :TypeII end
-
         TC = if T <: AbstractFloat; T else Float64 end
         mtxc = reverse(permdctmtx(TC, df...); dims=2)
 
-        new{T,D}(categ, df, ppo, nChs, initMts, propMts, mtxc)
+        new{T,D}(df, ppo, nChs, initMts, propMts, mtxc)
     end
 end
 
@@ -114,8 +113,9 @@ promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsol
 
 similar(nsolt::Rnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimationFactor, ord::NTuple{DD}=nsolt.polyphaseOrder, nch::Union{Integer,Tuple{Int,Int}}=nsolt.nChannels) where {T,DS,DD} = Rnsolt(element_type, df, ord, nch)
 
+istype1(nsolt::Rnsolt) = nsolt.nChannels[1] == nsolt.nChannels[2]
+
 struct Cnsolt{T,D} <: AbstractNsolt{T,D}
-    category::Symbol
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
     nChannels::Int
@@ -159,18 +159,24 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
 
-        categ = if iseven(nChs); :TypeI else :TypeII end
         TF = if T <: AbstractFloat; T else Float64 end
         sym = Diagonal{Complex{TF}}(ones(nChs))
         mtxf = reverse(cdftmtx(TF, df...); dims=2)
 
-        new{T,D}(categ, df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
+        new{T,D}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end
 end
 
 promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
 
 similar(nsolt::Cnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimationFactor, ord::NTuple{DD}=nsolt.polyphaseOrder, nch::Integer=nsolt.nChannels) where {T,DS,DD} = Cnsolt(element_type, df, ord, nch)
+
+istype1(nsolt::Cnsolt) = iseven(nsolt.nChannels)
+
+istype2(nsolt::AbstractNsolt) = !istype1(nsolt)
+
+TypeI = Val{true}
+TypeII = Val{false}
 
 struct ParallelFilters{T,D} <: FilterBank{T,D}
     decimationFactor::NTuple{D,Int}
