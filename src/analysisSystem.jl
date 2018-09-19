@@ -174,6 +174,7 @@ end
 
 analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D} = subanalyze(msop.shape, x, msop.operators...)
 
+# shape == Shapes.Default
 function subanalyze(shape::Shapes.Default, sx::AbstractArray, abop::AbstractOperator, args...)
     sy = analyze(abop, sx)
     [sy[2:end], subanalyze(shape, sy[1], args...)...]
@@ -181,6 +182,7 @@ end
 
 subanalyze(::Shapes.Default, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
 
+# shape == Shapes.Augumented
 function subanalyze(shape::Shapes.Augumented, sx::AbstractArray{T,D}, abop::AbstractOperator, args...) where {T,D}
     sy = analyze(abop, sx)
     clns = fill(:,D)
@@ -189,6 +191,7 @@ end
 
 subanalyze(::Shapes.Augumented, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
 
+# shape == Shapes.Vec
 function subanalyze(shape::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator, args...)
     sy = analyze(abop, sx)
     lndc = fld(length(sy), nchannels(abop))

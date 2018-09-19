@@ -207,11 +207,11 @@ end
 kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))
 
 function analysiskernels(pfb::PolyphaseFB)
-    df = pfb.decimationFactor
-    P = sum(pfb.nChannels)
+    df = decimations(pfb)
+    P = nchannels(pfb)
 
     afb = analysisbank(pfb)
-    ordm = pfb.polyphaseOrder .+ 1
+    ordm = orders(pfb) .+ 1
 
     return map(1:P) do p
         out = similar(afb, df .* ordm )

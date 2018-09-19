@@ -32,6 +32,11 @@ function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} 
 end
 
 # matrix-formed CDFT operator for D-dimensional signal
+cdftmtx(sz::NTuple) = cdftmtx(sz...)
+cdftmtx(sz::Integer...) = cdftmtx(Float64, sz...)
+cdftmtx(T::Type, sz::NTuple) = cdftmtx(T, sz...)
+cdftmtx(::Type{Complex{T}}, sz...) where {T} = cdftmtx(T, sz...)
+
 function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     len = prod(sz)
 
@@ -42,7 +47,9 @@ function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     rm * mtx / sqrt(T(len))
 end
 
-cdftmtx(sz::Integer...) = cdftmtx(Float64, sz...)
+permdctmtx(sz::NTuple) = permdctmtx(sz...)
+permdctmtx(sz::Integer...) = permdctmtx(Float64, sz...)
+permdctmtx(T::Type, sz::NTuple) = permdctmtx(T, sz...)
 
 function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     imps = [ setindex!(zeros(T, sz), 1, idx) |> dct |> vec for idx in 1:prod(sz) ]
@@ -53,5 +60,3 @@ function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
 
     vcat([ transpose(mtx[pi,:]) for pi in permids ]...)
 end
-
-permdctmtx(sz::Integer...) = permdctmtx(Float64, sz...)

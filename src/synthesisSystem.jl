@@ -171,6 +171,7 @@ function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,
     subsynthesize(msop.shape, y, msop.operators...)
 end
 
+# shape == Shapes.Default
 function subsynthesize(shape::Shapes.Default, sy::AbstractArray, abop::AbstractOperator, args...)
     ya = [ subsynthesize(shape, sy[2:end], args...), sy[1]... ]
     synthesize(abop, ya)
@@ -178,6 +179,7 @@ end
 
 subsynthesize(::Shapes.Default, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
 
+# shape == Shapes.Augumented
 function subsynthesize(shape::Shapes.Augumented, sy::AbstractArray, abop::AbstractOperator, args...)
     rx = subsynthesize(shape, sy[2:end], args...)
     synthesize(abop, cat(rx, sy[1]; dims=ndims(sy[1]) ))
@@ -185,6 +187,7 @@ end
 
 subsynthesize(::Shapes.Augumented, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
 
+# shape == Shapes.Vec
 function subsynthesize(shape::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator, args...)
     lny = prod(abop.outsize) - prod(args[1].insize)
     ya = [ vec(subsynthesize(shape, sy[lny+1:end], args...)); sy[1:lny] ]

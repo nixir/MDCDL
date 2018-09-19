@@ -17,6 +17,7 @@ export Multiscale, MultiLayerCsc
 export istype1, istype2
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
+export permdctmtx, cdftmtx
 export serialize, deserialize
 export analysisbank
 export kernels, analysiskernels, synthesiskernels
