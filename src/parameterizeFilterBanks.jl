@@ -60,7 +60,7 @@ function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     # set Cnsolt.initMatrices
     angsInit = angs[1:nParamsInit]
     musInit = mus[1:P]
-    cc.initMatrices[1] = rotations2mat(angsInit, musInit)
+    cc.initMatrices[1] = rotations2mat(angsInit, musInit, P)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -86,8 +86,8 @@ function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) wh
             mpw = subMusOrd[1:nMuswu]
             mpu = subMusOrd[(nMuswu+1):2*nMuswu]
 
-            cc.propMatrices[d][2*k-1] = rotations2mat(apw, mpw)
-            cc.propMatrices[d][2*k]   = rotations2mat(apu, mpu)
+            cc.propMatrices[d][2*k-1] = rotations2mat(apw, mpw, fld(P,2))
+            cc.propMatrices[d][2*k]   = rotations2mat(apu, mpu, fld(P,2))
             cc.paramAngles[d][k]      = apb
         end
     end
@@ -151,7 +151,7 @@ function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) w
     # set Cnsolt.initMatrices
     angsInit = angs[1:nParamsInit]
     musInit = mus[1:P]
-    cc.initMatrices[1] = rotations2mat(angsInit, musInit)
+    cc.initMatrices[1] = rotations2mat(angsInit, musInit, P)
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -189,10 +189,10 @@ function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) w
             mpw2 = subMusOrd2[1:nMuswu2]
             mpu2 = subMusOrd2[nMuswu2+1:2*nMuswu2]
 
-            cc.propMatrices[d][4*k-3] = rotations2mat(apw1, mpw1)
-            cc.propMatrices[d][4*k-2] = rotations2mat(apu1, mpu1)
-            cc.propMatrices[d][4*k-1] = rotations2mat(apw2, mpw2)
-            cc.propMatrices[d][4*k]   = rotations2mat(apu2, mpu2)
+            cc.propMatrices[d][4*k-3] = rotations2mat(apw1, mpw1, fld(P,2))
+            cc.propMatrices[d][4*k-2] = rotations2mat(apu1, mpu1, fld(P,2))
+            cc.propMatrices[d][4*k-1] = rotations2mat(apw2, mpw2, cld(P,2))
+            cc.propMatrices[d][4*k]   = rotations2mat(apu2, mpu2, cld(P,2))
             cc.paramAngles[d][2*k-1]  = apb1
             cc.paramAngles[d][2*k]    = apb2
         end
@@ -258,8 +258,8 @@ function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     musInitW = mus[1:fld(P,2)]
     angsInitU = angs[fld(nParamsInit,2)+1:nParamsInit]
     musInitU = mus[fld(P,2)+1:P]
-    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW)
-    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU)
+    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW, cld(P,2))
+    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU, fld(P,2))
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -281,7 +281,7 @@ function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) wh
             apu = subAngsOrd[1:nAngsu]
             mpu = subMusOrd[1:nMusu]
 
-            cc.propMatrices[d][k] = rotations2mat(apu, mpu)
+            cc.propMatrices[d][k] = rotations2mat(apu, mpu, fld(P,2))
         end
     end
 
@@ -353,8 +353,8 @@ function setrotations!(::TypeII, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) w
     angsInitU = angs[(1:nParamsInit[2]) .+ nParamsInit[1]]
     musInitU = mus[(1:nch[2]) .+ nch[1]]
 
-    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW)
-    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU)
+    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW, nch[1])
+    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU, nch[2])
 
     # set Cnsolt.propMatrices
     delimitersAngs = cumsum([ 0, nParamsProps... ])
@@ -381,8 +381,8 @@ function setrotations!(::TypeII, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) w
             mpu = subMusOrd1[1:minP]
             mpw = subMusOrd2[1:maxP]
 
-            cc.propMatrices[d][2*k-1] = rotations2mat(apu, mpu)
-            cc.propMatrices[d][2*k]   = rotations2mat(apw, mpw)
+            cc.propMatrices[d][2*k-1] = rotations2mat(apu, mpu, minP)
+            cc.propMatrices[d][2*k]   = rotations2mat(apw, mpw, maxP)
         end
     end
 
