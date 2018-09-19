@@ -155,9 +155,7 @@ end
 
 function hardshrink(x::AbstractArray, k::Integer; lt::Function=(lhs,rhs)->isless(abs2(lhs), abs2(rhs)))
     nzids = sortperm(vec(x); lt=lt, rev=true)[1:k]
-    output = zero(x)
-    for idx in nzids
-        output[idx] = x[idx]
+    foldl(nzids; init=zero(x)) do mtx, idx
+        setindex!(mtx, x[idx], idx)
     end
-    output
 end
