@@ -117,16 +117,15 @@ function extendAtomsPerDims(::Type{NS}, ::TypeI, pvx::AbstractMatrix, nBlock::In
     xu = view(pvx, 1:hP, :)
     xl = view(pvx, (1:hP) .+ hP, :)
     for k = 1:ordd
-        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-        xu .= tu; xl .= tl
-
+        # pvx .= B * pvx
+        unnormalized_butterfly!(xu, xl)
         if isodd(k)
             shiftforward!(Val(border), xl, nShift)
         else
             shiftbackward!(Val(border), xu, nShift)
         end
-        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-        xu .= tu; xl .= tl
+        # pvx .= 1/2 * B * pvx
+        half_butterfly!(xu, xl)
 
         xl .= propMtsd[k] * xl
     end
@@ -153,24 +152,16 @@ function extendAtomsPerDims(::Type{NS}, ::TypeII, pvx::AbstractMatrix, nBlock::I
     xmn = view(pvx, chMinor, :)
     for k = 1:nStages
         # first step
-        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-        xu .= tu; xl .= tl
-
+        unnormalized_butterfly!(xu, xl)
         shiftforward!(Val(border), xs1, nShift)
-
-        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-        xu .= tu; xl .= tl
+        half_butterfly!(xu, xl)
 
         xmn .= propMtsd[2k-1] * xmn
 
         # second step
-        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-        xu .= tu; xl .= tl
-
+        unnormalized_butterfly!(xu, xl)
         shiftbackward!(Val(border), xs2, nShift)
-
-        tu, tl = (xu + xl, xu - xl) ./ sqrt(2)
-        xu .= tu; xl .= tl
+        half_butterfly!(xu, xl)
 
         xmj .= propMtsd[2k] * xmj
     end

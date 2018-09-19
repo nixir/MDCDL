@@ -116,15 +116,13 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBloc
     for k = ordd:-1:1
         yl .= propMtsd[k]' * yl
 
-        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-        yu .= tu; yl .= tl
+        unnormalized_butterfly!(yu, yl)
         if isodd(k)
             shiftbackward!(Val(border), yl, nShift)
         else
             shiftforward!(Val(border), yu, nShift)
         end
-        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-        yu .= tu; yl .= tl
+        half_butterfly!(yu, yl)
     end
     return ipermutedimspv(pvy, nBlock)
 end
@@ -151,24 +149,16 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlo
         # second step
         ymj .= propMtsd[2k]' * ymj
 
-        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-        yu .= tu; yl .= tl
-
+        unnormalized_butterfly!(yu, yl)
         shiftforward!(Val(border), ys2, nShift)
-
-        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-        yu .= tu; yl .= tl
+        half_butterfly!(yu, yl)
 
         # first step
         ymn .= propMtsd[2k-1]' * ymn
 
-        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-        yu .= tu; yl .= tl
-
+        unnormalized_butterfly!(yu, yl)
         shiftbackward!(Val(border), ys1, nShift)
-
-        tu, tl = (yu + yl, yu - yl) ./ sqrt(2)
-        yu .= tu; yl .= tl
+        half_butterfly!(yu, yl)
     end
     ipermutedimspv(pvy, nBlock)
 end

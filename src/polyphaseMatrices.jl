@@ -303,6 +303,20 @@ function butterfly!(x::AbstractMatrix, p::Integer)
     x[end-(p-1):end,:] .= (xu - xl) / sqrt(2)
 end
 
+@inline function unnormalized_butterfly!(xu::T, xl::T) where {T<:AbstractMatrix}
+    tu, tl = (xu + xl, xu - xl)
+    xu .= tu
+    xl .= tl
+    nothing
+end
+
+@inline function half_butterfly!(xu::T, xl::T) where {T<:AbstractMatrix}
+    tu, tl = (xu + xl, xu - xl) ./ 2
+    xu .= tu
+    xl .= tl
+    nothing
+end
+
 function shiftforward!(::Val{:circular}, mtx::AbstractMatrix, nShift::Integer)
     mtx .= circshift(mtx, (0, nShift))
 end
