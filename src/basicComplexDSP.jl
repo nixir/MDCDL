@@ -14,21 +14,15 @@ cconv(x::Array, h::Array) = cconv(promote(x,h)...)
 # upsampler
 function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
     szx = size(x)
-    output = zeros(T, szx .* factor)
-    for ci in CartesianIndices(szx)
-        output[((ci.I .- 1) .* factor .+ 1 .+ offset)...] = x[ci]
+    foldl(CartesianIndices(szx); init=zeros(T, szx .* factor)) do mtx, ci
+        setindex!(mtx, x[ci], ((ci.I .- 1) .* factor .+ 1 .+ offset)...)
     end
-    output
 end
 
-function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
-    szout = fld.(size(x), factor)
-    output = similar(x, szout...)
-    ci = CartesianIndices(szout)
-    for idx = LinearIndices(szout)
-        output[idx] = x[((ci[idx].I .- 1) .* factor .+ 1 .+ offset)...]
+function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D}=(fill(0,D)...,)) where {T,D}
+    map(CartesianIndices(fld.(size(x), factor))) do ci
+        x[((ci.I .- 1) .* factor .+ 1 .+ offset)...]
     end
-    output
 end
 
 # matrix-formed CDFT operator for D-dimensional signal
