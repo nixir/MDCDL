@@ -9,13 +9,16 @@ end
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
-synthesize(cc::NS, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D,NS<:Cnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
+synthesize(cc::NS, py::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
 
-function synthesize(::Type{NS}, tp::Val, y::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Cnsolt{TF,D}}
+function synthesize(::Type{NS}, tp::Val, y::AbstractMatrix, nBlocks::NTuple, matrixF::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple, ord::NTuple, nch::Integer; kwargs...) where {NS<:Cnsolt}
     uy = concatenateAtoms(NS, tp, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
+    finalStep(NS, tp, uy, matrixF, initMts, df, nch; kwargs...)
+end
 
+function finalStep(::Type{NS}, ::Val, y::AbstractMatrix, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Integer; kwargs...) where {TM<:AbstractMatrix, NS<:Cnsolt}
     # output = (V0 * F * J)' * uy == J * F' * V0' * uy
-    (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2))' * uy
+    (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2))' * y
 end
 
 function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}}
@@ -82,16 +85,19 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlo
     return ipermutedimspv(pvy, nBlock)
 end
 
-synthesize(cc::NS, py::AbstractMatrix{TY}, nBlocks::NTuple{D}; kwargs...) where {TF,TY,D,NS<:Rnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
+synthesize(cc::NS, py::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 
-function synthesize(cc::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Rnsolt{TF,D}}
+function synthesize(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Rnsolt{TF,D}}
+    uy = concatenateAtoms(NS, tp, pvy, nBlocks, propMts, ord, nch; kwargs...)
+    finalStep(NS, tp, uy, matrixC, initMts, df, nch; kwargs...)
+end
+
+function finalStep(::Type{NS}, ::Val, y::AbstractMatrix, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,NS<:Rnsolt}
     M = prod(df)
+    W0ty = (initMts[1] * Matrix(I, nch[1], cld(M,2)))' * y[1:nch[1],:]
+    U0ty = (initMts[2] * Matrix(I, nch[2], fld(M,2)))' * y[(nch[1]+1):end,:]
 
-    y = concatenateAtoms(NS, tp, pvy, nBlocks, propMts, ord, nch; kwargs...)
-
-    W0 = initMts[1] * Matrix(I, nch[1], cld(M,2))
-    U0 = initMts[2] * Matrix(I, nch[2], fld(M,2))
-    reverse(matrixC, dims=2)' * vcat(W0' * y[1:nch[1],:], U0' * y[(nch[1]+1):end,:])
+    reverse(matrixC, dims=2)' * vcat(W0ty, U0ty)
 end
 
 function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}}

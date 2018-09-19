@@ -9,13 +9,16 @@ end
 
 analyze(fb::PolyphaseFB{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D} = PolyphaseVector(analyze(fb, pvx.data, pvx.nBlocks; kwargs...), pvx.nBlocks)
 
-analyze(cc::NS, px::AbstractMatrix{TX}, nBlocks::NTuple{D}; kwargs...) where {TF,TX,D,NS<:Cnsolt{TF,D}} = analyze(NS, Val(istype1(cc)), px, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
+analyze(cc::NS, px::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}} = analyze(NS, Val(istype1(cc)), px, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 
-function analyze(::Type{NS}, tp::Val, x::AbstractMatrix, nBlocks::NTuple{D}, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {TM<:AbstractMatrix,TF,D,NS<:Cnsolt{TF,D}}
-    # ux = V0 * F * J * x
-    ux = (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2)) * x
-
+function analyze(::Type{NS}, tp::Val, x::AbstractMatrix, nBlocks::NTuple, matrixF::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple, ord::NTuple, nch::Integer; kwargs...) where {NS<:Cnsolt}
+    ux = initialStep(NS, tp, x, matrixF, initMts, df, nch; kwargs...)
     sym * extendAtoms(NS, tp, ux, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
+end
+
+function initialStep(::Type{NS}, ::Val, x::AbstractMatrix, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Integer; kwargs...) where {TM<:AbstractMatrix,NS<:Cnsolt}
+    # ux = V0 * F * J * x
+    (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2)) * x
 end
 
 function extendAtoms(::Type{NS}, tp::Val, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray,  paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {D,TF,NS<:Cnsolt{TF,D}}
@@ -82,20 +85,22 @@ function extendAtomsPerDims(::Type{NS}, ::TypeII, pvx::AbstractMatrix, nBlock::I
     return pvx
 end
 
-analyze(cc::NS, px::AbstractMatrix{TX}, nBlocks::NTuple{D}; kwargs...) where {TF,TX,D,NS<:Rnsolt{TF,D}} = analyze(NS, Val(istype1(cc)), px, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
+analyze(cc::NS, px::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}} = analyze(NS, Val(istype1(cc)), px, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
 
 function analyze(::Type{NS}, tp::Val, x::AbstractMatrix, nBlocks::NTuple, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Rnsolt{TF,D}}
+    ux = initialStep(NS, tp, x, matrixC, initMts, df, nch; kwargs...)
+    extendAtoms(NS, tp, ux, nBlocks, propMts, ord, nch; kwargs...)
+end
+
+function initialStep(::Type{NS}, ::Val, x::AbstractMatrix, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,NS<:Rnsolt}
     M = prod(df)
-    cM = cld(M,2)
-    fM = fld(M,2)
+    cM, fM = cld(M,2), fld(M,2)
 
     tx = reverse(matrixC, dims=2) * x
 
-    W0 = initMts[1] * Matrix(I, nch[1], cM)
-    U0 = initMts[2] * Matrix(I, nch[2], fM)
-    ux = vcat(W0 * tx[1:cM, :], U0 * tx[(cM+1):end, :])
-
-    extendAtoms(NS, tp, ux, nBlocks, propMts, ord, nch; kwargs...)
+    W0x = initMts[1] * Matrix(I, nch[1], cM) * tx[1:cM, :]
+    U0x = initMts[2] * Matrix(I, nch[2], fM) * tx[(cM+1):end, :]
+    vcat(W0x, U0x)
 end
 
 function extendAtoms(::Type{NS}, tp::Val, pvx::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}}
