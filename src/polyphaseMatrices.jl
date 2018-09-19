@@ -239,7 +239,7 @@ function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where 
 
     outdata = similar(x, prod(szBlock), prod(nBlocks))
     tiles = collect(TileIterator(axes(x), szBlock))
-    for idx in LinearIndices(nBlocks)
+    for idx in 1:length(tiles)
         outdata[:,idx] = vec(x[tiles[idx]...])
     end
     PolyphaseVector(outdata, nBlocks)
@@ -261,7 +261,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
 
     out = similar(x.data, (x.nBlocks .* szBlock)...)
     tiles = collect(TileIterator(axes(out), szBlock))
-    for idx in LinearIndices(x.nBlocks)
+    for idx in 1:length(tiles)
         out[tiles[idx]...] = reshape(x.data[:,idx], szBlock...)
     end
     out
