@@ -52,14 +52,14 @@ end
 getParamsDictionary(nsolt::AbstractNsolt) = getrotations(nsolt)
 setParamsDictionary!(nsolt::AbstractNsolt, pm::NTuple{2}) = setrotations!(nsolt, pm...)
 
-function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...)
+function stepSparseCoding(cb::AbstractNsolt, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...)
     ana, syn = if filter_domain == :convolution
         map((:analyzer, :synthesizer,)) do symb
-            ConvolutionalOperator(nsolt, size(x), symb; shape=Shapes.Vec(), resource=resource)
+            ConvolutionalOperator(cb, size(x), symb; shape=Shapes.Vec(), resource=resource)
         end
     else # == :polyphase
-        nsop = createOperator(nsolt, size(x); shape=Shapes.Vec())
-        (nsop, nsop)
+        cbop = createOperator(cb, size(x); shape=Shapes.Vec())
+        (cbop, cbop)
     end
     y0 = analyze(ana, x)
 
@@ -71,10 +71,10 @@ function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Intege
     return (y_opt, loss_iht)
 end
 
-updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray; kwargs...) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getrotations(nsolt), kwargs...)
+updateDictionary(cb::CodeBook, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
 
 function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, (θ, μ)::Tuple{TT,TM}; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt,TT<:AbstractArray,TM<:AbstractArray}
-    f(t) = lossfcn(nsolt, x, hy, t, μ)
+    f(t) = lossfcn(nsolt, x, hy, (t, μ))
     ∇f(t) = ForwardDiff.gradient(f, t)
 
     θopt = θ
@@ -127,7 +127,7 @@ function savelogs(dirname::AbstractString, nsolt::AbstractNsolt, epoch::Integer;
     save(nsolt, filename_nsolt)
 end
 
-function lossfcn(nsolt::AbstractNsolt, x::AbstractArray, y::AbstractArray, θ::AbstractArray, μ::AbstractArray)
+function lossfcn(nsolt::AbstractNsolt, x::AbstractArray, y::AbstractArray, (θ, μ)::Tuple{TT,TM}) where {TT<:AbstractArray,TM<:AbstractArray}
     cpnsolt = setrotations!(similar(nsolt, eltype(θ)), θ, μ)
     syn = createOperator(cpnsolt, size(x); shape=Shapes.Vec())
     norm(x - synthesize(syn, y))^2/2
