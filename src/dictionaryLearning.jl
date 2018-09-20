@@ -3,20 +3,20 @@ using Base.Filesystem
 using Statistics
 using Dates
 
-train!(nsolt::AbstractNsolt, ts::AbstractArray; kwargs...) = train_nsolt!(nsolt, ts; kwargs...)
+train!(cb::CodeBook, ts::AbstractArray; kwargs...) = train_codebook!(cb, ts; kwargs...)
 
-function train_nsolt!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
+function train_codebook!(codebook::CB, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=()) where {CB<:AbstractNsolt}
     vlevel = verboselevel(verbose)
 
-    savesettings(logdir, nsolt, trainingSet;
+    savesettings(logdir, codebook, trainingSet;
         vlevel=vlevel,
         epochs=epochs,
         sc_options=sc_options,
         du_options=du_options)
 
-    vlevel >= 1 && println("beginning NSOLT dictionary training...")
+    vlevel >= 1 && println("beginning dictionary training...")
 
-    θ, μ = getrotations(nsolt)
+    params_dic = getParamsDictionary(codebook)
     for itr = 1:epochs
         K = length(trainingSet)
         loss_sps = fill(Inf, K)
@@ -25,36 +25,41 @@ function train_nsolt!(nsolt::CB, trainingSet::AbstractArray; epochs::Integer=1, 
             x = trainingSet[k]
 
             vlevel >= 3 && println("start Sparse Coding Stage.")
-            hy, loss_sps[k] = stepSparseCoding(nsolt, x; vlevel=vlevel, sc_options...)
+            sparse_coefs, loss_sps[k] = stepSparseCoding(codebook, x; vlevel=vlevel, sc_options...)
             vlevel >= 3 && println("end Sparse Coding Stage.")
 
             vlevel >= 3 && println("start Dictionary Update.")
-            θ, μ, loss_dus[k] = updateDictionary(nsolt, x, hy, θ, μ; vlevel=vlevel, du_options...)
+            params_dic, loss_dus[k] = updateDictionary(codebook, x, sparse_coefs, params_dic; vlevel=vlevel, du_options...)
             vlevel >= 3 && println("end Dictionary Update Stage.")
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
 
-            setrotations!(nsolt, θ, μ)
+            setParamsDictionary!(codebook, params_dic)
         end
         if vlevel >= 1
-            println("--- epoch #$itr, total sum(loss) = $(sum(loss_dus)), var(loss) = $(var(loss_dus))")
+            println("--- epoch #$itr, sum(loss) = $(sum(loss_dus)), var(loss) = $(var(loss_dus))")
         end
-        savelogs(logdir, nsolt, itr;
+        savelogs(logdir, codebook, itr;
             vlevel=vlevel,
             time=string(now()),
             loss_sparse_coding=loss_sps,
             loss_dictionary_update=loss_dus)
     end
     vlevel >= 1 && println("training finished.")
-    return setrotations!(nsolt, θ, μ)
+    return setParamsDictionary!(codebook, params_dic)
 end
+
+getParamsDictionary(nsolt::AbstractNsolt) = getrotations(nsolt)
+setParamsDictionary!(nsolt::AbstractNsolt, pm::NTuple{2}) = setrotations!(nsolt, pm...)
 
 function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...)
     ana, syn = if filter_domain == :convolution
-        (ConvolutionalOperator(nsolt, size(x), :analyzer; shape=Shapes.Vec(), resource=resource),
-        ConvolutionalOperator(nsolt, size(x), :synthesizer; shape=Shapes.Vec(), resource=resource),)
+        map((:analyzer, :synthesizer,)) do symb
+            ConvolutionalOperator(nsolt, size(x), symb; shape=Shapes.Vec(), resource=resource)
+        end
     else # == :polyphase
-        (fill(createOperator(nsolt, size(x); shape=Shapes.Vec()),2)...,)
+        nsop = createOperator(nsolt, size(x); shape=Shapes.Vec())
+        (nsop, nsop)
     end
     y0 = analyze(ana, x)
 
@@ -66,9 +71,9 @@ function stepSparseCoding(nsolt::AbstractNsolt, x::AbstractArray; vlevel::Intege
     return (y_opt, loss_iht)
 end
 
-updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray; kwargs...) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getrotations(nsolt)..., kwargs...)
+updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray; kwargs...) where {NS<:AbstractNsolt} = updateDictionary(nsolt, x, hy, getrotations(nsolt), kwargs...)
 
-function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::AbstractArray, μ::AbstractArray; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt}
+function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, (θ, μ)::Tuple{TT,TM}; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {NS<:AbstractNsolt,TT<:AbstractArray,TM<:AbstractArray}
     f(t) = lossfcn(nsolt, x, hy, t, μ)
     ∇f(t) = ForwardDiff.gradient(f, t)
 
@@ -80,7 +85,7 @@ function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, θ::Ab
         vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, ||∇loss|| (w.r.t. θ) = $(norm(Δθ))")
     end
     loss_opt = f(θopt)
-    return (θopt, μ, loss_opt,)
+    return ((θopt, μ), loss_opt,)
 end
 
 savesettings(::Nothing, args...; kwargs...) = nothing
