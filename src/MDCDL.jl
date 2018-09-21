@@ -8,8 +8,6 @@ using ComputationalResources: AbstractResource, CPU1
 import Base: promote_rule, eltype, ndims, similar
 import Random: rand!
 
-include("basicComplexDSP.jl")
-
 export PolyphaseVector
 export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt, ParallelFilters
 export Multiscale, MultiLayerCsc
