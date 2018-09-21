@@ -54,15 +54,13 @@ setParamsDictionary!(nsolt::AbstractNsolt, pm::NTuple{2}) = setrotations!(nsolt,
 
 function stepSparseCoding(cb::AbstractNsolt, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...)
     ana, syn = if filter_domain == :convolution
-        # map((:analyzer, :synthesizer,)) do symb
-            # ConvolutionalOperator(cb, size(x), symb; shape=Shapes.Vec(), resource=resource)
-        # end
         ana = createAnalyzer(ConvolutionalOperator, cb, size(x); shape=Shapes.Vec())
         syn = createSynthesizer(ConvolutionalOperator, cb, size(x); shape=Shapes.Vec())
         (ana, syn)
     else # == :polyphase
-        cbop = createOperator(cb, size(x); shape=Shapes.Vec())
-        (cbop, cbop)
+        ana = createAnalyzer(cb, size(x); shape=Shapes.Vec())
+        syn = createSynthesizer(cb, size(x); shape=Shapes.Vec())
+        (ana, syn)
     end
     y0 = analyze(ana, x)
 

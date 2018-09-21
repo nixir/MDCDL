@@ -299,9 +299,15 @@ end
 
 nchannels(msop::MultiscaleOperator) = nchannels.(msop.operators)
 
-function createOperator(ns::AbstractNsolt{T,D}, sz::NTuple{D,Int}, level::Integer; shape=Shapes.Default(), kwargs...) where {T,D}
-    szxs = [ fld.(sz, ns.decimationFactor.^(lv-1)) for lv in 1:level ]
-    ops = map(t->createOperator(ns, t; shape=shape, kwargs...), szxs)
+function createAnalyzer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
+    szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
+    ops = map((acb, asz)->createAnalyzer(acb, asz; shape=shape, kwargs...), cbs, szxs)
+    MultiscaleOperator(ops, sz; shape=shape)
+end
+
+function createSynthesizer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
+    szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
+    ops = map((acb, asz)->createSynthesizer(acb, asz; shape=shape, kwargs...), cbs, szxs)
     MultiscaleOperator(ops, sz; shape=shape)
 end
 
