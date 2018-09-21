@@ -23,9 +23,8 @@ export getrotations, setrotations!
 export mdarray2polyphase, polyphase2mdarray
 export iht
 export AbstractOperator
-export NsoltOperator
-export ConvolutionalOperator
-export createOperator
+export NsoltOperator, ConvolutionalOperator
+export createOperator, createAnalyzer, createSynthesizer
 export Shapes
 
 module Shapes
@@ -184,7 +183,7 @@ struct ParallelFilters{T,D} <: FilterBank{T,D}
 
     kernels::Vector{AbstractArray{T,D}}
 
-    function ParallelFilters(df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer, ker::Vector{A}) where {T,D,A<:AbstractArray{T,D}}
+    function ParallelFilters(ker::Vector{A}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer) where {T,D,A<:AbstractArray{T,D}}
         new{T,D}(df, ord, nch, ker)
     end
 
@@ -217,6 +216,11 @@ get_outputsize(::Shapes.Augumented, dcsz::NTuple, insz::NTuple, nch::Integer) = 
 get_outputsize(::Shapes.Vec, dcsz::NTuple, insz::NTuple, nch::Integer) = (prod(dcsz) * nch,)
 
 abstract type AbstractOperator{T,D} end
+
+createAnalyzer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
+createSynthesizer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
+createAnalyzer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperator} = OP(obj, args...; kwargs...)
+createSynthesizer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperator} = OP(obj, args...; kwargs...)
 
 struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     shape::Shapes.Shape
@@ -265,20 +269,22 @@ struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
         ConvolutionalOperator(pfs, insz, outsz; shape=shape, kwargs...)
     end
 
-    function ConvolutionalOperator(pfb::PolyphaseFB{T,D}, sz::NTuple{D,Int}, mode::Symbol; kwargs...) where {T,D}
-        ker = if mode == :analyzer
-            analysiskernels(pfb)
-        elseif mode == :synthesizer
-            synthesiskernels(pfb)
-        end
-        pfs = ParallelFilters(decimations(pfb), orders(pfb), nchannels(pfb), ker)
-        ConvolutionalOperator(pfs, sz; kwargs...)
+    function ConvolutionalOperator(kernel::AbstractArray{AR}, insz::NTuple, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D,AR<:AbstractArray{T,D}}
+        ConvolutionalOperator(ParallelFilters(kernel, df, ord, nch), insz; kwargs...)
     end
 end
 
 decimations(co::ConvolutionalOperator) = decimations(co.parallelFilters)
 orders(co::ConvolutionalOperator) = orders(co.parallelFilters)
 nchannels(co::ConvolutionalOperator) = nchannels(co.parallelFilters)
+
+function createAnalyzer(::Type{CO}, pfb::PolyphaseFB, insz::NTuple; kwargs...) where {CO<:ConvolutionalOperator}
+    CO(analysiskernels(pfb), insz, decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
+end
+
+function createSynthesizer(::Type{CO}, pfb::PolyphaseFB, insz::NTuple; kwargs...) where {CO<:ConvolutionalOperator}
+    CO(synthesiskernels(pfb), insz, decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
+end
 
 struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple{D,T}

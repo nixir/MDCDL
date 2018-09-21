@@ -19,7 +19,7 @@ using Random
                 szFilter = df .* (ord .+ 1)
                 afs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
                 szx = rand(1:4) .* df .* (ord .+ 1)
-                ca = ConvolutionalOperator(ParallelFilters(df, ord, nch, afs), szx)
+                ca = ConvolutionalOperator(ParallelFilters(afs, df, ord, nch), szx)
 
                 x = rand(dt, szx)
                 y = analyze(ca, x)
@@ -57,7 +57,7 @@ using Random
                 sfs = [ rand(dt, szFilter) for p in 1:sum(nch) ]
                 szy = rand(1:4) .* (ord .+ 1)
                 # cs = ConvolutionalOperator(sfs, szy, df, ord, nch)
-                cs = ConvolutionalOperator(ParallelFilters(df, ord, nch, sfs), szy)
+                cs = ConvolutionalOperator(ParallelFilters(sfs, df, ord, nch), szy)
 
                 y = [ rand(dt, szy) for p in 1:sum(nch) ]
                 rx = synthesize(cs, y)
