@@ -18,12 +18,12 @@ ord = (4,4)
 #                     (<:Integer for Cnsolt)
 nch = 8
 # number of tree level (<: Integer)
-level = 3
+level = 2
 
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 4
+nSubData = 16
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = begin
@@ -35,9 +35,9 @@ logdir = nothing
 do_save_trainingset = false
 
 # options for sparse coding
-sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
+sc_options = ( iterations = 1000, sparsity = 0.04, filter_domain=:convolution)
 # options for dictionary update
-du_options = ( iterations = 100, stepsize = 1e-3,)
+du_options = ( iterations = 100, stepsize = 1e-2,)
 
 # general options of dictionary learning
 options = ( epochs  = 100,
@@ -68,6 +68,7 @@ end
 nsolt = Nsolt(TP, df, ord, nch)
 # set random orthonormal matrices to the initial matrices.
 MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
+nsolt.initMatrices[1] .= cat(1, qr(rand((size(nsolt.initMatrices[1]) .- 1)...)).Q, dims=[1,2])
 
 msnsolt = (fill(nsolt,3)...,)
 

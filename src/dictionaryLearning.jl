@@ -128,10 +128,14 @@ function savelogs(dirname::AbstractString, nsolt::AbstractNsolt, epoch::Integer;
     save(nsolt, filename_nsolt)
 end
 
-function lossfcn(nsolt::AbstractNsolt, x::AbstractArray, y::AbstractArray, (θ, μ)::Tuple{TT,TM}) where {TT<:AbstractArray,TM<:AbstractArray}
-    cpnsolt = setrotations!(similar(nsolt, eltype(θ)), θ, μ)
-    syn = createOperator(cpnsolt, size(x); shape=Shapes.Vec())
+function lossfcn(nsolt::AbstractNsolt, x::AbstractArray, y::AbstractArray, params::Tuple) where {TT<:AbstractArray,TM<:AbstractArray}
+    cpnsolt = similar_dictionary(nsolt, params)
+    syn = createSynthesizer(cpnsolt, size(x); shape=Shapes.Vec())
     norm(x - synthesize(syn, y))^2/2
+end
+
+function similar_dictionary(nsolt::AbstractNsolt, (θ, μ)::Tuple{TT,TM}) where {TT<:AbstractArray,TM<:AbstractArray}
+    setrotations!(similar(nsolt, eltype(θ)), θ, μ)
 end
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")
@@ -147,8 +151,8 @@ getParamsDictionary(targets::NTuple) = getParamsDictionary.(targets)
 setParamsDictionary!(targets::NTuple, pm::NTuple) = setParamsDictionary!.(targets, pm)
 
 function stepSparseCoding(targets::NTuple{N,CB}, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, kwargs...) where {N,CB<:CodeBook}
-    ana = createAnalyzer(targets, size(x))
-    syn = createSynthesizer(targets, size(x))
+    ana = createAnalyzer(targets, size(x); shape=Shapes.Vec())
+    syn = createSynthesizer(targets, size(x); shape=Shapes.Vec())
     y0 = analyze(ana, x)
 
     # number of non-zero coefficients
@@ -159,19 +163,32 @@ function stepSparseCoding(targets::NTuple{N,CB}, x::AbstractArray; vlevel::Integ
     return (y_opt, loss_iht)
 end
 
-function updateDictionary(targets::NTuple{CB}, x::AbstractArray, hy::AbstractArray, (θ, μ)::Tuple{TT,TM}; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {CB<:CodeBook,TT<:AbstractArray,TM<:AbstractArray}
-    f(t) = lossfcn(targets, x, hy, (t, μ))
+function updateDictionary(targets::NTuple{N,CB}, x::AbstractArray, hy::AbstractArray, params::Tuple; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {N,CB<:AbstractNsolt}
+    vpm0, pminfo = vectorize_params(params)
+    f(t) = lossfcn(targets, x, hy, restore_params(t, pminfo))
     ∇f(t) = ForwardDiff.gradient(f, t)
 
-    θopt = θ
+    vpmopt = vpm0
     for itr = 1:iterations
-        Δθ = ∇f(θopt)
-        θopt -= stepsize * Δθ
-
-        vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, ||∇loss|| (w.r.t. θ) = $(norm(Δθ))")
+        Δvpm = ∇f(vpmopt)
+        vpmopt -= stepsize * Δvpm
     end
-    loss_opt = f(θopt)
-    return ((θopt, μ), loss_opt,)
+    loss_opt = f(vpmopt)
+    return (restore_params(vpmopt, pminfo), loss_opt,)
+end
+
+function vectorize_params(params::NTuple{N}) where {N}
+    θs, μs = map(t->t[1], params), map(t->t[2], params)
+    vcat(θs...), (length.(θs), μs)
+end
+
+function restore_params(vp::AbstractArray, pminfo)
+    lenpms = collect(pminfo[1])
+    arrpms = map(lenpms, cumsum(lenpms)) do lhs, rhs
+        vp[(rhs - lhs + 1):rhs]
+    end
+
+    map((lhs,rhs)->(lhs,rhs,), (arrpms...,), pminfo[2])
 end
 
 function savesettings(dirname::AbstractString, targets::NTuple{N,CB}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), kwargs...) where {N,CB<:CodeBook,T,D}
@@ -213,8 +230,8 @@ function savelogs(dirname::AbstractString, targets::NTuple{N,CB}, epoch::Integer
     save(nsolt, filename_nsolt)
 end
 
-function lossfcn(targets::NTuple{N,CB}, x::AbstractArray, y::AbstractArray, (θ, μ)::Tuple{TT,TM}) where {N,CB<:CodeBook,TT<:AbstractArray,TM<:AbstractArray}
-    cpnsolt = setrotations!(similar(nsolt, eltype(θ)), θ, μ)
-    syn = createOperator(cpnsolt, size(x); shape=Shapes.Vec())
+function lossfcn(targets::NTuple{N,CB}, x::AbstractArray, y::AbstractArray, params) where {N,CB<:PolyphaseFB,TT<:AbstractArray,TM<:AbstractArray}
+    cptargets = similar_dictionary.(targets, params)
+    syn = createSynthesizer(cptargets, size(x); shape=Shapes.Vec())
     norm(x - synthesize(syn, y))^2/2
 end
