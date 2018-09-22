@@ -221,6 +221,8 @@ createAnalyzer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...
 createSynthesizer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
 createAnalyzer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperator} = OP(obj, args...; kwargs...)
 createSynthesizer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperator} = OP(obj, args...; kwargs...)
+createAnalyzer(::Type{AbstractOperator}, obj, args...; kwargs...) = createAnalyzer(obj, args...; kwargs...)
+createSynthesizer(::Type{AbstractOperator}, obj, args...; kwargs...) = createSynthesizer(obj, args...; kwargs...)
 
 struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     shape::Shapes.Shape
