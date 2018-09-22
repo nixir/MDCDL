@@ -59,7 +59,7 @@ trainingIds = map(1:nSubData) do nsd
 end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
 if do_save_trainingset
-    datadir = joinpath(logdir, "data").
+    datadir = joinpath(logdir, "data")
     !isdir(datadir) && mkpath(datadir)
     map(idx->save(joinpath(datadir, "$idx.png"), trainingSet[idx]), 1:nSubData)
 end

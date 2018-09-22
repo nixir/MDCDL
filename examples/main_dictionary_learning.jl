@@ -21,7 +21,7 @@ nch = 8
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 4
+nSubData = 32
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = begin
@@ -57,7 +57,7 @@ trainingIds = map(1:nSubData) do nsd
 end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
 if do_save_trainingset
-    datadir = joinpath(logdir, "data").
+    datadir = joinpath(logdir, "data")
     !isdir(datadir) && mkpath(datadir)
     map(idx->save(joinpath(datadir, "$idx.png"), trainingSet[idx]), 1:nSubData)
 end
