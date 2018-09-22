@@ -35,7 +35,7 @@ do_save_trainingset = false
 # options for sparse coding
 sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
 # options for dictionary update
-du_options = ( iterations = 100, stepsize = 1e-3,)
+du_options = ( iterations = 1, stepsize = 1e-3,)
 
 # general options of dictionary learning
 options = ( epochs  = 100,
