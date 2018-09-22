@@ -90,8 +90,8 @@ function updateDictionary(nsolt::NS, x::AbstractArray, hy::AbstractArray, (Î¸, Î
 end
 
 savesettings(::Nothing, args...; kwargs...) = nothing
-function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), kwargs...) where {T,D}
-    filename = joinpath(dirname, "settings")
+function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), filename="settings", kwargs...) where {T,D}
+    filepath = joinpath(dirname, filename)
 
     txt_general = """
         Settings of $(namestring(nsolt)) Dictionary Learning:
@@ -109,7 +109,7 @@ function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, traini
         """
     txt_others = [ "Keyword $(arg.first) := $(arg.second)\n" for arg in kwargs]
 
-    open(filename, write=true) do io
+    open(filepath, write=true) do io
         println(io, txt_general, txt_others...)
     end
     vlevel >= 2 && println("Settings was written in $filename.")
@@ -140,7 +140,7 @@ end
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")
 namestring(nsolt::Cnsolt) = namestring(nsolt, "Complex NSOLT")
-namestring(nsolt::AbstractNsolt{T,D}, strnsolt::AbstractString) where {T,D} = "$D-dimensional $(nsolt.category) $strnsolt"
+namestring(nsolt::AbstractNsolt{T,D}, strnsolt::AbstractString) where {T,D} = "$D-dimensional $(ifelse(istype1(nsolt), "Type-I", "Type-II")) $strnsolt"
 
 verbosenames() = Dict(:none => 0, :standard => 1, :specified => 2, :loquacious => 3)
 verboselevel(sym::Symbol) = verbosenames()[sym]
@@ -191,43 +191,27 @@ function restore_params(vp::AbstractArray, pminfo)
     map((lhs,rhs)->(lhs,rhs,), (arrpms...,), pminfo[2])
 end
 
-function savesettings(dirname::AbstractString, targets::NTuple{N,CB}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), kwargs...) where {N,CB<:CodeBook,T,D}
-    return nothing
-    filename = joinpath(dirname, "settings")
-
-    txt_general = """
-        Settings of $(namestring(nsolt)) Dictionary Learning:
-        Element type := $T
-        Decimation factor := $(nsolt.decimationFactor)
-        Polyphase order := $(nsolt.polyphaseOrder)
-        Number of channels := $(nsolt.nChannels)
-
-        Number of training data := $(length(trainingset))
-        Epochs := $epochs
-
-        User-defined options for Sparse Coding Stage := $sc_options
-        User-defined options for Dictionary Update Stage := $du_options
-
-        """
-    txt_others = [ "Keyword $(arg.first) := $(arg.second)\n" for arg in kwargs]
-
-    open(filename, write=true) do io
-        println(io, txt_general, txt_others...)
+function savesettings(dirname::AbstractString, targets::NTuple{N,CB}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), filename="settings", kwargs...) where {N,CB<:CodeBook,T,D}
+    for idx = 1:N
+        savesettings(dirname, targets[idx], trainingset; vlevel=vlevel, epochs=epochs, sc_options=sc_options, du_options=du_options, filename=string(filename,"_",idx))
     end
-    vlevel >= 2 && println("Settings was written in $filename.")
 end
 
-function savelogs(dirname::AbstractString, targets::NTuple{N,CB}, epoch::Integer; params...) where {N,CB<:CodeBook}
-    return nothing
-    filename_logs = joinpath(dirname, "log")
-    filename_nsolt = joinpath(dirname, "nsolt.json")
-
-    strparams = [ " $(prm.first) = $(prm.second)," for prm in params ]
-    strlogs = string("epoch $epoch:", strparams...)
-    open(filename_logs, append=true) do io
-        println(io, strlogs)
+function savelogs(dirname::AbstractString, targets::NTuple{N,CB}, epoch::Integer; params...) where {N,CB<:AbstractNsolt}
+    for idx = 1:N
+        filename_nsolt = joinpath(dirname, string("nsolt_", idx, ".json"))
+        save(targets[idx], filename_nsolt)
     end
-    save(nsolt, filename_nsolt)
+    return nothing
+    # filename_logs = joinpath(dirname, "log")
+    # filename_nsolt = joinpath(dirname, "nsolt.json")
+    #
+    # strparams = [ " $(prm.first) = $(prm.second)," for prm in params ]
+    # strlogs = string("epoch $epoch:", strparams...)
+    # open(filename_logs, append=true) do io
+    #     println(io, strlogs)
+    # end
+    # save(nsolt, filename_nsolt)
 end
 
 function lossfcn(targets::NTuple{N,CB}, x::AbstractArray, y::AbstractArray, params) where {N,CB<:PolyphaseFB,TT<:AbstractArray,TM<:AbstractArray}
