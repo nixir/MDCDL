@@ -169,6 +169,9 @@ setParamsDictionary!(targets::NTuple, pm::NTuple) = setParamsDictionary!.(target
 getOperatorType_scs(::Type, ::Val) = AbstractOperator
 getOperatorType_scs(::Type{NS}, ::Val{:convolution}) where {NS<:AbstractNsolt} = ConvolutionalOperator
 
+decompose_params(::Type, params) = (params, ())
+compose_params(::Type, params, ()) = params
+
 decompose_params(::Type{NS}, (θ, μ)) where {NS<:AbstractNsolt} = (θ, μ)
 compose_params(::Type{NS}, θ, μ) where {NS<:AbstractNsolt} = (θ, μ)
 
