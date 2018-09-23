@@ -1,3 +1,5 @@
+ngivensangles(n::Integer) = fld(n*(n-1),2)
+
 function mat2rotations(mtx::AbstractMatrix{T}) where T <: Real
     P = size(mtx, 1)
 

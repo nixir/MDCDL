@@ -238,6 +238,7 @@ end
 #TODO: コードが汚いのでリファクタリングする
 function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
+    nch = cc.nChannels
     P = sum(cc.nChannels)
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -247,13 +248,13 @@ function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     nParamsProps = ord .* nParamsPropPerDimsOrder
     # nParams = vcat(nParamsInit, nParamsProps...)
 
-    # set Cnsolt.initMatrices
-    angsInitW = angs[1:fld(nParamsInit,2)]
-    musInitW = mus[1:fld(P,2)]
-    angsInitU = angs[fld(nParamsInit,2)+1:nParamsInit]
-    musInitU = mus[fld(P,2)+1:P]
-    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW, cld(P,2))
-    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU, fld(P,2))
+    # set Rnsolt.initMatrices
+    initAngsRanges = intervals(ngivensangles.(nch))
+    initMusRanges = intervals(nch)
+
+    for idx = 1:2
+        cc.initMatrices[idx] = rotations2mat(angs[initAngsRanges[idx]], mus[initMusRanges[idx]], nch[idx])
+    end
 
     dimAngsRanges = intervals(nParamsProps, nParamsInit)
     dimMusRanges = intervals(collect(ord .* fld(P,2)), P)
@@ -331,19 +332,17 @@ function setrotations!(::TypeII, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) w
         (nch[2], nch[1])
     end
 
-    nParamsInit = fld.(nch .* (nch .- 1),2)
-    nParamsPropPerDimsOrder = sum(fld.(nch .* (nch .- 1),2))
+    nParamsInit = ngivensangles.(nch)
+    nParamsPropPerDimsOrder = sum(ngivensangles.(nch))
     nParamsProps = fld.(ord,2) .* sum(nParamsPropPerDimsOrder)
     nParams = vcat(sum(nParamsInit), nParamsProps...)
 
-    # set Cnsolt.initMatrices
-    angsInitW = angs[1:nParamsInit[1]]
-    musInitW = mus[1:nch[1]]
-    angsInitU = angs[(1:nParamsInit[2]) .+ nParamsInit[1]]
-    musInitU = mus[(1:nch[2]) .+ nch[1]]
+    initAngsRanges = intervals(nParamsInit)
+    initMusRanges = intervals(nch)
 
-    cc.initMatrices[1] = rotations2mat(angsInitW, musInitW, nch[1])
-    cc.initMatrices[2] = rotations2mat(angsInitU, musInitU, nch[2])
+    for idx = 1:2
+        cc.initMatrices[idx] = rotations2mat(angs[initAngsRanges[idx]], mus[initMusRanges[idx]], nch[idx])
+    end
 
     # set Cnsolt.propMatrices
     dimAngsRanges = intervals(nParamsProps, sum(nParamsInit))
