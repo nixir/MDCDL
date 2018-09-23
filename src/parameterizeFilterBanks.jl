@@ -1,7 +1,3 @@
-
-#TODO: 角度パラメータのベクトル化手法の仕様をどこかに記述する．
-#TODO: コードが汚いのでリファクタリングする
-
 getrotations(cc::AbstractNsolt) = getrotations(Val(istype1(cc)), cc)
 setrotations!(cc::AbstractNsolt, θ, μ) = setrotations!(Val(istype1(cc)), cc, θ, μ)
 
