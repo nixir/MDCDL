@@ -259,17 +259,12 @@ function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     dimAngsRanges = intervals(nParamsProps, nParamsInit)
     dimMusRanges = intervals(collect(ord .* fld(P,2)), P)
 
-    nAngsu = fld(P*(P-2),8)
-    nMusu = fld(P,2)
     for d = 1:D
-        subAngsDim = angs[ dimAngsRanges[d] ]
-        subMusDim = mus[ dimMusRanges[d] ]
+        subAngsDim = view(angs, dimAngsRanges[d])
+        subMusDim = view(mus, dimMusRanges[d])
         for k = 1:ord[d]
-            subAngsOrd = subAngsDim[(1:nParamsPropPerDimsOrder) .+ (k-1)*nParamsPropPerDimsOrder]
-            subMusOrd = subMusDim[(1:fld(P,2)) .+ (k-1)*fld(P,2)]
-
-            apu = subAngsOrd[1:nAngsu]
-            mpu = subMusOrd[1:nMusu]
+            apu = view(subAngsDim, (1:nParamsPropPerDimsOrder) .+ (k-1)*nParamsPropPerDimsOrder)
+            mpu = view(subMusDim, (1:fld(P,2)) .+ (k-1)*fld(P,2))
 
             cc.propMatrices[d][k] = rotations2mat(apu, mpu, fld(P,2))
         end
