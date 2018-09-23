@@ -6,7 +6,9 @@ using ImageFiltering.Algorithm: Alg, FIR, FFT
 using ComputationalResources: AbstractResource, CPU1
 
 import Base: promote_rule, eltype, ndims, similar
-import Random: rand!
+import Random: rand, rand!
+
+export rand, rand!
 
 export PolyphaseVector
 export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt, ParallelFilters
