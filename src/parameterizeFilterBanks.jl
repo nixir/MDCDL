@@ -12,10 +12,8 @@ function getrotations(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
 
-    nParamsInit = fld(P*(P-1),2)
-    nParamsPropPerDimsOrder = fld(P*(P-2),4) + fld(P,4)
-    nParamsProps = ord .* nParamsPropPerDimsOrder
-    # nParams = vcat(nParamsInit, nParamsProps...)
+    nParamsInit = ngivensangles(P)
+    nParamsProps = ord .* (ngivensangles(fld(P,2)) + fld(P,4))
 
     # Angles ang MUS
     angsInit, musInit = mat2rotations(cc.initMatrices[1])
@@ -94,10 +92,8 @@ function getrotations(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
 
-    nParamsInit = fld(P*(P-1),2)
-    nParamsPropPerDimsOrder = (fld((P-1)*(P-3),4), fld((P+1)*(P-1),4)) .+ fld(P,4)
-    nParamsProps = fld.(ord,2) .* sum(nParamsPropPerDimsOrder)
-    # nParams = vcat(nParamsInit, nParamsProps...)
+    nParamsInit = ngivensangles(P)
+    nParamsProps = fld.(ord,2) .* (2 * (ngivensangles(fld(P,2)) + ngivensangles(cld(P,2)) + fld(P,4)))
 
     # Angles ang MUS
     angsInit, musInit = mat2rotations(cc.initMatrices[1])
@@ -189,14 +185,13 @@ function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) w
 end
 
 function getrotations(::TypeI, cc::Rnsolt{T,D}) where {D,T}
+    nch = cc.nChannels
     P = sum(cc.nChannels)
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
 
-    nParamsInit = fld(P*(P-2),4)
-    nParamsPropPerDimsOrder = fld(P*(P-2),8)
-    nParamsProps = ord .* nParamsPropPerDimsOrder
-    # nParams = vcat(nParamsInit, nParamsProps...)
+    nParamsInit = sum(ngivensangles.(nch))
+    nParamsProps = ord .* ngivensangles(nch[2])
 
     # Angles ang MUS
     angsInitW, musInitW = mat2rotations(cc.initMatrices[1])
@@ -271,10 +266,8 @@ function getrotations(::TypeII, cc::Rnsolt{T,D}) where {D,T}
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
 
-    nParamsInit = sum(fld.(nch .* (nch .- 1),2))
-    nParamsPropPerDimsOrder = sum(fld.(nch .* (nch .- 1),2))
-    nParamsProps = fld.(ord,2) .* sum(nParamsPropPerDimsOrder)
-    # nParams = vcat(nParamsInit, nParamsProps...)
+    nParamsInit = sum(ngivensangles.(nch))
+    nParamsProps = fld.(ord,2) .* sum(ngivensangles.(nch))
 
     # Angles ang MUS
     angsInitW, musInitW = mat2rotations(cc.initMatrices[1])
