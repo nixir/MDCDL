@@ -1,4 +1,6 @@
 getrotations(cc::AbstractNsolt) = getrotations(Val(istype1(cc)), cc)
+
+setrotations!(cc::AbstractNsolt, (θ, μ)) = setrotations(cc, θ, μ)
 setrotations!(cc::AbstractNsolt, θ, μ) = setrotations!(Val(istype1(cc)), cc, θ, μ)
 
 setrotations(cc::AbstractNsolt, args...) = setrotations!(deepcopy(cc), args...)
