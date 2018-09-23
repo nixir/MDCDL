@@ -45,17 +45,18 @@ function getrotations(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-#TODO: コードが汚いのでリファクタリングする
 function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
 
-    nParamsInit = fld(P*(P-1),2)
-    nParamsPropPerDimsOrder = fld(P*(P-2),4) + fld(P,4)
-    nParamsProps = ord .* nParamsPropPerDimsOrder
-    nParams = vcat(nParamsInit, nParamsProps...)
+    nMuswu = fld(P,2)
+    nAngswu = ngivensangles(nMuswu)
+    nAngsb = fld(P,4)
+
+    nParamsInit = ngivensangles(P)
+    nParamsProps = ord .* (2*nAngswu + nAngsb)
 
     # set Cnsolt.initMatrices
     angsInit = angs[1:nParamsInit]
@@ -66,22 +67,18 @@ function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     dimAngsRanges = intervals(nParamsProps, nParamsInit)
     dimMusRanges = intervals(ord .* P, P)
 
-    nAngswu = fld(P*(P-2),8)
-    nAngsb = fld(P,4)
-    nMuswu = fld(P,2)
     for d = 1:D
-        subAngsDim = angs[ dimAngsRanges[d] ]
-        subMusDim = mus[ dimMusRanges[d] ]
+        subAngsDim = view(angs, dimAngsRanges[d])
+        subMusDim = view(mus, dimMusRanges[d])
+        subAngsRanges = intervals(repeat([nAngswu, nAngswu, nAngsb], ord[d]))
+        subMusRanges = intervals(repeat([nMuswu, nMuswu], ord[d]))
         for k = 1:ord[d]
-            subAngsOrd = subAngsDim[(1:nParamsPropPerDimsOrder) .+ (k-1)*nParamsPropPerDimsOrder]
-            subMusOrd = subMusDim[(1:P) .+ (k-1)*P]
+            apw = view(subAngsDim, subAngsRanges[3k-2])
+            apu = view(subAngsDim, subAngsRanges[3k-1])
+            apb = view(subAngsDim, subAngsRanges[3k])
 
-            apw = subAngsOrd[1:nAngswu]
-            apu = subAngsOrd[(nAngswu+1):2*nAngswu]
-            apb = subAngsOrd[(2*nAngswu+1):nParamsPropPerDimsOrder]
-
-            mpw = subMusOrd[1:nMuswu]
-            mpu = subMusOrd[(nMuswu+1):2*nMuswu]
+            mpw = view(subMusDim, subMusRanges[2k-1])
+            mpu = view(subMusDim, subMusRanges[2k])
 
             cc.propMatrices[d][2*k-1] = rotations2mat(apw, mpw, fld(P,2))
             cc.propMatrices[d][2*k]   = rotations2mat(apu, mpu, fld(P,2))
@@ -140,10 +137,14 @@ function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) w
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
 
-    nParamsInit = fld(P*(P-1),2)
-    nParamsPropPerDimsOrder = (fld((P-1)*(P-3),4), fld((P+1)*(P-1),4)) .+ fld(P,4)
-    nParamsProps = fld.(ord,2) .* sum(nParamsPropPerDimsOrder)
-    nParams = vcat(nParamsInit, nParamsProps...)
+    nMuswu1 = fld(P,2)
+    nMuswu2 = cld(P,2)
+    nAngswu1 = ngivensangles(nMuswu1)
+    nAngswu2 = ngivensangles(nMuswu2)
+    nAngsb = fld(P,4)
+
+    nParamsInit = ngivensangles(P)
+    nParamsProps = fld.(ord,2) .* (2 * (nAngswu1 + nAngswu2 + nAngsb))
 
     # set Cnsolt.initMatrices
     angsInit = angs[1:nParamsInit]
@@ -154,34 +155,26 @@ function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) w
     dimAngsRanges = intervals(nParamsProps, nParamsInit)
     dimMusRanges = intervals(ord .* P, P)
 
-    nAngswu1 = fld((P-1)*(P-3),8)
-    nAngswu2 = fld((P+1)*(P-1),8)
-    nAngsb = fld(P,4)
-    nMuswu1 = fld(P,2)
-    nMuswu2 = cld(P,2)
     for d = 1:D
         nStages = fld(ord[d],2)
-        subAngsDim = angs[ dimAngsRanges[d] ]
-        subMusDim = mus[ dimMusRanges[d] ]
+        subAngsDim = view(angs, dimAngsRanges[d])
+        subMusDim = view(mus, dimMusRanges[d])
+        subAngsRanges = intervals(repeat([nAngswu1, nAngswu1, nAngsb, nAngswu2, nAngswu2, nAngsb], nStages))
+        subMusRanges = intervals(repeat([nMuswu1, nMuswu1, nMuswu2, nMuswu2], nStages))
         for k = 1:nStages
-            subAngsOrd1 = subAngsDim[(1:nParamsPropPerDimsOrder[1]) .+ (k-1)*sum(nParamsPropPerDimsOrder)]
-            subMusOrd1 = subMusDim[(1:P-1) .+ (k-1)*2*P]
-            subAngsOrd2 = subAngsDim[(1:nParamsPropPerDimsOrder[2]) .+ ((k-1)*sum(nParamsPropPerDimsOrder) + nParamsPropPerDimsOrder[1])]
-            subMusOrd2 = subMusDim[(1:P+1) .+ ((P-1) + (k-1)*2*P)]
+            apw1 = view(subAngsDim, subAngsRanges[6k-5])
+            apu1 = view(subAngsDim, subAngsRanges[6k-4])
+            apb1 = view(subAngsDim, subAngsRanges[6k-3])
 
-            apw1 = subAngsOrd1[1:nAngswu1]
-            apu1 = subAngsOrd1[nAngswu1+1:2*nAngswu1]
-            apb1 = subAngsOrd1[2*nAngswu1+1:2*nAngswu1+nAngsb]
+            mpw1 = view(subMusDim, subMusRanges[4k-3])
+            mpu1 = view(subMusDim, subMusRanges[4k-2])
 
-            mpw1 = subMusOrd1[1:nMuswu1]
-            mpu1 = subMusOrd1[nMuswu1+1:2*nMuswu1]
+            apw2 = view(subAngsDim, subAngsRanges[6k-2])
+            apu2 = view(subAngsDim, subAngsRanges[6k-1])
+            apb2 = view(subAngsDim, subAngsRanges[6k])
 
-            apw2 = subAngsOrd2[1:nAngswu2]
-            apu2 = subAngsOrd2[nAngswu2+1:2*nAngswu2]
-            apb2 = subAngsOrd2[2*nAngswu2+1:2*nAngswu2+nAngsb]
-
-            mpw2 = subMusOrd2[1:nMuswu2]
-            mpu2 = subMusOrd2[nMuswu2+1:2*nMuswu2]
+            mpw2 = view(subMusDim, subMusRanges[4k-1])
+            mpu2 = view(subMusDim, subMusRanges[4k])
 
             cc.propMatrices[d][4*k-3] = rotations2mat(apw1, mpw1, fld(P,2))
             cc.propMatrices[d][4*k-2] = rotations2mat(apu1, mpu1, fld(P,2))
@@ -348,8 +341,8 @@ function setrotations!(::TypeII, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) w
         nStages = fld(ord[d],2)
         subAngsDim = angs[ dimAngsRanges[d] ]
         subMusDim = mus[ dimMusRanges[d] ]
-        subAngsRanges = intervals(repeat([nAngsu, nAngsw], ord[d]))
-        subMusRanges = intervals(repeat([minP, maxP], ord[d]))
+        subAngsRanges = intervals(repeat([nAngsu, nAngsw], nStages))
+        subMusRanges = intervals(repeat([minP, maxP], nStages))
         for k = 1:nStages
             apu = view(subAngsDim, subAngsRanges[2k-1])
             apw = view(subAngsDim, subAngsRanges[2k])
