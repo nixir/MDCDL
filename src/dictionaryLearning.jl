@@ -5,7 +5,7 @@ using Dates
 
 LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}}
 
-function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=())
+function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, sparsecoder::Symbol=:IHT, optimizer::Symbol=:SGD, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=())
     vlevel = verboselevel(verbose)
 
     savesettings(logdir, target, trainingSet;
@@ -25,11 +25,11 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
             x = trainingSet[k]
 
             vlevel >= 3 && println("start Sparse Coding Stage.")
-            sparse_coefs, loss_sps[k] = stepSparseCoding(target, x; vlevel=vlevel, sc_options...)
+            sparse_coefs, loss_sps[k] = stepSparseCoding(Val(sparsecoder), target, x; vlevel=vlevel, sc_options...)
             vlevel >= 3 && println("end Sparse Coding Stage.")
 
             vlevel >= 3 && println("start Dictionary Update.")
-            params_dic, loss_dus[k] = updateDictionary(target, x, sparse_coefs, params_dic; vlevel=vlevel, du_options...)
+            params_dic, loss_dus[k] = updateDictionary(Val(optimizer), target, x, sparse_coefs, params_dic; vlevel=vlevel, du_options...)
             vlevel >= 3 && println("end Dictionary Update Stage.")
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
@@ -49,7 +49,7 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
     return setParamsDictionary!(target, params_dic)
 end
 
-function stepSparseCoding(cb::DT, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...) where {DT<:LearningTarget}
+function stepSparseCoding(::Val{:IHT}, cb::DT, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...) where {DT<:LearningTarget}
     TP = getOperatorType_scs(DT, Val(filter_domain))
 
     ana = createAnalyzer(TP, cb, size(x); shape=Shapes.Vec())
@@ -65,9 +65,9 @@ function stepSparseCoding(cb::DT, x::AbstractArray; vlevel::Integer=0, sparsity=
     return (y_opt, loss_iht)
 end
 
-updateDictionary(cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
+updateDictionary(::Val, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
 
-function updateDictionary(cb::DT, x::AbstractArray, hy::AbstractArray, params; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
+function updateDictionary(::Val{:SGD}, cb::DT, x::AbstractArray, hy::AbstractArray, params; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
     vecpm, pminfo = decompose_params(DT, params)
     f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo))
     ∇f(t) = ForwardDiff.gradient(f, t)
