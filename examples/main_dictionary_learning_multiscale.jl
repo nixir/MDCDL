@@ -13,17 +13,17 @@ TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
 df = (2,2)
 # polyphase order: (<:NTuple{D,Int} where D)
-ord = (4,4)
+ord = (2,2)
 # number of channels: (<:Union{Integer,Tuple{Int,Int}} for Rnsolt)
 #                     (<:Integer for Cnsolt)
-nch = 8
+nch = 6
 # number of tree level (<: Integer)
-level = 2
+level = 3
 
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 32
+nSubData = 4
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = begin

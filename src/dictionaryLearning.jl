@@ -181,12 +181,8 @@ function decompose_params(::Type{NTuple{N,T}}, params::NTuple{N}) where {N,T<:Ab
 end
 
 function compose_params(::Type{NTuple{N,T}}, vp::AbstractArray, pminfo::Tuple) where {N,T<:AbstractNsolt}
-    lenpms = collect(pminfo[1])
-    arrpms = map(lenpms, cumsum(lenpms)) do lhs, rhs
-        vp[(rhs - lhs + 1):rhs]
-    end
-
-    map((lhs,rhs)->(lhs,rhs,), (arrpms...,), pminfo[2])
+    arrpms = map(rng->vp[rng],intervals(pminfo[1]))
+    map((lhs,rhs)->(lhs,rhs,), arrpms, pminfo[2])
 end
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")

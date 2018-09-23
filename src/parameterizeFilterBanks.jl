@@ -63,11 +63,8 @@ function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     cc.initMatrices[1] = rotations2mat(angsInit, musInit, P)
 
     # set Cnsolt.propMatrices
-    delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ nParamsInit for d in 1:D]
-
-    delimitersMus = cumsum([ 0, (ord .* P)... ])
-    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ P for d in 1:D]
+    dimAngsRanges = intervals(nParamsProps, nParamsInit)
+    dimMusRanges = intervals(ord .* P, P)
 
     nAngswu = fld(P*(P-2),8)
     nAngsb = fld(P,4)
@@ -154,11 +151,8 @@ function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) w
     cc.initMatrices[1] = rotations2mat(angsInit, musInit, P)
 
     # set Cnsolt.propMatrices
-    delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ nParamsInit for d in 1:D]
-
-    delimitersMus = cumsum([ 0, (ord .* P)... ])
-    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ P for d in 1:D]
+    dimAngsRanges = intervals(nParamsProps, nParamsInit)
+    dimMusRanges = intervals(ord .* P, P)
 
     nAngswu1 = fld((P-1)*(P-3),8)
     nAngswu2 = fld((P+1)*(P-1),8)
@@ -261,13 +255,8 @@ function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     cc.initMatrices[1] = rotations2mat(angsInitW, musInitW, cld(P,2))
     cc.initMatrices[2] = rotations2mat(angsInitU, musInitU, fld(P,2))
 
-    # set Cnsolt.propMatrices
-    delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ nParamsInit for d in 1:D]
-
-    delimitersMus = cumsum([ 0, (ord .* fld(P,2))... ])
-    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ P for d in 1:D]
-
+    dimAngsRanges = intervals(nParamsProps, nParamsInit)
+    dimMusRanges = intervals(collect(ord .* fld(P,2)), P)
 
     nAngsu = fld(P*(P-2),8)
     nMusu = fld(P,2)
@@ -357,11 +346,8 @@ function setrotations!(::TypeII, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) w
     cc.initMatrices[2] = rotations2mat(angsInitU, musInitU, nch[2])
 
     # set Cnsolt.propMatrices
-    delimitersAngs = cumsum([ 0, nParamsProps... ])
-    dimAngsRanges = [ ((delimitersAngs[d]+1):delimitersAngs[d+1]) .+ sum(nParamsInit) for d in 1:D]
-
-    delimitersMus = cumsum([ 0, (fld.(ord,2) .* sum(nch))... ])
-    dimMusRanges = [ ((delimitersMus[d]+1):delimitersMus[d+1]) .+ sum(nch) for d in 1:D]
+    dimAngsRanges = intervals(nParamsProps, sum(nParamsInit))
+    dimMusRanges = intervals(fld.(ord,2) .* sum(nch), sum(nch))
     nAngsu = fld(minP*(minP-1),2)
     nAngsw = fld(maxP*(maxP-1),2)
 

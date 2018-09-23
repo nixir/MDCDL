@@ -51,10 +51,10 @@ function rand!(rnsolt::Rnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=tr
     rnsolt
 end
 
-function intervals(lns::AbstractVector{T}) where {T<:Integer}
+function intervals(lns::AbstractVector{T}, offset::T=0) where {T<:Integer}
     map(lns, cumsum(lns)) do st, ed
-        UnitRange(ed - st + 1, ed)
+        UnitRange(ed - st + 1 + offset, ed + offset)
     end
 end
 
-intervals(lns::Tuple) = (intervals(collect(lns))...,)
+intervals(lns::Tuple, args...) = (intervals(collect(lns), args...)...,)
