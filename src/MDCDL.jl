@@ -20,7 +20,7 @@ export upsample, downsample
 export permdctmtx, cdftmtx
 export serialize, deserialize
 export analysisbank
-export kernels, analysiskernels, synthesiskernels
+export kernels, analysiskernels, synthesiskernels, kernelsize
 export getrotations, setrotations!
 export mdarray2polyphase, polyphase2mdarray
 export iht
@@ -55,6 +55,9 @@ ndims(cb::CodeBook) = ndims(typeof(cb))
 decimations(fb::FilterBank) = fb.decimationFactor
 nchannels(fb::FilterBank) = sum(fb.nChannels)
 orders(fb::FilterBank) = fb.polyphaseOrder
+
+kernels(fb::FilterBank) = fb.kernels
+kernelsize(fb::FilterBank) = decimations(fb) .* (1 .+ orders(fb))
 
 struct Rnsolt{T,D} <: AbstractNsolt{T,D}
     decimationFactor::NTuple{D, Int}

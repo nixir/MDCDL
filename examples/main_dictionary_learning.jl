@@ -1,6 +1,7 @@
 using MDCDL
 using LinearAlgebra
 using Images, TestImages
+using Plots
 
 using Base.Filesystem
 using Dates
@@ -21,16 +22,14 @@ nch = 8
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 32
+nSubData = 2
 
 # path of log files (do nothing if isa(logdir, Nothing))
-# logdir = begin
-#     tm = Dates.format(now(), "yyyymmdd_HH_MM_SS_sss")
-#     joinpath(@__DIR__, "results", tm)
-# end
+# logdir = joinpath(@__DIR__, "results", Dates.format(now(), "yyyymmdd_HH_MM_SS_sss"))
 logdir = nothing
 # save minibatches?
 do_save_trainingset = false
+do_export_atoms = false
 
 # options for sparse coding
 sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
@@ -45,7 +44,6 @@ options = ( epochs  = 100,
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
-do_save_trainingset = do_save_trainingset && logdir != nothing
 
 # original image
 orgImg = TP.(testimage("cameraman"))
@@ -56,7 +54,7 @@ trainingIds = map(1:nSubData) do nsd
     UnitRange.(1 .+ pos, szx .+ pos)
 end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
-if do_save_trainingset
+if logdir != nothing && do_save_trainingset
     datadir = joinpath(logdir, "data")
     !isdir(datadir) && mkpath(datadir)
     map(idx->save(joinpath(datadir, "$idx.png"), trainingSet[idx]), 1:nSubData)
@@ -70,4 +68,6 @@ MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
 # dictionary learning
 MDCDL.train!(nsolt, trainingSet; options...)
 
-#plot(nsolt)
+if logdir != nothing && do_export_atoms
+    png(plot(nsolt), joinpath(logdir, "atoms.png"))
+end

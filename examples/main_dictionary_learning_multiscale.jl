@@ -1,6 +1,7 @@
 using MDCDL
 using LinearAlgebra
 using Images, TestImages
+using Plots
 
 using Base.Filesystem
 using Dates
@@ -23,31 +24,28 @@ level = 3
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 4
+nSubData = 16
 
 # path of log files (do nothing if isa(logdir, Nothing))
-# logdir = begin
-#     tm = Dates.format(now(), "yyyymmdd_HH_MM_SS_sss")
-#     joinpath(@__DIR__, "results", tm)
-# end
+# logdir = joinpath(@__DIR__, "results", Dates.format(now(), "yyyymmdd_HH_MM_SS_sss"))
 logdir = nothing
 # save minibatches?
 do_save_trainingset = false
+do_export_atoms = false
 
 # options for sparse coding
 sc_options = ( iterations = 1000, sparsity = 0.2, filter_domain=:convolution)
 # options for dictionary update
-du_options = ( iterations = 1, stepsize = 1e-3,)
+du_options = ( iterations = 100, stepsize = 1e-3,)
 
 # general options of dictionary learning
-options = ( epochs  = 100,
+options = ( epochs  = 10,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sc_options = sc_options,
             du_options = du_options,
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
-do_save_trainingset = do_save_trainingset && logdir != nothing
 
 # original image
 orgImg = TP.(testimage("cameraman"))
@@ -58,7 +56,7 @@ trainingIds = map(1:nSubData) do nsd
     UnitRange.(1 .+ pos, szx .+ pos)
 end
 trainingSet = map(idx -> orgImg[idx...], trainingIds)
-if do_save_trainingset
+if logdir != nothing && do_save_trainingset
     datadir = joinpath(logdir, "data")
     !isdir(datadir) && mkpath(datadir)
     map(idx->save(joinpath(datadir, "$idx.png"), trainingSet[idx]), 1:nSubData)
@@ -68,12 +66,16 @@ end
 nsolt = Nsolt(TP, df, ord, nch)
 # set random orthonormal matrices to the initial matrices.
 # MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
-MDCDL.rand!(nsolt)
-nsolt.initMatrices[1] .= cat(1, qr(rand((size(nsolt.initMatrices[1]) .- 1)...)).Q, dims=[1,2])
+# MDCDL.rand!(nsolt)
+# nsolt.initMatrices[1] .= cat(1, qr(rand((size(nsolt.initMatrices[1]) .- 1)...)).Q, dims=[1,2])
 
 msnsolt = (fill(nsolt,3)...,)
 
 # dictionary learning
 MDCDL.train!(msnsolt, trainingSet; options...)
 
-#plot(nsolt)
+if logdir != nothing && do_export_atoms
+    for idx = 1:length(msnsolt)
+        png(plot(msnsolt[idx]), joinpath(logdir, string("nsolt_",idx,".png")))
+    end
+end
