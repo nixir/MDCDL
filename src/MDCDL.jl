@@ -27,13 +27,13 @@ export iht
 export AbstractOperator
 export NsoltOperator, ConvolutionalOperator
 export createOperator, createAnalyzer, createSynthesizer
-export Shapes
+export Shapes, Optimizers, SparseCoders
 
 module Shapes
-    abstract type Shape end
-    struct Default <: Shape end
-    struct Vec <: Shape end
-    struct Augumented <: Shape end
+    abstract type AbstractShape end
+    struct Default <: AbstractShape end
+    struct Vec <: AbstractShape end
+    struct Augumented <: AbstractShape end
 end
 
 struct PolyphaseVector{T,D}
@@ -214,7 +214,7 @@ struct MultiLayerCsc{T,D} <: CodeBook{T,D}
     end
 end
 
-get_outputsize(s::Shapes.Shape, pfb, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
+get_outputsize(s::Shapes.AbstractShape, pfb, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
 
 get_outputsize(::Shapes.Default, dcsz::NTuple, insz::NTuple, nch::Integer) = (nch, dcsz...)
 get_outputsize(::Shapes.Augumented, dcsz::NTuple, insz::NTuple, nch::Integer) = (dcsz..., nch)
@@ -230,7 +230,7 @@ createAnalyzer(::Type{AbstractOperator}, obj, args...; kwargs...) = createAnalyz
 createSynthesizer(::Type{AbstractOperator}, obj, args...; kwargs...) = createSynthesizer(obj, args...; kwargs...)
 
 struct NsoltOperator{T,D} <: AbstractOperator{T,D}
-    shape::Shapes.Shape
+    shape::Shapes.AbstractShape
     insize::NTuple
     outsize::NTuple
 
@@ -260,7 +260,7 @@ createOperator(ns::AbstractNsolt, x; kwargs...) = NsoltOperator(ns, x; kwargs...
 struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple
     outsize::NTuple
-    shape::Shapes.Shape
+    shape::Shapes.AbstractShape
 
     parallelFilters::ParallelFilters{T,D}
 
@@ -295,7 +295,7 @@ end
 
 struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     insize::NTuple{D,T}
-    shape::Shapes.Shape
+    shape::Shapes.AbstractShape
 
     operators::Vector{AbstractOperator{T,D}}
 

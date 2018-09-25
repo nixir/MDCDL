@@ -34,15 +34,15 @@ do_save_trainingset = false
 do_export_atoms = false
 
 # options for sparse coding
-sc_options = ( iterations = 1000, sparsity = 0.2, filter_domain=:convolution)
+sparsecoder = SparseCoders.IHT( iterations = 1000, sparsity = 0.2, filter_domain=:convolution)
 # options for dictionary update
-du_options = ( iterations = 100, stepsize = 1e-3,)
+optimizer = Optimizers.Steepest( iterations = 100, rate = 1e-3)
 
 # general options of dictionary learning
 options = ( epochs  = 10,
             verbose = :standard, # :none, :standard, :specified, :loquacious
-            sc_options = sc_options,
-            du_options = du_options,
+            sparsecoder = sparsecoder,
+            optimizer = optimizer,
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)

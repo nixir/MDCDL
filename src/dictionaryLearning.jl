@@ -3,16 +3,65 @@ using Base.Filesystem
 using Statistics
 using Dates
 
+module SparseCoders
+    using MDCDL.Shapes
+    abstract type SparseCoder end
+    struct IHT <: SparseCoder
+        iterations::Integer
+        sparsity::AbstractFloat
+        shape::Shapes.AbstractShape
+
+        filter_domain::Symbol
+
+        IHT(; iterations=1, sparsity=0.5, shape=Shapes.Vec(), filter_domain=:convolution) = new(iterations, sparsity, shape, filter_domain)
+    end
+end
+
+module Optimizers
+    abstract type AbstractOptimizer end
+    abstract type AbstractGradientDescent <: AbstractOptimizer end
+    struct Steepest <: AbstractGradientDescent
+        iterations::Integer
+        rate::AbstractFloat
+        Steepest(; iterations=1, rate=1e-3) = new(iterations, rate)
+    end
+
+    struct Momentum <: AbstractGradientDescent
+        iterations::Integer
+        rate::AbstractFloat
+        β::AbstractFloat
+        Momentum(; iterations=1, rate=1e-3, beta=1e-8) = new(iterations, rate, beta)
+    end
+
+    struct AdaGrad <: AbstractGradientDescent
+        iterations::Integer
+        rate::AbstractFloat
+        ϵ::AbstractFloat
+        AdaGrad(; iterations=1, rate=1e-3, epsilon=1e-8) = new(iterations, rate, epsilon)
+    end
+
+    struct Adam <: AbstractGradientDescent
+        iterations::Integer
+        α::AbstractFloat
+        β1::AbstractFloat
+        β2::AbstractFloat
+        ϵ::AbstractFloat
+
+        Adam(; iterations=1, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8) = new(alpha, beta1, beta2, epsilon)
+    end
+
+end
+
+iterations(abopt::Optimizers.AbstractOptimizer) = abopt.iterations
+
 LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}}
 
-function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, sparsecoder::Symbol=:IHT, optimizer::Symbol=:SGD, verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing, sc_options=(), du_options=())
+function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, sparsecoder::SparseCoders.SparseCoder=SparseCoders.IHT(), optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(), verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing)
     vlevel = verboselevel(verbose)
 
     savesettings(logdir, target, trainingSet;
         vlevel=vlevel,
-        epochs=epochs,
-        sc_options=sc_options,
-        du_options=du_options)
+        epochs=epochs)
 
     vlevel >= 1 && println("beginning dictionary training...")
 
@@ -25,11 +74,11 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
             x = trainingSet[k]
 
             vlevel >= 3 && println("start Sparse Coding Stage.")
-            sparse_coefs, loss_sps[k] = stepSparseCoding(Val(sparsecoder), target, x; vlevel=vlevel, sc_options...)
+            sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, target, x; vlevel=vlevel)
             vlevel >= 3 && println("end Sparse Coding Stage.")
 
             vlevel >= 3 && println("start Dictionary Update.")
-            params_dic, loss_dus[k] = updateDictionary(Val(optimizer), target, x, sparse_coefs, params_dic; vlevel=vlevel, du_options...)
+            params_dic, loss_dus[k] = updateDictionary(optimizer, target, x, sparse_coefs, params_dic; vlevel=vlevel)
             vlevel >= 3 && println("end Dictionary Update Stage.")
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
@@ -49,33 +98,35 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
     return setParamsDictionary!(target, params_dic)
 end
 
-function stepSparseCoding(::Val{:IHT}, cb::DT, x::AbstractArray; vlevel::Integer=0, sparsity=1.0, iterations::Integer=400, filter_domain::Symbol=:convolution, resource::AbstractResource=CPU1(FIR()), kwargs...) where {DT<:LearningTarget}
-    TP = getOperatorType_scs(DT, Val(filter_domain))
+function stepSparseCoding(ihtsc::SparseCoders.IHT, cb::DT, x::AbstractArray; vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
+    TP = getOperatorType_scs(DT, Val(ihtsc.filter_domain))
 
-    ana = createAnalyzer(TP, cb, size(x); shape=Shapes.Vec())
-    syn = createSynthesizer(TP, cb, size(x); shape=Shapes.Vec())
+    ana = createAnalyzer(TP, cb, size(x); shape=ihtsc.shape)
+    syn = createSynthesizer(TP, cb, size(x); shape=ihtsc.shape)
 
     # initial sparse vector y0
     y0 = analyze(ana, x)
     # number of non-zero coefficients
-    K = trunc(Int, sparsity * length(x))
+    K = trunc(Int, ihtsc.sparsity * length(x))
 
-    y_opt, loss_iht = iht(syn, ana, x, y0, K; iterations=iterations, isverbose=(vlevel>=3))
+    y_opt, loss_iht = iht(syn, ana, x, y0, K; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
 
     return (y_opt, loss_iht)
 end
 
-updateDictionary(::Val, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
+updateDictionary(::Optimizers.AbstractOptimizer, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
 
-function updateDictionary(::Val{:SGD}, cb::DT, x::AbstractArray, hy::AbstractArray, params; vlevel::Integer=0, stepsize::Real=1e-5, iterations::Integer=1, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
+function updateDictionary(optr::Optimizers.Steepest, cb::DT, x::AbstractArray, hy::AbstractArray, params; vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
     vecpm, pminfo = decompose_params(DT, params)
     f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo))
     ∇f(t) = ForwardDiff.gradient(f, t)
 
     vecpm_opt = vecpm
-    for itr = 1:iterations
+    optim_state = initialstate(optr, ∇f, vecpm)
+    for itr = 1:iterations(optr)
         Δvecpm = ∇f(vecpm_opt)
-        vecpm_opt -= stepsize * Δvecpm
+        upm, optim_state = updateamount(optr, Δvecpm, itr, optim_state)
+        vecpm_opt -= upm
 
         vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, ||∇loss|| = $(norm(Δvecpm))")
     end
@@ -183,6 +234,20 @@ end
 function compose_params(::Type{NTuple{N,T}}, vp::AbstractArray, pminfo::Tuple) where {N,T<:AbstractNsolt}
     arrpms = map(rng->vp[rng],intervals(pminfo[1]))
     map((lhs,rhs)->(lhs,rhs,), arrpms, pminfo[2])
+end
+
+initialstate(spr::Optimizers.Steepest, args...) = nothing
+initialstate(adam::Optimizers.Adam, ∇f::Function, vecpm::AbstractArray) = (zero(vecpm), 0.0)
+
+updateamount(stp::Optimizers.Steepest, grad, args...) = (stp.rate .* grad, nothing)
+function updateamount(adam::Optimizers.Adam, grad, itr, (m, v))
+    m = adam.β1 * m + (1 - adam.β1) * grad
+    v = adam.β2 * v + (1 - adam.β2) * norm(grad)^2
+    m̂ = m / (1 - adam.β1^(itr))
+    v̂ = v / (1 - adam.β2^(itr))
+
+    upm = adam.rate * m̂ / (sqrt(v̂) + adam.ϵ)
+    (upm, (m, v))
 end
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")

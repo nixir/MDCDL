@@ -22,7 +22,7 @@ nch = 8
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 2
+nSubData = 16
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = joinpath(@__DIR__, "results", Dates.format(now(), "yyyymmdd_HH_MM_SS_sss"))
@@ -32,15 +32,16 @@ do_save_trainingset = false
 do_export_atoms = false
 
 # options for sparse coding
-sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
+# sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
+sparsecoder = SparseCoders.IHT( iterations = 100, sparsity = 0.5, filter_domain=:convolution)
 # options for dictionary update
-du_options = ( iterations = 1, stepsize = 1e-3,)
+optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-3)
 
 # general options of dictionary learning
 options = ( epochs  = 100,
             verbose = :standard, # :none, :standard, :specified, :loquacious
-            sc_options = sc_options,
-            du_options = du_options,
+            sparsecoder = sparsecoder,
+            optimizer = optimizer,
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
