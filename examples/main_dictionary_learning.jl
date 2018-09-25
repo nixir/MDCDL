@@ -32,8 +32,8 @@ do_save_trainingset = false
 do_export_atoms = false
 
 # options for sparse coding
-# sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
-sparsecoder = SparseCoders.IHT( iterations = 100, sparsity = 0.5, filter_domain=:convolution)
+sparsity = 0.5
+sparsecoder = SparseCoders.IHT( iterations = 100, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
 # options for dictionary update
 # optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-3)
 optimizer = Optimizers.AdaGrad(iterations = 1)
@@ -43,6 +43,7 @@ options = ( epochs  = 100,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,
+            shape = Shapes.Vec(),
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)

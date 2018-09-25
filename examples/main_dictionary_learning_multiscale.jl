@@ -35,9 +35,9 @@ do_export_atoms = false
 
 # options for sparse coding
 # sparsecoder = SparseCoders.IHT( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
-sparsecoder = SparseCoders.ScalewiseIHT( iterations = 1000, nonzeros=(20,20,20), shape=Shapes.Augumented())
+sparsecoder = SparseCoders.ScalewiseIHT(iterations = 1000, nonzeros=(20,20,20))
 # options for dictionary update
-optimizer = Optimizers.Steepest( iterations = 100, rate = 1e-3, shape=Shapes.Augumented())
+optimizer = Optimizers.Steepest(iterations = 100, rate = 1e-3)
 # optimizer = Optimizers.Adam( iterations = 100)
 
 # general options of dictionary learning
@@ -45,6 +45,7 @@ options = ( epochs  = 10,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,
+            shape = Shapes.Augumented(),
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)

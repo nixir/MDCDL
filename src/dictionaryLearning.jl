@@ -4,57 +4,55 @@ using Statistics
 using Dates
 
 module SparseCoders
-    using MDCDL.Shapes
-    abstract type SparseCoder{S} end
-    struct IHT{S} <: SparseCoder{S}
+    abstract type SparseCoder end
+    struct IHT <: SparseCoder
         iterations::Integer
-        sparsity::AbstractFloat
+        nonzeros::Integer
 
         filter_domain::Symbol
 
-        IHT(; iterations=1, sparsity=0.5, filter_domain=:convolution, shape::S=Shapes.Vec()) where {S<:Shapes.AbstractShape} = new{S}(iterations, sparsity, filter_domain)
+        IHT(; iterations=1, nonzeros, filter_domain=:convolution) = new(iterations, nonzeros, filter_domain)
     end
 
-    struct ScalewiseIHT{N,S} <: SparseCoder{S}
+    struct ScalewiseIHT{N} <: SparseCoder
         iterations::Integer
         nonzeros::NTuple{N,Integer}
 
-        ScalewiseIHT(; iterations::Integer=1, nonzeros::NTuple{N}=(fill(1,N)...,), shape::S=Shapes.Augumented()) where {N,S<:Shapes.AbstractShape} = new{N,S}(iterations, nonzeros)
+        ScalewiseIHT(; iterations::Integer=1, nonzeros::NTuple{N}=(fill(1,N)...,)) where {N} = new{N}(iterations, nonzeros)
     end
 end
 
 module Optimizers
-    using MDCDL.Shapes
-    abstract type AbstractOptimizer{S} end
-    abstract type AbstractGradientDescent{S} <: AbstractOptimizer{S} end
-    struct Steepest{S} <: AbstractGradientDescent{S}
+    abstract type AbstractOptimizer end
+    abstract type AbstractGradientDescent <: AbstractOptimizer end
+    struct Steepest <: AbstractGradientDescent
         iterations::Integer
         rate::AbstractFloat
-        Steepest(; iterations=1, rate=1e-3, shape::S=Shapes.Vec()) where {S<:Shapes.AbstractShape}= new{S}(iterations, rate)
+        Steepest(; iterations=1, rate=1e-3) = new(iterations, rate)
     end
 
-    struct Momentum{S} <: AbstractGradientDescent{S}
+    struct Momentum <: AbstractGradientDescent
         iterations::Integer
         rate::AbstractFloat
         β::AbstractFloat
-        Momentum(; iterations=1, rate=1e-3, beta=1e-8, shape::S=Shapes.Vec()) where {S<:Shapes.AbstractShape}= new{S}(iterations, rate, beta)
+        Momentum(; iterations=1, rate=1e-3, beta=1e-8) = new(iterations, rate, beta)
     end
 
-    struct AdaGrad{S} <: AbstractGradientDescent{S}
+    struct AdaGrad <: AbstractGradientDescent
         iterations::Integer
         rate::AbstractFloat
         ϵ::AbstractFloat
-        AdaGrad(; iterations=1, rate=1e-3, epsilon=1e-8, shape::S=Shapes.Vec()) where {S<:Shapes.AbstractShape} = new{S}(iterations, rate, epsilon)
+        AdaGrad(; iterations=1, rate=1e-3, epsilon=1e-8) = new(iterations, rate, epsilon)
     end
 
-    struct Adam{S} <: AbstractGradientDescent{S}
+    struct Adam <: AbstractGradientDescent
         iterations::Integer
         rate::AbstractFloat
         β1::AbstractFloat
         β2::AbstractFloat
         ϵ::AbstractFloat
 
-        Adam(; iterations=1, rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8, shape=Shapes.Vec()) = new{shape}(iterations, rate, beta1, beta2, epsilon)
+        Adam(; iterations=1, rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8) = new(iterations, rate, beta1, beta2, epsilon)
     end
 
 end
@@ -63,7 +61,7 @@ iterations(abopt::Optimizers.AbstractOptimizer) = abopt.iterations
 
 LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}}
 
-function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, sparsecoder::SparseCoders.SparseCoder{S}=SparseCoders.IHT(), optimizer::Optimizers.AbstractOptimizer{S}=Optimizers.Steepest(), verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing) where {S<:Shapes.AbstractShape}
+function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, shape::Shapes.AbstractShape=Shapes.Vec(),  sparsecoder::SparseCoders.SparseCoder=SparseCoders.IHT(), optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(), verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing)
     vlevel = verboselevel(verbose)
 
     savesettings(logdir, target, trainingSet;
@@ -81,11 +79,11 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
             x = trainingSet[k]
 
             vlevel >= 3 && println("start Sparse Coding Stage.")
-            sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, target, x; vlevel=vlevel)
+            sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, target, x; shape=shape, vlevel=vlevel)
             vlevel >= 3 && println("end Sparse Coding Stage.")
 
             vlevel >= 3 && println("start Dictionary Update.")
-            params_dic, loss_dus[k] = updateDictionary(optimizer, target, x, sparse_coefs, params_dic; vlevel=vlevel)
+            params_dic, loss_dus[k] = updateDictionary(optimizer, target, x, sparse_coefs, params_dic; shape=shape, vlevel=vlevel)
             vlevel >= 3 && println("end Dictionary Update Stage.")
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
@@ -105,25 +103,24 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
     return setParamsDictionary!(target, params_dic)
 end
 
-function stepSparseCoding(ihtsc::SparseCoders.IHT{S}, cb::DT, x::AbstractArray; vlevel::Integer=0, kwargs...) where {S<:Shapes.AbstractShape,DT<:LearningTarget}
+function stepSparseCoding(ihtsc::SparseCoders.IHT, cb::DT, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
     TP = getOperatorType_scs(DT, Val(ihtsc.filter_domain))
 
-    ana = createAnalyzer(TP, cb, size(x); shape=S())
-    syn = createSynthesizer(TP, cb, size(x); shape=S())
+    ana = createAnalyzer(TP, cb, size(x); shape=shape)
+    syn = createSynthesizer(TP, cb, size(x); shape=shape)
 
     # initial sparse vector y0
     y0 = analyze(ana, x)
     # number of non-zero coefficients
-    K = trunc(Int, ihtsc.sparsity * length(x))
 
-    y_opt, loss_iht = iht(syn, ana, x, y0, K; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
+    y_opt, loss_iht = iht(syn, ana, x, y0, ihtsc.nonzeros; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
 
     return (y_opt, loss_iht)
 end
 
-function stepSparseCoding(ihtsc::SparseCoders.ScalewiseIHT{N,S}, targets::NTuple{N,CB}, x::AbstractArray; vlevel::Integer=0, kwargs...) where {N,S<:Shapes.AbstractShape,CB<:CodeBook}
-    ana = createAnalyzer(targets, size(x); shape=S())
-    syn = createSynthesizer(targets, size(x); shape=S())
+function stepSparseCoding(ihtsc::SparseCoders.ScalewiseIHT{N}, targets::NTuple{N,CB}, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(), vlevel::Integer=0, kwargs...) where {N,CB<:CodeBook}
+    ana = createAnalyzer(targets, size(x); shape=shape)
+    syn = createSynthesizer(targets, size(x); shape=shape)
 
     y0 = analyze(ana, x)
 
@@ -134,9 +131,9 @@ end
 
 updateDictionary(::Optimizers.AbstractOptimizer, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
 
-function updateDictionary(optr::Optimizers.AbstractGradientDescent{S}, cb::DT, x::AbstractArray, hy::AbstractArray, params; vlevel::Integer=0, kwargs...) where {S<:Shapes.AbstractShape,DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
+function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape::Shapes.AbstractShape=Shapes.Vec(), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
     vecpm, pminfo = decompose_params(DT, params)
-    f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=S())
+    f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
     ∇f(t) = ForwardDiff.gradient(f, t)
 
     vecpm_opt = vecpm
