@@ -114,8 +114,8 @@ end
 fmconj(f) = (x_, s_) -> (x_ - f(x_,s_))
 
 function iht(cb::CodeBook, x, args...; kwargs...)
-    syn = createSynthesize(cb, x; shape=:vector)
-    adj = createAnalyzer(cb, x; shape=:vector)
+    syn = createSynthesizer(cb, x; shape=Shapes.Vec())
+    adj = createAnalyzer(cb, x; shape=Shapes.Vec())
     iht(syn, adj, x, args...; kwargs...)
 end
 
@@ -145,12 +145,8 @@ end
 
 function l2ballProj(x::AbstractArray, radius::Real, c::AbstractArray)
     dist = norm(x - centerVec)
-
-    if dist <= radius
-        x
-    else
-        (λ / dist) * (x - c) + c
-    end
+    
+    ifelse(dist <= radius, x, (λ / dist) * (x - c) + c)
 end
 
 function hardshrink(x::AbstractArray, k::Integer; lt::Function=(lhs,rhs)->isless(abs2(lhs), abs2(rhs)))
@@ -158,4 +154,12 @@ function hardshrink(x::AbstractArray, k::Integer; lt::Function=(lhs,rhs)->isless
     foldl(nzids; init=zero(x)) do mtx, idx
         setindex!(mtx, x[idx], idx)
     end
+end
+
+function hardshrink(x::AbstractArray, ks::AbstractArray)
+    hardshrink.(x, ks)
+end
+
+function hardshrink(x::AbstractArray, ks::NTuple)
+    hardshrink.(x, ks)
 end
