@@ -5,20 +5,13 @@ using Dates
 
 module SparseCoders
     abstract type SparseCoder end
-    struct IHT <: SparseCoder
+    struct IHT{T} <: SparseCoder
         iterations::Integer
-        nonzeros::Integer
+        nonzeros::T
 
         filter_domain::Symbol
 
-        IHT(; iterations=1, nonzeros, filter_domain=:convolution) = new(iterations, nonzeros, filter_domain)
-    end
-
-    struct ScalewiseIHT{N} <: SparseCoder
-        iterations::Integer
-        nonzeros::NTuple{N,Integer}
-
-        ScalewiseIHT(; iterations::Integer=1, nonzeros::NTuple{N}=(fill(1,N)...,)) where {N} = new{N}(iterations, nonzeros)
+        IHT(; iterations=1, nonzeros::T, filter_domain=:convolution) where {T} = new{T}(iterations, nonzeros, filter_domain)
     end
 end
 
@@ -112,17 +105,6 @@ function stepSparseCoding(ihtsc::SparseCoders.IHT, cb::DT, x::AbstractArray; sha
     # initial sparse vector y0
     y0 = analyze(ana, x)
     # number of non-zero coefficients
-
-    y_opt, loss_iht = iht(syn, ana, x, y0, ihtsc.nonzeros; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
-
-    return (y_opt, loss_iht)
-end
-
-function stepSparseCoding(ihtsc::SparseCoders.ScalewiseIHT{N}, targets::NTuple{N,CB}, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(), vlevel::Integer=0, kwargs...) where {N,CB<:CodeBook}
-    ana = createAnalyzer(targets, size(x); shape=shape)
-    syn = createSynthesizer(targets, size(x); shape=shape)
-
-    y0 = analyze(ana, x)
 
     y_opt, loss_iht = iht(syn, ana, x, y0, ihtsc.nonzeros; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
 

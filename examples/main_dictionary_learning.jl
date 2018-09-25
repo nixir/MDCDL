@@ -36,7 +36,7 @@ sparsity = 0.5
 sparsecoder = SparseCoders.IHT( iterations = 100, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
 # options for dictionary update
 # optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-3)
-optimizer = Optimizers.AdaGrad(iterations = 1)
+optimizer = Optimizers.AdaGrad(iterations = 100)
 
 # general options of dictionary learning
 options = ( epochs  = 100,
