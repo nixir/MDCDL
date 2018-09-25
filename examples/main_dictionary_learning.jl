@@ -8,7 +8,7 @@ using Dates
 
 ########## Configurations #########
 # choose NSOLT type: (Rnsolt | Cnsolt)
-Nsolt = Rnsolt
+Nsolt = Cnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
@@ -35,7 +35,8 @@ do_export_atoms = false
 # sc_options = ( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
 sparsecoder = SparseCoders.IHT( iterations = 100, sparsity = 0.5, filter_domain=:convolution)
 # options for dictionary update
-optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-3)
+# optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-3)
+optimizer = Optimizers.AdaGrad(iterations = 1)
 
 # general options of dictionary learning
 options = ( epochs  = 100,

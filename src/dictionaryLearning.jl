@@ -42,12 +42,12 @@ module Optimizers
 
     struct Adam <: AbstractGradientDescent
         iterations::Integer
-        α::AbstractFloat
+        rate::AbstractFloat
         β1::AbstractFloat
         β2::AbstractFloat
         ϵ::AbstractFloat
 
-        Adam(; iterations=1, alpha=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8) = new(alpha, beta1, beta2, epsilon)
+        Adam(; iterations=1, rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8) = new(iterations, rate, beta1, beta2, epsilon)
     end
 
 end
@@ -116,7 +116,7 @@ end
 
 updateDictionary(::Optimizers.AbstractOptimizer, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
 
-function updateDictionary(optr::Optimizers.Steepest, cb::DT, x::AbstractArray, hy::AbstractArray, params; vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
+function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::AbstractArray, hy::AbstractArray, params; vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
     vecpm, pminfo = decompose_params(DT, params)
     f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo))
     ∇f(t) = ForwardDiff.gradient(f, t)
@@ -236,11 +236,17 @@ function compose_params(::Type{NTuple{N,T}}, vp::AbstractArray, pminfo::Tuple) w
     map((lhs,rhs)->(lhs,rhs,), arrpms, pminfo[2])
 end
 
-initialstate(spr::Optimizers.Steepest, args...) = nothing
+initialstate(spr::Optimizers.Steepest, args...) = ()
+initialstate(spr::Optimizers.AdaGrad, args...) = 0.0
 initialstate(adam::Optimizers.Adam, ∇f::Function, vecpm::AbstractArray) = (zero(vecpm), 0.0)
 
-updateamount(stp::Optimizers.Steepest, grad, args...) = (stp.rate .* grad, nothing)
-function updateamount(adam::Optimizers.Adam, grad, itr, (m, v))
+updateamount(stp::Optimizers.Steepest, grad, args...) = (stp.rate .* grad, ())
+function updateamount(agd::Optimizers.AdaGrad, grad::AbstractArray, ::Integer, v::AbstractFloat)
+    v = v + norm(grad)^2
+    upm = agd.rate / (sqrt(v) + agd.ϵ) * grad
+    (upm, v)
+end
+function updateamount(adam::Optimizers.Adam, grad::AbstractArray, itr::Integer, (m, v)::Tuple{TM,TV}) where {TM<:AbstractArray,TV<:AbstractFloat}
     m = adam.β1 * m + (1 - adam.β1) * grad
     v = adam.β2 * v + (1 - adam.β2) * norm(grad)^2
     m̂ = m / (1 - adam.β1^(itr))
