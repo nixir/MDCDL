@@ -11,7 +11,7 @@ module SparseCoders
 
         filter_domain::Symbol
 
-        IHT(; iterations=1, nonzeros::T, filter_domain=:convolution) where {T} = new{T}(iterations, nonzeros, filter_domain)
+        IHT(; iterations=1, nonzeros::T, filter_domain=:convolution) where {T<:Union{Integer,Tuple}} = new{T}(iterations, nonzeros, filter_domain)
     end
 end
 
@@ -255,7 +255,7 @@ function updateamount(adam::Optimizers.Adam, grad::AbstractArray, itr::Integer, 
 end
 
 getvalidshape(shape::Shapes.AbstractShape, args...) = shape
-getvalidshape(::Nothing, ::CodeBook, args...) = Shapes.Vec()
+getvalidshape(::Nothing, ::LearningTarget, args...) = Shapes.Vec()
 getvalidshape(::Nothing, ::NTuple{N}, ::SparseCoders.IHT{T}, args...) where {N,T<:NTuple{N}} = Shapes.Augumented()
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")

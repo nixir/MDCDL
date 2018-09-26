@@ -118,6 +118,10 @@ similar(nsolt::Rnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimati
 
 istype1(nsolt::Rnsolt) = nsolt.nChannels[1] == nsolt.nChannels[2]
 
+Rnsolt1D{T} = Rnsolt{T,1}
+Rnsolt2D{T} = Rnsolt{T,2}
+Rnsolt3D{T} = Rnsolt{T,3}
+
 struct Cnsolt{T,D} <: AbstractNsolt{T,D}
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
@@ -177,6 +181,10 @@ similar(nsolt::Cnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimati
 istype1(nsolt::Cnsolt) = iseven(nsolt.nChannels)
 
 istype2(nsolt::AbstractNsolt) = !istype1(nsolt)
+
+Cnsolt1D{T} = Cnsolt{T,1}
+Cnsolt2D{T} = Cnsolt{T,2}
+Cnsolt3D{T} = Cnsolt{T,3}
 
 TypeI = Val{true}
 TypeII = Val{false}

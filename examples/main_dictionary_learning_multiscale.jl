@@ -19,7 +19,7 @@ ord = (2,2)
 #                     (<:Integer for Cnsolt)
 nch = 6
 # number of tree level (<: Integer)
-level = 3
+level = 2
 
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
@@ -35,13 +35,13 @@ do_export_atoms = false
 
 # options for sparse coding
 # sparsecoder = SparseCoders.IHT( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
-sparsecoder = SparseCoders.IHT(iterations = 1000, nonzeros=(20,10,5))
+sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros=trunc(Int,0.4*prod(szx)))
 # options for dictionary update
-# optimizer = Optimizers.Steepest(iterations = 100, rate = 1e-3)
-optimizer = Optimizers.Adam( iterations = 1000)
+optimizer = Optimizers.Steepest(iterations = 100, rate = 1e-3)
+# optimizer = Optimizers.Adam( iterations = 1000)
 
 # general options of dictionary learning
-options = ( epochs  = 10,
+options = ( epochs  = 1000,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,
@@ -68,10 +68,10 @@ end
 nsolt = Nsolt(TP, df, ord, nch)
 # set random orthonormal matrices to the initial matrices.
 # MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
-# MDCDL.rand!(nsolt)
-# nsolt.initMatrices[1] .= cat(1, qr(rand((size(nsolt.initMatrices[1]) .- 1)...)).Q, dims=[1,2])
+MDCDL.rand!(nsolt)
+nsolt.initMatrices[1] .= cat(1, qr(rand((size(nsolt.initMatrices[1]) .- 1)...)).Q, dims=[1,2])
 
-msnsolt = (fill(nsolt,3)...,)
+msnsolt = ([ similar(nsolt) for l in 1:level ]...,)
 
 # dictionary learning
 MDCDL.train!(msnsolt, trainingSet; options...)

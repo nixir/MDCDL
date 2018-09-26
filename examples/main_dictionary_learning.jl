@@ -22,7 +22,7 @@ nch = 8
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 4
+nSubData = 16
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = joinpath(@__DIR__, "results", Dates.format(now(), "yyyymmdd_HH_MM_SS_sss"))
@@ -33,7 +33,7 @@ do_export_atoms = false
 
 # options for sparse coding
 sparsity = 0.5
-sparsecoder = SparseCoders.IHT( iterations = 100, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
+sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
 # options for dictionary update
 # optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-3)
 optimizer = Optimizers.AdaGrad(iterations = 100)
