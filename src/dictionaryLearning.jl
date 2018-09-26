@@ -4,8 +4,8 @@ using Statistics
 using Dates
 
 module SparseCoders
-    abstract type SparseCoder end
-    struct IHT{T} <: SparseCoder
+    abstract type AbstractSparseCoder end
+    struct IHT{T} <: AbstractSparseCoder
         iterations::Integer
         nonzeros::T
 
@@ -54,8 +54,9 @@ iterations(abopt::Optimizers.AbstractOptimizer) = abopt.iterations
 
 LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}}
 
-function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, shape::Shapes.AbstractShape=Shapes.Vec(),  sparsecoder::SparseCoders.SparseCoder=SparseCoders.IHT(), optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(), verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing)
+function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, shape=nothing,  sparsecoder::SparseCoders.AbstractSparseCoder=SparseCoders.IHT(), optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(), verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing)
     vlevel = verboselevel(verbose)
+    shape = getvalidshape(shape, target, sparsecoder, optimizer)
 
     savesettings(logdir, target, trainingSet;
         vlevel=vlevel,
@@ -252,6 +253,10 @@ function updateamount(adam::Optimizers.Adam, grad::AbstractArray, itr::Integer, 
     upm = adam.rate * m̂ / (sqrt(v̂) + adam.ϵ)
     (upm, (m, v))
 end
+
+getvalidshape(shape::Shapes.AbstractShape, args...) = shape
+getvalidshape(::Nothing, ::CodeBook, args...) = Shapes.Vec()
+getvalidshape(::Nothing, ::NTuple{N}, ::SparseCoders.IHT{T}, args...) where {N,T<:NTuple{N}} = Shapes.Augumented()
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")
 namestring(nsolt::Cnsolt) = namestring(nsolt, "Complex NSOLT")

@@ -22,7 +22,7 @@ nch = 8
 # size of minibatches (<:NTuple{D,Int})
 szx = (16,16)
 # number of minibatches (<:Integer)
-nSubData = 16
+nSubData = 4
 
 # path of log files (do nothing if isa(logdir, Nothing))
 # logdir = joinpath(@__DIR__, "results", Dates.format(now(), "yyyymmdd_HH_MM_SS_sss"))
@@ -43,7 +43,6 @@ options = ( epochs  = 100,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,
-            shape = Shapes.Vec(),
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
