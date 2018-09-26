@@ -205,23 +205,6 @@ struct ParallelFilters{T,D} <: FilterBank{T,D}
     end
 end
 
-struct MultiLayerCsc{T,D} <: CodeBook{T,D}
-    nLayers::Int
-
-    dictionaries::Vector
-    # lambdas::Vector{T}
-    # proxOperators::Vector{Function}
-
-    function MultiLayerCsc{T,D}(nl::Integer) where{T,D}
-        dics = Vector(nl)
-        # lmds = fill(convert(T,1.0), (nl,))
-        # pos = fill( (y,lm) -> identity(y) , (nl,))
-
-        # new{T,D}(nl, dics, lmds, pos)
-        new{T,D}(nl, dics)
-    end
-end
-
 get_outputsize(s::Shapes.AbstractShape, pfb, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
 
 get_outputsize(::Shapes.Default, dcsz::NTuple, insz::NTuple, nch::Integer) = (nch, dcsz...)
