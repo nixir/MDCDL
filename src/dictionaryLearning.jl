@@ -2,6 +2,7 @@ using ForwardDiff
 using Base.Filesystem
 using Statistics
 using Dates
+# using FileIO
 
 module SparseCoders
     abstract type AbstractSparseCoder end
@@ -70,7 +71,7 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
         loss_sps = fill(Inf, K)
         loss_dus = fill(Inf, K)
         for k = 1:K
-            x = trainingSet[k]
+            x = gettrainingdata(trainingSet[k])
 
             vlevel >= 3 && println("start Sparse Coding Stage.")
             sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, target, x; shape=shape, vlevel=vlevel)
@@ -196,6 +197,12 @@ function savelogs(dirname::AbstractString, targets::NTuple{N,CB}, epoch::Integer
     # end
     # save(nsolt, filename_nsolt)
 end
+
+gettrainingdata(td::AbstractArray{T}) where {T<:AbstractFloat} = td
+gettrainingdata(td::AbstractArray{Complex{T}}) where {T<:AbstractFloat} = td
+# function gettrainingdata(filename::AbstractString)
+#
+# end
 
 function lossfcn(cb::LearningTarget, x::AbstractArray, y::AbstractArray, params; shape=Shapes.Vec()) where {TT<:AbstractArray,TM<:AbstractArray}
     cpcb = similar_dictionary(cb, params)

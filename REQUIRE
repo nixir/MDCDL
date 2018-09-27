@@ -1,6 +1,7 @@
 julia 0.7
 Images
 ImageFiltering
+FileIO
 ComputationalResources
 ColorTypes
 ColorSchemes
