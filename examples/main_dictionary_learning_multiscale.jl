@@ -50,7 +50,7 @@ options = ( epochs  = 1000,
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
 
 # original image
-orgImg = TP.(testimage("cameraman"))
+orgImg = testimage("cameraman")
 
 # generate minibatches of orgImage
 trainingIds = map(1:nSubData) do nsd

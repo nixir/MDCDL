@@ -1,14 +1,14 @@
 using JSON
 using InteractiveUtils: subtypes
 
-function save(nsolt::AbstractNsolt, filename::AbstractString, mode::AbstractString="w")
+function savefb(filename::AbstractString, nsolt::AbstractNsolt, mode::AbstractString="w")
     if match(r".*\.json$", filename) === nothing
         filename = string(filename, ".json")
     end
-    open(io->save(io, nsolt), filename, mode)
+    open(io->savefb(io, nsolt), filename, mode)
 end
 
-save(io::IOStream, nsolt::AbstractNsolt) = print(io, serialize(nsolt))
+savefb(io::IOStream, nsolt::AbstractNsolt) = print(io, serialize(nsolt))
 
 function serialize(cc::AbstractNsolt{T,D}; format::AbstractString="JSON") where {T,D,S}
     configs = JSON.json(cc)
@@ -21,9 +21,9 @@ function serialize(cc::AbstractNsolt{T,D}; format::AbstractString="JSON") where 
     string("{\"Name\":\"", fbname ,"\",\"DataType\":\"", string(T), "\",\"Dimensions\":", D, ",\"Configurations\":", configs ,"}")
 end
 
-load(filename::AbstractString) = open(io->MDCDL.load(io), filename)
+loadfb(filename::AbstractString) = open(io->MDCDL.loadfb(io), filename)
 
-function load(io::IOStream)
+function loadfb(io::IOStream)
     dic = JSON.parse(read(io, String))
 
     deserialize(dic)

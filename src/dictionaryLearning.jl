@@ -2,7 +2,8 @@ using ForwardDiff
 using Base.Filesystem
 using Statistics
 using Dates
-# using FileIO
+using FileIO: load
+using ImageCore: channelview
 
 module SparseCoders
     abstract type AbstractSparseCoder end
@@ -177,14 +178,14 @@ function savelogs(dirname::AbstractString, nsolt::AbstractNsolt, epoch::Integer;
     open(filename_logs, append=true) do io
         println(io, strlogs)
     end
-    save(nsolt, filename_nsolt)
+    savefb(filename_nsolt, nsolt)
     nothing
 end
 
 function savelogs(dirname::AbstractString, targets::NTuple{N,CB}, epoch::Integer; params...) where {N,CB<:AbstractNsolt}
     for idx = 1:N
         filename_nsolt = joinpath(dirname, string("nsolt_", idx, ".json"))
-        save(targets[idx], filename_nsolt)
+        savefb(filename_nsolt, targets[idx])
     end
     return nothing
     # filename_logs = joinpath(dirname, "log")
@@ -198,11 +199,15 @@ function savelogs(dirname::AbstractString, targets::NTuple{N,CB}, epoch::Integer
     # save(nsolt, filename_nsolt)
 end
 
+gettrainingdata(filename::AbstractString) = gettrainingdata(FileIO.load(filename))
 gettrainingdata(td::AbstractArray{T}) where {T<:AbstractFloat} = td
 gettrainingdata(td::AbstractArray{Complex{T}}) where {T<:AbstractFloat} = td
-# function gettrainingdata(filename::AbstractString)
-#
-# end
+function gettrainingdata(td::AbstractArray{T,D}, TP::Type=Float64) where {T<:Color,D}
+    permutedims(channelview(td), [D+1, collect(1:D)...]) .|> TP
+end
+function gettrainingdata(td::AbstractArray{T,D}, TP::Type=Float64) where {TC,D,T<:Color{TC,1}}
+    channelview(td) .|> TP
+end
 
 function lossfcn(cb::LearningTarget, x::AbstractArray, y::AbstractArray, params; shape=Shapes.Vec()) where {TT<:AbstractArray,TM<:AbstractArray}
     cpcb = similar_dictionary(cb, params)

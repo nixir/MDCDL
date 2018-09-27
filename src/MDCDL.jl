@@ -28,6 +28,7 @@ export AbstractOperator
 export NsoltOperator, ConvolutionalOperator
 export createOperator, createAnalyzer, createSynthesizer
 export Shapes, Optimizers, SparseCoders
+export readfb, savefb
 
 module Shapes
     abstract type AbstractShape end
@@ -321,7 +322,6 @@ include("transforms.jl")
 include("parameterizeFilterBanks.jl")
 
 include("dictionaryLearning.jl")
-include("mlcsc.jl")
 
 include("recipes.jl")
 include("io.jl")

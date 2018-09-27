@@ -8,7 +8,7 @@ using Dates
 
 ########## Configurations #########
 # choose NSOLT type: (Rnsolt | Cnsolt)
-Nsolt = Cnsolt
+Nsolt = Rnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
@@ -48,7 +48,7 @@ options = ( epochs  = 100,
 logdir != nothing && !isdir(logdir) && mkpath(logdir)
 
 # original image
-orgImg = TP.(testimage("cameraman"))
+orgImg = testimage("cameraman")
 
 # generate minibatches of orgImage
 trainingIds = map(1:nSubData) do nsd
