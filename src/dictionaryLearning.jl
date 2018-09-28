@@ -202,10 +202,7 @@ end
 gettrainingdata(filename::AbstractString) = gettrainingdata(FileIO.load(filename))
 gettrainingdata(td::AbstractArray{T}) where {T<:AbstractFloat} = td
 gettrainingdata(td::AbstractArray{Complex{T}}) where {T<:AbstractFloat} = td
-function gettrainingdata(td::AbstractArray{T,D}, TP::Type=Float64) where {T<:Color,D}
-    permutedims(channelview(td), [D+1, collect(1:D)...]) .|> TP
-end
-function gettrainingdata(td::AbstractArray{T,D}, TP::Type=Float64) where {TC,D,T<:Color{TC,1}}
+function gettrainingdata(td::AbstractArray{T,D}, TP::Type=Float64) where {D,T<:Color}
     channelview(td) .|> TP
 end
 
