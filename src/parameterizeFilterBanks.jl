@@ -13,7 +13,7 @@ function getrotations(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     nParamsInit = ngivensangles(P)
     nParamsProps = ord .* (ngivensangles(fld(P,2)) + fld(P,4))
 
-    # Angles ang MUS
+    # Angles ang sign parameters
     angsInit, musInit = mat2rotations(cc.initMatrices[1])
 
     angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
@@ -93,7 +93,7 @@ function getrotations(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     nParamsInit = ngivensangles(P)
     nParamsProps = fld.(ord,2) .* (2 * (ngivensangles(fld(P,2)) + ngivensangles(cld(P,2)) + fld(P,4)))
 
-    # Angles ang MUS
+    # Angles ang sign parameters
     angsInit, musInit = mat2rotations(cc.initMatrices[1])
 
     angsPropsSet = [ zeros(T, npk) for npk in nParamsProps ]
@@ -191,7 +191,7 @@ function getrotations(::TypeI, cc::Rnsolt{T,D}) where {D,T}
     nParamsInit = sum(ngivensangles.(nch))
     nParamsProps = ord .* ngivensangles(nch[2])
 
-    # Angles ang MUS
+    # Angles ang sign parameters
     angsInitW, musInitW = mat2rotations(cc.initMatrices[1])
     angsInitU, musInitU = mat2rotations(cc.initMatrices[2])
 
@@ -267,7 +267,7 @@ function getrotations(::TypeII, cc::Rnsolt{T,D}) where {D,T}
     nParamsInit = sum(ngivensangles.(nch))
     nParamsProps = fld.(ord,2) .* sum(ngivensangles.(nch))
 
-    # Angles ang MUS
+    # Angles ang sign parameters
     angsInitW, musInitW = mat2rotations(cc.initMatrices[1])
     angsInitU, musInitU = mat2rotations(cc.initMatrices[2])
 

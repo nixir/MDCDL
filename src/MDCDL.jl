@@ -34,7 +34,7 @@ module Shapes
     abstract type AbstractShape end
     struct Default <: AbstractShape end
     struct Vec <: AbstractShape end
-    struct Augumented <: AbstractShape end
+    struct Arrayed <: AbstractShape end
 end
 
 struct PolyphaseVector{T,D}
@@ -209,7 +209,7 @@ end
 get_outputsize(s::Shapes.AbstractShape, pfb, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
 
 get_outputsize(::Shapes.Default, dcsz::NTuple, insz::NTuple, nch::Integer) = (nch, dcsz...)
-get_outputsize(::Shapes.Augumented, dcsz::NTuple, insz::NTuple, nch::Integer) = (dcsz..., nch)
+get_outputsize(::Shapes.Arrayed, dcsz::NTuple, insz::NTuple, nch::Integer) = (dcsz..., nch)
 get_outputsize(::Shapes.Vec, dcsz::NTuple, insz::NTuple, nch::Integer) = (prod(dcsz) * nch,)
 
 abstract type AbstractOperator{T,D} end

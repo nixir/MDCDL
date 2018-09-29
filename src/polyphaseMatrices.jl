@@ -4,9 +4,11 @@ using FFTW: fft, dct
 # upsampler
 function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
     szx = size(x)
-    foldl(CartesianIndices(szx); init=zeros(T, szx .* factor)) do mtx, ci
-        setindex!(mtx, x[ci], ((ci.I .- 1) .* factor .+ 1 .+ offset)...)
+    mtx = zeros(T, szx .* factor)
+    for ci in CartesianIndices(szx)
+        mtx[((ci.I .- 1) .* factor .+ 1 .+ offset)...] = x[ci]
     end
+    mtx
 end
 
 function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D}=(fill(0,D)...,)) where {T,D}
@@ -312,10 +314,7 @@ end
 
 function mdarray2polyphase(x::AbstractArray{T,D}) where {T,D}
     nBlocks = size(x)[1:D-1]
-    outdata = similar(x, size(x,D), prod(nBlocks))
-    for p = 1:size(x,D)
-        outdata[p,:] = vec( x[fill(:,D-1)..., p])
-    end
+    outdata = transpose(reshape(x, prod(nBlocks), size(x,D)))
     PolyphaseVector(outdata, nBlocks)
 end
 
@@ -333,13 +332,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
 end
 
 function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
-    P = size(x.data,1)
-    output = similar(x.data, x.nBlocks..., P)
-
-    for p = 1:P
-        output[fill(:,D)...,p] = reshape(x.data[p,:], x.nBlocks)
-    end
-    output
+    reshape(transpose(x.data), x.nBlocks..., size(x.data, 1))
 end
 
 function permutedimspv(x::AbstractMatrix, nShift::Integer)

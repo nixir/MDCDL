@@ -265,7 +265,7 @@ end
 
 getvalidshape(shape::Shapes.AbstractShape, args...) = shape
 getvalidshape(::Nothing, ::LearningTarget, args...) = Shapes.Vec()
-getvalidshape(::Nothing, ::NTuple{N}, ::SparseCoders.IHT{T}, args...) where {N,T<:NTuple{N}} = Shapes.Augumented()
+getvalidshape(::Nothing, ::NTuple{N}, ::SparseCoders.IHT{T}, args...) where {N,T<:NTuple{N}} = Shapes.Arrayed()
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")
 namestring(nsolt::Cnsolt) = namestring(nsolt, "Complex NSOLT")

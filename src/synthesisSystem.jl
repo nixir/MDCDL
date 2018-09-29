@@ -175,13 +175,13 @@ end
 
 subsynthesize(::Shapes.Default, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
 
-# shape == Shapes.Augumented
-function subsynthesize(shape::Shapes.Augumented, sy::AbstractArray, abop::AbstractOperator, args...)
+# shape == Shapes.Arrayed
+function subsynthesize(shape::Shapes.Arrayed, sy::AbstractArray, abop::AbstractOperator, args...)
     rx = subsynthesize(shape, sy[2:end], args...)
     synthesize(abop, cat(rx, sy[1]; dims=ndims(sy[1]) ))
 end
 
-subsynthesize(::Shapes.Augumented, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
+subsynthesize(::Shapes.Arrayed, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
 
 # shape == Shapes.Vec
 function subsynthesize(shape::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator, args...)

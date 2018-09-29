@@ -2,7 +2,7 @@ function reshape_polyvec(::Shapes.Default, ::NsoltOperator, pvy::PolyphaseVector
     [ reshape(pvy.data[p,:], pvy.nBlocks) for p in 1:size(pvy.data,1) ]
 end
 
-function reshape_polyvec(::Shapes.Augumented, ::NsoltOperator, pvy::PolyphaseVector)
+function reshape_polyvec(::Shapes.Arrayed, ::NsoltOperator, pvy::PolyphaseVector)
     polyphase2mdarray(pvy)
 end
 
@@ -14,7 +14,7 @@ function reshape_polyvec(::Shapes.Default, ::ConvolutionalOperator, y::AbstractA
     y
 end
 
-function reshape_polyvec(::Shapes.Augumented, ::ConvolutionalOperator{TF,D}, y::AbstractArray{TY,D}) where {TF,TY,D}
+function reshape_polyvec(::Shapes.Arrayed, ::ConvolutionalOperator{TF,D}, y::AbstractArray{TY,D}) where {TF,TY,D}
     cat(D+1, y...)
 end
 
@@ -27,7 +27,7 @@ function reshape_coefs(::Shapes.Default, ::NsoltOperator, y::AbstractArray)
     PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
 end
 
-function reshape_coefs(::Shapes.Augumented, ::NsoltOperator, y::AbstractArray)
+function reshape_coefs(::Shapes.Arrayed, ::NsoltOperator, y::AbstractArray)
     mdarray2polyphase(y)
 end
 
@@ -41,7 +41,7 @@ function reshape_coefs(::Shapes.Default, ::ConvolutionalOperator, y::AbstractArr
     y
 end
 
-function reshape_coefs(::Shapes.Augumented, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
+function reshape_coefs(::Shapes.Arrayed, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
     [ y[fill(:,D)..., p] for p in 1:nchannels(co)]
 end
 

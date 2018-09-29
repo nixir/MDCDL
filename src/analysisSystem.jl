@@ -178,14 +178,14 @@ end
 
 subanalyze(::Shapes.Default, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
 
-# shape == Shapes.Augumented
-function subanalyze(shape::Shapes.Augumented, sx::AbstractArray{T,D}, abop::AbstractOperator, args...) where {T,D}
+# shape == Shapes.Arrayed
+function subanalyze(shape::Shapes.Arrayed, sx::AbstractArray{T,D}, abop::AbstractOperator, args...) where {T,D}
     sy = analyze(abop, sx)
     clns = fill(:,D)
     [ sy[clns...,2:end], subanalyze(shape, sy[clns...,1], args...)... ]
 end
 
-subanalyze(::Shapes.Augumented, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
+subanalyze(::Shapes.Arrayed, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
 
 # shape == Shapes.Vec
 function subanalyze(shape::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator, args...)
