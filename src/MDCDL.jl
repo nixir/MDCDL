@@ -32,15 +32,25 @@ export readfb, savefb
 
 module Shapes
     abstract type AbstractShape end
-    struct Default <: AbstractShape end
+
+    struct Default <: AbstractShape
+        Default(sz...) = new()
+    end
     struct Vec <: AbstractShape
         insize::Tuple
         Vec(sz::Integer...) = new(sz)
         Vec(sz::AbstractVector) = Vec(sz...)
         Vec(sz::Tuple) = Vec(sz...)
     end
-    struct Arrayed <: AbstractShape end
+    struct Arrayed <: AbstractShape
+        Arrayed(sz...) = new()
+    end
+
 end
+
+isfixedsize(::A) where {A<:Shapes.AbstractShape} = isfixedsize(A)
+isfixedsize(::Type{S}) where {S<:Shapes.AbstractShape}= false
+isfixedsize(::Type{Shapes.Vec}) = true
 
 struct PolyphaseVector{T,D}
     data::AbstractMatrix{T}
@@ -226,11 +236,10 @@ kernels(pf::ParallelFilters) = kernelspair
 
 struct Multiscale
     filterbanks::Tuple
-    Multiscale(fbs::FilterBank...) = new((fbs...,))
-    Multiscale(fbs::Tuple) = Multiscale(fbs...)
+    Multiscale(fbs...) = new(fbs)
 end
 
-abstract type AbstractOperator{T,D} end
+abstract type AbstractOperator end
 
 createAnalyzer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
 createSynthesizer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
@@ -239,13 +248,17 @@ createSynthesizer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperat
 createAnalyzer(::Type{AbstractOperator}, obj, args...; kwargs...) = createAnalyzer(obj, args...; kwargs...)
 createSynthesizer(::Type{AbstractOperator}, obj, args...; kwargs...) = createSynthesizer(obj, args...; kwargs...)
 
-struct TransformSystem{OP,T,D} <: AbstractOperator{T,D}
+struct TransformSystem{OP} <: AbstractOperator
     shape::Shapes.AbstractShape
     operator::OP
     options::Base.Iterators.Pairs
 
-    function TransformSystem(operator::OP; shape=Shapes.Default(), options...) where {T,D,OP<:FilterBank{T,D}}
-        new{OP,T,D}(shape, operator, options)
+    function TransformSystem(operator::OP; shape=Shapes.Default(), options...) where {OP<:FilterBank}
+        new{OP}(shape, operator, options)
+    end
+
+    function TransformSystem(ts::TransformSystem; shape=ts.shape)
+        TransformSystem(deepcopy(ts.operator); shape=shape, ts.options...)
     end
 end
 
@@ -255,30 +268,32 @@ nchannels(tfs::TransformSystem) = nchannels(tfs.operator)
 
 createOperator(ns::FilterBank; kwargs...) = TransformSystem(ns; kwargs...)
 
-struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
-    # insize::NTuple{D,T}
+struct JoinedTransformSystems{T} <: AbstractOperator
     shape::Shapes.AbstractShape
+    transforms::Array
 
-    operators::MultiscaleOperator
-
-    function MultiscaleOperator(ops::Vector{X}, sz::NTuple{D,Int}; shape=Shapes.Default()) where {T,D,X<:AbstractOperator{T,D}}
-        new{T,D}(sz, shape, ops)
+    JoinedTransformSystems(ts::Tuple{TS}; kwargs...) where{TS<:TransformSystem} = JoinedTransformSystems(Multiscale(ts...); kwargs...)
+    function JoinedTransformSystems(mst::MS; shape=Shapes.Default()) where {TS<:TransformSystem,MS<:Multiscale}
+        # opsarr = map(1:length(ms.filterbanks)) do lv
+        #     szx = fld.(shape.insize, decimations(ms.filterbanks[lv]).^(lv-1))
+        #     TransformSystem(ms.filterbanks[lv], shape=S(szx))
+        # end
+        # ops = (opsarr...,)
+        new{MS}(shape, collect(mst.filterbanks))
     end
 end
 
-nchannels(msop::MultiscaleOperator) = nchannels.(msop.operators)
-
-# function createAnalyzer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
-#     szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
-#     ops = map((acb, asz)->createAnalyzer(acb, asz; shape=shape, kwargs...), cbs, szxs)
-#     MultiscaleOperator(ops, sz; shape=shape)
-# end
-#
-# function createSynthesizer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
-#     szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
-#     ops = map((acb, asz)->createSynthesizer(acb, asz; shape=shape, kwargs...), cbs, szxs)
-#     MultiscaleOperator(ops, sz; shape=shape)
-# end
+function createOperator(ms::MS; shape::S=Shapes.Default()) where {MS<:Multiscale,S<:Shapes.AbstractShape}
+    opsarr = map(1:length(ms.filterbanks)) do lv
+        sp = if isfixedsize(S)
+            S(fld.(shape.insize, decimations(ms.filterbanks[lv]).^(lv-1)))
+        else
+            S()
+        end
+        TransformSystem(ms.filterbanks[lv], shape=sp)
+    end
+    JoinedTransformSystems(MS(opsarr...), shape=shape)
+end
 
 include("sparseCoding.jl")
 

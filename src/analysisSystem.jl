@@ -168,7 +168,11 @@ function extendAtomsPerDims(::Type{NS}, ::TypeII, pvx::AbstractMatrix, nBlock::I
     return pvx
 end
 
-analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D} = subanalyze(msop.shape, x, msop.operators...)
+function analyze(jts::JoinedTransformSystems{MS}, x::AbstractArray{TX,D}) where {MS<:Multiscale,TX,D}
+    subanalyze(jts.shape, x, jts.transforms...)
+end
+
+# analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D} = subanalyze(msop.shape, x, msop.operators...)
 
 # shape == Shapes.Default
 function subanalyze(shape::Shapes.Default, sx::AbstractArray, abop::AbstractOperator, args...)

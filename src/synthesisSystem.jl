@@ -2,9 +2,9 @@ using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
 function synthesize(syn::TransformSystem{NS}, y::AbstractArray) where {TF,D,NS<:AbstractNsolt{TF,D}}
-    pvy = reshape_coefs(syn.shape, syn.nsolt, y)
-    pvx = synthesize(syn.nsolt, pvy; syn.options...)
-    polyphase2mdarray(pvx, decimations(syn.nsolt))
+    pvy = reshape_coefs(syn.shape, syn.operator, y)
+    pvx = synthesize(syn.operator, pvy; syn.options...)
+    polyphase2mdarray(pvx, decimations(syn.operator))
 end
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
@@ -163,8 +163,8 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlo
     ipermutedimspv(pvy, nBlock)
 end
 
-function synthesize(msop::MultiscaleOperator{TF,D}, y::AbstractArray) where {TF,D}
-    subsynthesize(msop.shape, y, msop.operators...)
+function synthesize(jts::JoinedTransformSystems{MS}, y::AbstractArray) where {MS<:Multiscale}
+    subsynthesize(jts.shape, y, jts.transforms...)
 end
 
 # shape == Shapes.Default
@@ -185,7 +185,8 @@ subsynthesize(::Shapes.Arrayed, sy::AbstractArray, abop::AbstractOperator) = syn
 
 # shape == Shapes.Vec
 function subsynthesize(shape::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator, args...)
-    lny = prod(abop.outsize) - prod(args[1].shape.insize)
+    lny = nchannels(abop) * prod(fld.(abop.shape.insize, decimations(abop))) - prod(args[1].shape.insize)
+    
     ya = [ vec(subsynthesize(shape, sy[lny+1:end], args...)); sy[1:lny] ]
     synthesize(abop, ya)
 end
@@ -208,6 +209,6 @@ function synthesize(pfs::ParallelFilters{TF,D}, y::AbstractArray; resource=CPU1(
 end
 
 function synthesize(cs::TransformSystem{PF}, y::AbstractVector) where {TF,D,PF<:ParallelFilters{TF,D}}
-    ty = reshape_coefs(cs.shape, cs.nsolt, y)
-    synthesize(cs.nsolt, ty; cs.options...)
+    ty = reshape_coefs(cs.shape, cs.operator, y)
+    synthesize(cs.operator, ty; cs.options...)
 end
