@@ -25,7 +25,7 @@ export getrotations, setrotations!
 export mdarray2polyphase, polyphase2mdarray
 export iht
 export AbstractOperator
-export NsoltOperator, ConvolutionalOperator
+export TransformSystem
 export createOperator, createAnalyzer, createSynthesizer
 export Shapes, Optimizers, SparseCoders
 export readfb, savefb
@@ -200,16 +200,29 @@ struct ParallelFilters{T,D} <: FilterBank{T,D}
     polyphaseOrder::NTuple{D,Int}
     nChannels::Integer
 
-    kernels::Vector{AbstractArray{T,D}}
+    # kernels::Vector{AbstractArray{T,D}}
+    kernelspair::NTuple{2}
 
-    function ParallelFilters(ker::Vector{A}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer) where {T,D,A<:AbstractArray{T,D}}
+    function ParallelFilters(ker::NTuple{2,Vector{A}}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer) where {T,D,A<:AbstractArray{T,D}}
         new{T,D}(df, ord, nch, ker)
     end
 
+    function ParallelFilters(ker::Vector{A}, df::Tuple, ord::Tuple, nch::Integer) where {T,D,A<:AbstractArray{T,D}}
+        ParallelFilters((ker,ker), df, ord, nch)
+    end
+
     function ParallelFilters(::Type{T}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer) where {T,D}
-        new{T,D}(df, ord, nch, fill(zeros(df .* (ord .+ 1)), nch))
+        new{T,D}(df, ord, nch, ([fill(zeros(df .* (ord .+ 1)), nch) for idx=1:2 ]...,))
+    end
+
+    function ParallelFilters(fb::FilterBank)
+        ParallelFilters(kernels(fb), decimations(fb), orders(fb), nchannels(fb))
     end
 end
+
+analysiskernels(pf::ParallelFilters) = kernelspair[1]
+synthesiskernels(pf::ParallelFilters) = kernelspair[2]
+kernels(pf::ParallelFilters) = kernelspair
 
 struct Multiscale
     filterbanks::Tuple
@@ -226,47 +239,21 @@ createSynthesizer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperat
 createAnalyzer(::Type{AbstractOperator}, obj, args...; kwargs...) = createAnalyzer(obj, args...; kwargs...)
 createSynthesizer(::Type{AbstractOperator}, obj, args...; kwargs...) = createSynthesizer(obj, args...; kwargs...)
 
-struct NsoltOperator{T,D} <: AbstractOperator{T,D}
+struct TransformSystem{OP,T,D} <: AbstractOperator{T,D}
     shape::Shapes.AbstractShape
-    nsolt::AbstractNsolt{T,D}
+    operator::OP
     options::Base.Iterators.Pairs
 
-    function NsoltOperator(ns::AbstractNsolt{T,D}; shape=Shapes.Default(), options...) where {T,D}
-        new{T,D}(shape, ns, options)
+    function TransformSystem(operator::OP; shape=Shapes.Default(), options...) where {T,D,OP<:FilterBank{T,D}}
+        new{OP,T,D}(shape, operator, options)
     end
 end
 
-decimations(nsop::NsoltOperator) = decimations(nsop.nsolt)
-orders(nsop::NsoltOperator) = orders(nsop.nsolt)
-nchannels(nsop::NsoltOperator) = nchannels(nsop.nsolt)
+decimations(tfs::TransformSystem) = decimations(tfs.operator)
+orders(tfs::TransformSystem) = orders(tfs.operator)
+nchannels(tfs::TransformSystem) = nchannels(tfs.operator)
 
-createOperator(ns::AbstractNsolt; kwargs...) = NsoltOperator(ns; kwargs...)
-
-struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
-    shape::Shapes.AbstractShape
-    parallelFilters::ParallelFilters{T,D}
-    options::Base.Iterators.Pairs
-
-    function ConvolutionalOperator(filters::ParallelFilters{T,D}; shape=Shapes.Default(), options...) where {T,D}
-        new{T,D}(shape, filters, options)
-    end
-
-    function ConvolutionalOperator(kernel::AbstractArray{AR}, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D,AR<:AbstractArray{T,D}}
-        ConvolutionalOperator(ParallelFilters(kernel, df, ord, nch); kwargs...)
-    end
-end
-
-decimations(co::ConvolutionalOperator) = decimations(co.parallelFilters)
-orders(co::ConvolutionalOperator) = orders(co.parallelFilters)
-nchannels(co::ConvolutionalOperator) = nchannels(co.parallelFilters)
-
-function createAnalyzer(::Type{CO}, pfb::PolyphaseFB; kwargs...) where {CO<:ConvolutionalOperator}
-    CO(analysiskernels(pfb), decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
-end
-
-function createSynthesizer(::Type{CO}, pfb::PolyphaseFB; kwargs...) where {CO<:ConvolutionalOperator}
-    CO(synthesiskernels(pfb), decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
-end
+createOperator(ns::FilterBank; kwargs...) = TransformSystem(ns; kwargs...)
 
 struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
     # insize::NTuple{D,T}

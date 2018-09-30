@@ -1,10 +1,10 @@
 using ImageFiltering: imfilter, reflect, FIR, FFT
 using OffsetArrays: OffsetArray
 
-function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    pvx = mdarray2polyphase(x, decimations(A.nsolt))
-    y = analyze(A.nsolt, pvx; A.options...)
-    reshape_polyvec(A.shape, A, y)
+function analyze(A::TransformSystem{NS}, x::AbstractArray{TX,D}) where {TF,TX,D,NS<:AbstractNsolt{TF,D}}
+    pvx = mdarray2polyphase(x, decimations(A.operator))
+    y = analyze(A.operator, pvx; A.options...)
+    reshape_polyvec(A.shape, A.operator, y)
 end
 
 analyze(fb::PolyphaseFB{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D} = PolyphaseVector(analyze(fb, pvx.data, pvx.nBlocks; kwargs...), pvx.nBlocks)
@@ -205,14 +205,14 @@ function analyze(pfs::ParallelFilters{TF,D}, x::AbstractArray{TX,D}; resource=CP
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
     offset = df .- 1
 
-    map(pfs.kernels) do f
+    map(pfs.kernelspair[1]) do f
         ker = reflect(OffsetArray(f, region...))
         fltimg = imfilter(resource, x, ker, "circular")
         downsample(fltimg, df, offset)
     end
 end
 
-function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    y = analyze(ca.parallelFilters, x; ca.options...)
-    reshape_polyvec(ca.shape, ca, y)
+function analyze(ca::TransformSystem{PF}, x::AbstractArray{TX,D}) where {TF,TX,D,PF<:ParallelFilters{TF,D}}
+    y = analyze(ca.operator, x; ca.options...)
+    reshape_polyvec(ca.shape, ca.operator, y)
 end

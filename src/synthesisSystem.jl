@@ -1,8 +1,8 @@
 using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
-function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
-    pvy = reshape_coefs(syn.shape, syn, y)
+function synthesize(syn::TransformSystem{NS}, y::AbstractArray) where {TF,D,NS<:AbstractNsolt{TF,D}}
+    pvy = reshape_coefs(syn.shape, syn.nsolt, y)
     pvx = synthesize(syn.nsolt, pvy; syn.options...)
     polyphase2mdarray(pvx, decimations(syn.nsolt))
 end
@@ -199,7 +199,7 @@ function synthesize(pfs::ParallelFilters{TF,D}, y::AbstractArray; resource=CPU1(
     nShift = df .* cld.(ord, 2) .+ 1
     region = UnitRange.(1 .- nShift, df .* (ord .+ 1) .- nShift)
 
-    sxs = map(y, pfs.kernels) do yp, sfp
+    sxs = map(y, pfs.kernelspair[2]) do yp, sfp
         upimg = upsample(yp, df)
         ker = reflect(OffsetArray(sfp, region...))
         imfilter(resource, upimg, ker, "circular")
@@ -207,7 +207,7 @@ function synthesize(pfs::ParallelFilters{TF,D}, y::AbstractArray; resource=CPU1(
     sum(sxs)
 end
 
-function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
-    ty = reshape_coefs(cs.shape, cs, y)
-    synthesize(cs.parallelFilters, ty; cs.options...)
+function synthesize(cs::TransformSystem{PF}, y::AbstractVector) where {TF,D,PF<:ParallelFilters{TF,D}}
+    ty = reshape_coefs(cs.shape, cs.nsolt, y)
+    synthesize(cs.nsolt, ty; cs.options...)
 end
