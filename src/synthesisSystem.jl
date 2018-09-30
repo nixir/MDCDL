@@ -3,7 +3,7 @@ using OffsetArrays: OffsetArray
 
 function synthesize(syn::NsoltOperator{TF,D}, y::AbstractArray) where {TF,D}
     pvy = reshape_coefs(syn.shape, syn, y)
-    pvx = synthesize(syn.nsolt, pvy; border=syn.border)
+    pvx = synthesize(syn.nsolt, pvy; syn.options...)
     polyphase2mdarray(pvx, decimations(syn.nsolt))
 end
 
@@ -185,7 +185,7 @@ subsynthesize(::Shapes.Arrayed, sy::AbstractArray, abop::AbstractOperator) = syn
 
 # shape == Shapes.Vec
 function subsynthesize(shape::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator, args...)
-    lny = prod(abop.outsize) - prod(args[1].insize)
+    lny = prod(abop.outsize) - prod(args[1].shape.insize)
     ya = [ vec(subsynthesize(shape, sy[lny+1:end], args...)); sy[1:lny] ]
     synthesize(abop, ya)
 end
@@ -209,5 +209,5 @@ end
 
 function synthesize(cs::ConvolutionalOperator{TF,D}, y::AbstractVector) where {TF,D}
     ty = reshape_coefs(cs.shape, cs, y)
-    synthesize(cs.parallelFilters, ty; resource=cs.resource)
+    synthesize(cs.parallelFilters, ty; cs.options...)
 end

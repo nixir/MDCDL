@@ -3,7 +3,7 @@ using OffsetArrays: OffsetArray
 
 function analyze(A::NsoltOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
     pvx = mdarray2polyphase(x, decimations(A.nsolt))
-    y = analyze(A.nsolt, pvx; border=A.border)
+    y = analyze(A.nsolt, pvx; A.options...)
     reshape_polyvec(A.shape, A, y)
 end
 
@@ -191,7 +191,7 @@ subanalyze(::Shapes.Arrayed, sx::AbstractArray, abop::AbstractOperator) = [ anal
 function subanalyze(shape::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator, args...)
     sy = analyze(abop, sx)
     lndc = fld(length(sy), nchannels(abop))
-    dcdata = reshape(sy[1:lndc], args[1].insize...)
+    dcdata = reshape(sy[1:lndc], args[1].shape.insize...)
     vcat(sy[lndc+1:end], subanalyze(shape, dcdata, args...))
 end
 
@@ -213,6 +213,6 @@ function analyze(pfs::ParallelFilters{TF,D}, x::AbstractArray{TX,D}; resource=CP
 end
 
 function analyze(ca::ConvolutionalOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D}
-    y = analyze(ca.parallelFilters, x; resource=ca.resource)
+    y = analyze(ca.parallelFilters, x; ca.options...)
     reshape_polyvec(ca.shape, ca, y)
 end

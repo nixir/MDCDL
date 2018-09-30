@@ -31,8 +31,8 @@ function reshape_coefs(::Shapes.Arrayed, ::NsoltOperator, y::AbstractArray)
     mdarray2polyphase(y)
 end
 
-function reshape_coefs(::Shapes.Vec, nsop::NsoltOperator, y::AbstractArray)
-    szout = fld.(nsop.insize, decimations(nsop))
+function reshape_coefs(sv::Shapes.Vec, nsop::NsoltOperator, y::AbstractArray)
+    szout = fld.(sv.insize, decimations(nsop))
     ty = reshape(y, szout..., nchannels(nsop))
     mdarray2polyphase(ty)
 end
@@ -45,7 +45,7 @@ function reshape_coefs(::Shapes.Arrayed, co::ConvolutionalOperator{T,D}, y::Abst
     [ y[fill(:,D)..., p] for p in 1:nchannels(co)]
 end
 
-function reshape_coefs(::Shapes.Vec, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
-    ry = reshape(y, fld.(co.insize, decimations(co))..., nchannels(co))
+function reshape_coefs(sv::Shapes.Vec, co::ConvolutionalOperator{T,D}, y::AbstractArray) where {T,D}
+    ry = reshape(y, fld.(sv.insize, decimations(co))..., nchannels(co))
     [ ry[fill(:,D)..., p] for p in 1:nchannels(co) ]
 end

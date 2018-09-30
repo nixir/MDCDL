@@ -33,7 +33,12 @@ export readfb, savefb
 module Shapes
     abstract type AbstractShape end
     struct Default <: AbstractShape end
-    struct Vec <: AbstractShape end
+    struct Vec <: AbstractShape
+        insize::Tuple
+        Vec(sz::Integer...) = new(sz)
+        Vec(sz::AbstractVector) = Vec(sz...)
+        Vec(sz::Tuple) = Vec(sz...)
+    end
     struct Arrayed <: AbstractShape end
 end
 
@@ -206,11 +211,11 @@ struct ParallelFilters{T,D} <: FilterBank{T,D}
     end
 end
 
-get_outputsize(s::Shapes.AbstractShape, pfb, insz::NTuple) = get_outputsize(s, fld.(insz, decimations(pfb)), insz, nchannels(pfb))
-
-get_outputsize(::Shapes.Default, dcsz::NTuple, insz::NTuple, nch::Integer) = (nch, dcsz...)
-get_outputsize(::Shapes.Arrayed, dcsz::NTuple, insz::NTuple, nch::Integer) = (dcsz..., nch)
-get_outputsize(::Shapes.Vec, dcsz::NTuple, insz::NTuple, nch::Integer) = (prod(dcsz) * nch,)
+struct Multiscale
+    filterbanks::Tuple
+    Multiscale(fbs::FilterBank...) = new((fbs...,))
+    Multiscale(fbs::Tuple) = Multiscale(fbs...)
+end
 
 abstract type AbstractOperator{T,D} end
 
@@ -223,23 +228,11 @@ createSynthesizer(::Type{AbstractOperator}, obj, args...; kwargs...) = createSyn
 
 struct NsoltOperator{T,D} <: AbstractOperator{T,D}
     shape::Shapes.AbstractShape
-    insize::NTuple
-    outsize::NTuple
-
     nsolt::AbstractNsolt{T,D}
-    border::Symbol
+    options::Base.Iterators.Pairs
 
-    function NsoltOperator(ns::AbstractNsolt{T,D}, insz::NTuple, outsz::NTuple; shape=Shapes.Default(), border=:circular) where {T,D}
-        new{T,D}(shape, insz, outsz, ns, border)
-    end
-
-    function NsoltOperator(ns::AbstractNsolt{T,D}, insz::NTuple; shape=Shapes.Default(), kwargs...) where {T,D}
-        outsz = get_outputsize(shape, ns, insz)
-        NsoltOperator(ns, insz, outsz; shape=shape, kwargs...)
-    end
-
-    function NsoltOperator(ns::AbstractNsolt, x::AbstractArray; kwargs...)
-        NsoltOperator(ns, size(x); kwargs...)
+    function NsoltOperator(ns::AbstractNsolt{T,D}; shape=Shapes.Default(), options...) where {T,D}
+        new{T,D}(shape, ns, options)
     end
 end
 
@@ -247,29 +240,19 @@ decimations(nsop::NsoltOperator) = decimations(nsop.nsolt)
 orders(nsop::NsoltOperator) = orders(nsop.nsolt)
 nchannels(nsop::NsoltOperator) = nchannels(nsop.nsolt)
 
-createOperator(ns::AbstractNsolt, x; kwargs...) = NsoltOperator(ns, x; kwargs...)
+createOperator(ns::AbstractNsolt; kwargs...) = NsoltOperator(ns; kwargs...)
 
 struct ConvolutionalOperator{T,D} <: AbstractOperator{T,D}
-    insize::NTuple
-    outsize::NTuple
     shape::Shapes.AbstractShape
-
     parallelFilters::ParallelFilters{T,D}
+    options::Base.Iterators.Pairs
 
-    border::Symbol
-    resource::AbstractResource
-
-    function ConvolutionalOperator(filters::ParallelFilters{T,D}, insz::NTuple, outsz::NTuple; shape=Shapes.Default(), border=:circular, resource=CPU1(FIR())) where {T,D}
-        new{T,D}(insz, outsz, shape, filters, border, resource)
+    function ConvolutionalOperator(filters::ParallelFilters{T,D}; shape=Shapes.Default(), options...) where {T,D}
+        new{T,D}(shape, filters, options)
     end
 
-    function ConvolutionalOperator(pfs::ParallelFilters{T,D}, insz::NTuple{D,Int}; shape=Shapes.Default(), kwargs...) where {T,D}
-        outsz = get_outputsize(shape, pfs, insz)
-        ConvolutionalOperator(pfs, insz, outsz; shape=shape, kwargs...)
-    end
-
-    function ConvolutionalOperator(kernel::AbstractArray{AR}, insz::NTuple, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D,AR<:AbstractArray{T,D}}
-        ConvolutionalOperator(ParallelFilters(kernel, df, ord, nch), insz; kwargs...)
+    function ConvolutionalOperator(kernel::AbstractArray{AR}, df::NTuple{D}, ord::NTuple{D}, nch::Integer; kwargs...) where {T,D,AR<:AbstractArray{T,D}}
+        ConvolutionalOperator(ParallelFilters(kernel, df, ord, nch); kwargs...)
     end
 end
 
@@ -277,19 +260,19 @@ decimations(co::ConvolutionalOperator) = decimations(co.parallelFilters)
 orders(co::ConvolutionalOperator) = orders(co.parallelFilters)
 nchannels(co::ConvolutionalOperator) = nchannels(co.parallelFilters)
 
-function createAnalyzer(::Type{CO}, pfb::PolyphaseFB, insz::NTuple; kwargs...) where {CO<:ConvolutionalOperator}
-    CO(analysiskernels(pfb), insz, decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
+function createAnalyzer(::Type{CO}, pfb::PolyphaseFB; kwargs...) where {CO<:ConvolutionalOperator}
+    CO(analysiskernels(pfb), decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
 end
 
-function createSynthesizer(::Type{CO}, pfb::PolyphaseFB, insz::NTuple; kwargs...) where {CO<:ConvolutionalOperator}
-    CO(synthesiskernels(pfb), insz, decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
+function createSynthesizer(::Type{CO}, pfb::PolyphaseFB; kwargs...) where {CO<:ConvolutionalOperator}
+    CO(synthesiskernels(pfb), decimations(pfb), orders(pfb), nchannels(pfb); kwargs...)
 end
 
 struct MultiscaleOperator{T,D} <: AbstractOperator{T,D}
-    insize::NTuple{D,T}
+    # insize::NTuple{D,T}
     shape::Shapes.AbstractShape
 
-    operators::Vector{AbstractOperator{T,D}}
+    operators::MultiscaleOperator
 
     function MultiscaleOperator(ops::Vector{X}, sz::NTuple{D,Int}; shape=Shapes.Default()) where {T,D,X<:AbstractOperator{T,D}}
         new{T,D}(sz, shape, ops)
@@ -298,17 +281,17 @@ end
 
 nchannels(msop::MultiscaleOperator) = nchannels.(msop.operators)
 
-function createAnalyzer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
-    szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
-    ops = map((acb, asz)->createAnalyzer(acb, asz; shape=shape, kwargs...), cbs, szxs)
-    MultiscaleOperator(ops, sz; shape=shape)
-end
-
-function createSynthesizer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
-    szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
-    ops = map((acb, asz)->createSynthesizer(acb, asz; shape=shape, kwargs...), cbs, szxs)
-    MultiscaleOperator(ops, sz; shape=shape)
-end
+# function createAnalyzer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
+#     szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
+#     ops = map((acb, asz)->createAnalyzer(acb, asz; shape=shape, kwargs...), cbs, szxs)
+#     MultiscaleOperator(ops, sz; shape=shape)
+# end
+#
+# function createSynthesizer(cbs::NTuple{N,CB}, sz::NTuple; shape=Shapes.Default(), kwargs...) where {N,CB<:CodeBook}
+#     szxs = [ fld.(sz, decimations(cbs[lv]).^(lv-1)) for lv in 1:N ]
+#     ops = map((acb, asz)->createSynthesizer(acb, asz; shape=shape, kwargs...), cbs, szxs)
+#     MultiscaleOperator(ops, sz; shape=shape)
+# end
 
 include("sparseCoding.jl")
 
