@@ -8,7 +8,7 @@ using Dates
 
 ########## Configurations #########
 # choose NSOLT type: (Rnsolt | Cnsolt)
-Nsolt = Cnsolt
+Nsolt = Rnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
@@ -71,7 +71,7 @@ nsolt = Nsolt(TP, df, ord, nch)
 MDCDL.rand!(nsolt)
 nsolt.initMatrices[1] .= cat(1, qr(rand((size(nsolt.initMatrices[1]) .- 1)...)).Q, dims=[1,2])
 
-msnsolt = ([ similar(nsolt) for l in 1:level ]...,)
+msnsolt = Multiscale([ similar(nsolt) for l in 1:level ]...)
 
 # dictionary learning
 MDCDL.train!(msnsolt, trainingSet; options...)

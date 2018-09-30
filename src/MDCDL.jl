@@ -241,6 +241,8 @@ end
 
 abstract type AbstractOperator end
 
+createOperator(arg...) = createTransform(arg...)
+
 createAnalyzer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
 createSynthesizer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
 createAnalyzer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperator} = OP(obj, args...; kwargs...)
@@ -266,7 +268,7 @@ decimations(tfs::TransformSystem) = decimations(tfs.operator)
 orders(tfs::TransformSystem) = orders(tfs.operator)
 nchannels(tfs::TransformSystem) = nchannels(tfs.operator)
 
-createOperator(ns::FilterBank; kwargs...) = TransformSystem(ns; kwargs...)
+createTransform(ns::FilterBank; kwargs...) = TransformSystem(ns; kwargs...)
 
 struct JoinedTransformSystems{T} <: AbstractOperator
     shape::Shapes.AbstractShape
@@ -283,7 +285,7 @@ struct JoinedTransformSystems{T} <: AbstractOperator
     end
 end
 
-function createOperator(ms::MS; shape::S=Shapes.Default()) where {MS<:Multiscale,S<:Shapes.AbstractShape}
+function createTransform(ms::MS; shape::S=Shapes.Default()) where {MS<:Multiscale,S<:Shapes.AbstractShape}
     opsarr = map(1:length(ms.filterbanks)) do lv
         sp = if isfixedsize(S)
             S(fld.(shape.insize, decimations(ms.filterbanks[lv]).^(lv-1)))

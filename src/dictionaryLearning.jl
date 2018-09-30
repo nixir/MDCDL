@@ -54,11 +54,10 @@ end
 
 iterations(abopt::Optimizers.AbstractOptimizer) = abopt.iterations
 
-LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}}
+LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}, Multiscale}
 
 function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, shape=nothing,  sparsecoder::SparseCoders.AbstractSparseCoder=SparseCoders.IHT(), optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(), verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing)
     vlevel = verboselevel(verbose)
-    shape = getvalidshape(shape, target, sparsecoder, optimizer)
 
     savesettings(logdir, target, trainingSet;
         vlevel=vlevel,
@@ -73,13 +72,14 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
         loss_dus = fill(Inf, K)
         for k = 1:K
             x = gettrainingdata(trainingSet[k])
+            shapek = getvalidshape(shape, target, sparsecoder, optimizer, x)
 
             vlevel >= 3 && println("start Sparse Coding Stage.")
-            sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, target, x; shape=shape, vlevel=vlevel)
+            sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, target, x; shape=shapek, vlevel=vlevel)
             vlevel >= 3 && println("end Sparse Coding Stage.")
 
             vlevel >= 3 && println("start Dictionary Update.")
-            params_dic, loss_dus[k] = updateDictionary(optimizer, target, x, sparse_coefs, params_dic; shape=shape, vlevel=vlevel)
+            params_dic, loss_dus[k] = updateDictionary(optimizer, target, x, sparse_coefs, params_dic; shape=shapek, vlevel=vlevel)
             vlevel >= 3 && println("end Dictionary Update Stage.")
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
@@ -99,24 +99,21 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
     return setParamsDictionary!(target, params_dic)
 end
 
-function stepSparseCoding(ihtsc::SparseCoders.IHT, cb::DT, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
-    TP = getOperatorType_scs(DT, Val(ihtsc.filter_domain))
-
-    ana = createAnalyzer(TP, cb, size(x); shape=shape)
-    syn = createSynthesizer(TP, cb, size(x); shape=shape)
+function stepSparseCoding(ihtsc::SparseCoders.IHT, cb::DT, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
+    ts = createTransform(cb; shape=shape)
 
     # initial sparse vector y0
-    y0 = analyze(ana, x)
+    y0 = analyze(ts, x)
     # number of non-zero coefficients
 
-    y_opt, loss_iht = iht(syn, ana, x, y0, ihtsc.nonzeros; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
+    y_opt, loss_iht = iht(ts, ts, x, y0, ihtsc.nonzeros; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
 
     return (y_opt, loss_iht)
 end
 
 updateDictionary(::Optimizers.AbstractOptimizer, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
 
-function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape::Shapes.AbstractShape=Shapes.Vec(), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
+function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
     vecpm, pminfo = decompose_params(DT, params)
     f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
     ∇f(t) = ForwardDiff.gradient(f, t)
@@ -162,9 +159,9 @@ function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, traini
     nothing
 end
 
-function savesettings(dirname::AbstractString, targets::NTuple{N,CB}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), filename="settings", kwargs...) where {N,CB<:CodeBook,T,D}
+function savesettings(dirname::AbstractString, targets::Multiscale, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), filename="settings", kwargs...) where {T,D}
     for idx = 1:N
-        savesettings(dirname, targets[idx], trainingset; vlevel=vlevel, epochs=epochs, sc_options=sc_options, du_options=du_options, filename=string(filename,"_",idx))
+        savesettings(dirname, targets.filterbanks[idx], trainingset; vlevel=vlevel, epochs=epochs, sc_options=sc_options, du_options=du_options, filename=string(filename,"_",idx))
     end
 end
 
@@ -182,10 +179,10 @@ function savelogs(dirname::AbstractString, nsolt::AbstractNsolt, epoch::Integer;
     nothing
 end
 
-function savelogs(dirname::AbstractString, targets::NTuple{N,CB}, epoch::Integer; params...) where {N,CB<:AbstractNsolt}
+function savelogs(dirname::AbstractString, targets::Multiscale, epoch::Integer; params...) # where {N,CB<:AbstractNsolt}
     for idx = 1:N
         filename_nsolt = joinpath(dirname, string("nsolt_", idx, ".json"))
-        savefb(filename_nsolt, targets[idx])
+        savefb(filename_nsolt, targets.filterbanks[idx])
     end
     return nothing
     # filename_logs = joinpath(dirname, "log")
@@ -206,9 +203,9 @@ function gettrainingdata(td::AbstractArray{T,D}, TP::Type=Float64) where {D,T<:C
     channelview(td) .|> TP
 end
 
-function lossfcn(cb::LearningTarget, x::AbstractArray, y::AbstractArray, params; shape=Shapes.Vec()) where {TT<:AbstractArray,TM<:AbstractArray}
+function lossfcn(cb::LearningTarget, x::AbstractArray, y::AbstractArray, params; shape=Shapes.Vec(size(x))) where {TT<:AbstractArray,TM<:AbstractArray}
     cpcb = similar_dictionary(cb, params)
-    syn = createSynthesizer(cpcb, size(x); shape=shape)
+    syn = createTransform(cpcb; shape=shape)
     norm(x - synthesize(syn, y))^2/2
 end
 
@@ -216,13 +213,13 @@ function similar_dictionary(nsolt::AbstractNsolt, (θ, μ)::Tuple{TT,TM}) where 
     setrotations!(similar(nsolt, eltype(θ)), θ, μ)
 end
 
-similar_dictionary(target::NTuple{N}, params::NTuple{N}) where {N} = similar_dictionary.(target, params)
+similar_dictionary(target::Multiscale, params::NTuple{N}) where {N} = Multiscale(similar_dictionary.(target.filterbanks, params)...)
 
 getParamsDictionary(nsolt::AbstractNsolt) = getrotations(nsolt)
 setParamsDictionary!(nsolt::AbstractNsolt, pm::NTuple{2}) = setrotations!(nsolt, pm...)
 
-getParamsDictionary(targets::NTuple) = getParamsDictionary.(targets)
-setParamsDictionary!(targets::NTuple, pm::NTuple) = setParamsDictionary!.(targets, pm)
+getParamsDictionary(targets::Multiscale) = map(t->getParamsDictionary(t), targets.filterbanks)
+setParamsDictionary!(targets::Multiscale, pm::NTuple) = map((t,p)->setParamsDictionary!(t, p), targets.filterbanks, pm)
 
 getOperatorType_scs(::Type, ::Val) = AbstractOperator
 getOperatorType_scs(::Type{NS}, ::Val{:convolution}) where {NS<:AbstractNsolt} = ConvolutionalOperator
@@ -233,12 +230,12 @@ compose_params(::Type, params, ()) = params
 decompose_params(::Type{NS}, (θ, μ)) where {NS<:AbstractNsolt} = (θ, μ)
 compose_params(::Type{NS}, θ, μ) where {NS<:AbstractNsolt} = (θ, μ)
 
-function decompose_params(::Type{NTuple{N,T}}, params::NTuple{N}) where {N,T<:AbstractNsolt}
+function decompose_params(::Type{Multiscale}, params::NTuple{N}) where {N} # T<:AbstractNsolt
     θs, μs = map(t->t[1], params), map(t->t[2], params)
     vcat(θs...), (length.(θs), μs)
 end
 
-function compose_params(::Type{NTuple{N,T}}, vp::AbstractArray, pminfo::Tuple) where {N,T<:AbstractNsolt}
+function compose_params(::Type{Multiscale}, vp::AbstractArray, pminfo::Tuple) where {N}
     arrpms = map(rng->vp[rng],intervals(pminfo[1]))
     map((lhs,rhs)->(lhs,rhs,), arrpms, pminfo[2])
 end
@@ -264,8 +261,8 @@ function updateamount(adam::Optimizers.Adam, grad::AbstractArray, itr::Integer, 
 end
 
 getvalidshape(shape::Shapes.AbstractShape, args...) = shape
-getvalidshape(::Nothing, ::LearningTarget, args...) = Shapes.Vec()
-getvalidshape(::Nothing, ::NTuple{N}, ::SparseCoders.IHT{T}, args...) where {N,T<:NTuple{N}} = Shapes.Arrayed()
+getvalidshape(::Nothing, ::LearningTarget, sc, du, x::AbstractArray) = Shapes.Vec(size(x))
+getvalidshape(::Nothing, ::Multiscale, ::SparseCoders.IHT{T}, args...) where {N,T<:NTuple{N}} = Shapes.Arrayed()
 
 namestring(nsolt::Rnsolt) = namestring(nsolt, "Real NSOLT")
 namestring(nsolt::Cnsolt) = namestring(nsolt, "Complex NSOLT")
