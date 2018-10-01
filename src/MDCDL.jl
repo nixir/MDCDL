@@ -5,7 +5,7 @@ using ImageFiltering
 using ImageFiltering.Algorithm: Alg, FIR, FFT
 using ComputationalResources: AbstractResource, CPU1
 
-import Base: promote_rule, eltype, ndims, similar
+import Base: promote_rule, eltype, ndims, similar, length
 import Random: rand, rand!
 
 export rand, rand!
@@ -238,6 +238,8 @@ struct Multiscale
     filterbanks::Tuple
     Multiscale(fbs...) = new(fbs)
 end
+
+length(ms::Multiscale) = length(ms.filterbanks)
 
 abstract type AbstractOperator end
 

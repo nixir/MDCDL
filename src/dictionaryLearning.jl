@@ -160,7 +160,7 @@ function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, traini
 end
 
 function savesettings(dirname::AbstractString, targets::Multiscale, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), filename="settings", kwargs...) where {T,D}
-    for idx = 1:N
+    for idx = 1:length(targets)
         savesettings(dirname, targets.filterbanks[idx], trainingset; vlevel=vlevel, epochs=epochs, sc_options=sc_options, du_options=du_options, filename=string(filename,"_",idx))
     end
 end
@@ -180,7 +180,7 @@ function savelogs(dirname::AbstractString, nsolt::AbstractNsolt, epoch::Integer;
 end
 
 function savelogs(dirname::AbstractString, targets::Multiscale, epoch::Integer; params...) # where {N,CB<:AbstractNsolt}
-    for idx = 1:N
+    for idx = 1:length(targets)
         filename_nsolt = joinpath(dirname, string("nsolt_", idx, ".json"))
         savefb(filename_nsolt, targets.filterbanks[idx])
     end
