@@ -100,7 +100,7 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
 end
 
 function stepSparseCoding(ihtsc::SparseCoders.IHT, cb::DT, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
-    ts = createTransform(cb; shape=shape)
+    ts = createTransform(cb, shape)
 
     # initial sparse vector y0
     y0 = analyze(ts, x)
@@ -205,7 +205,7 @@ end
 
 function lossfcn(cb::LearningTarget, x::AbstractArray, y::AbstractArray, params; shape=Shapes.Vec(size(x))) where {TT<:AbstractArray,TM<:AbstractArray}
     cpcb = similar_dictionary(cb, params)
-    syn = createTransform(cpcb; shape=shape)
+    syn = createTransform(cpcb, shape)
     norm(x - synthesize(syn, y))^2/2
 end
 

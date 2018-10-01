@@ -20,7 +20,7 @@ ord = (4,4)
 nch = 8
 
 # size of minibatches (<:NTuple{D,Int})
-szx = (16,16)
+szx = (8,8)
 # number of minibatches (<:Integer)
 nSubData = 16
 
@@ -32,14 +32,14 @@ do_save_trainingset = false
 do_export_atoms = false
 
 # options for sparse coding
-sparsity = 0.5
+sparsity = 0.25
 sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
 # options for dictionary update
 # optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-3)
-optimizer = Optimizers.AdaGrad(iterations = 100)
+optimizer = Optimizers.AdaGrad(iterations = 30)
 
 # general options of dictionary learning
-options = ( epochs  = 100,
+options = ( epochs  = 1000,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,

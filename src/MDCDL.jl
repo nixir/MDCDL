@@ -241,26 +241,17 @@ end
 
 abstract type AbstractOperator end
 
-createOperator(arg...) = createTransform(arg...)
-
-createAnalyzer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
-createSynthesizer(obj, args...; kwargs...) = createOperator(obj, args...; kwargs...)
-createAnalyzer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperator} = OP(obj, args...; kwargs...)
-createSynthesizer(::Type{OP}, obj, args...; kwargs...) where {OP<:AbstractOperator} = OP(obj, args...; kwargs...)
-createAnalyzer(::Type{AbstractOperator}, obj, args...; kwargs...) = createAnalyzer(obj, args...; kwargs...)
-createSynthesizer(::Type{AbstractOperator}, obj, args...; kwargs...) = createSynthesizer(obj, args...; kwargs...)
-
 struct TransformSystem{OP} <: AbstractOperator
     shape::Shapes.AbstractShape
     operator::OP
     options::Base.Iterators.Pairs
 
-    function TransformSystem(operator::OP; shape=Shapes.Default(), options...) where {OP<:FilterBank}
+    function TransformSystem(operator::OP, shape=Shapes.Default(); options...) where {OP<:FilterBank}
         new{OP}(shape, operator, options)
     end
 
-    function TransformSystem(ts::TransformSystem; shape=ts.shape)
-        TransformSystem(deepcopy(ts.operator); shape=shape, ts.options...)
+    function TransformSystem(ts::TransformSystem, shape=ts.shape)
+        TransformSystem(deepcopy(ts.operator), shape; ts.options...)
     end
 end
 
@@ -268,33 +259,28 @@ decimations(tfs::TransformSystem) = decimations(tfs.operator)
 orders(tfs::TransformSystem) = orders(tfs.operator)
 nchannels(tfs::TransformSystem) = nchannels(tfs.operator)
 
-createTransform(ns::FilterBank; kwargs...) = TransformSystem(ns; kwargs...)
+createTransform(ns::FilterBank, args...; kwargs...) = TransformSystem(ns, args...; kwargs...)
 
 struct JoinedTransformSystems{T} <: AbstractOperator
     shape::Shapes.AbstractShape
     transforms::Array
 
-    JoinedTransformSystems(ts::Tuple{TS}; kwargs...) where{TS<:TransformSystem} = JoinedTransformSystems(Multiscale(ts...); kwargs...)
-    function JoinedTransformSystems(mst::MS; shape=Shapes.Default()) where {TS<:TransformSystem,MS<:Multiscale}
-        # opsarr = map(1:length(ms.filterbanks)) do lv
-        #     szx = fld.(shape.insize, decimations(ms.filterbanks[lv]).^(lv-1))
-        #     TransformSystem(ms.filterbanks[lv], shape=S(szx))
-        # end
-        # ops = (opsarr...,)
+    JoinedTransformSystems(ts::Tuple{TS}, args...; kwargs...) where{TS<:TransformSystem} = JoinedTransformSystems(Multiscale(ts...), args...; kwargs...)
+    function JoinedTransformSystems(mst::MS, shape=Shapes.Default()) where {TS<:TransformSystem,MS<:Multiscale}
         new{MS}(shape, collect(mst.filterbanks))
     end
 end
 
-function createTransform(ms::MS; shape::S=Shapes.Default()) where {MS<:Multiscale,S<:Shapes.AbstractShape}
+function createTransform(ms::MS, shape::S=Shapes.Default()) where {MS<:Multiscale,S<:Shapes.AbstractShape}
     opsarr = map(1:length(ms.filterbanks)) do lv
         sp = if isfixedsize(S)
             S(fld.(shape.insize, decimations(ms.filterbanks[lv]).^(lv-1)))
         else
             S()
         end
-        TransformSystem(ms.filterbanks[lv], shape=sp)
+        TransformSystem(ms.filterbanks[lv], sp)
     end
-    JoinedTransformSystems(MS(opsarr...), shape=shape)
+    JoinedTransformSystems(MS(opsarr...), shape)
 end
 
 include("sparseCoding.jl")
