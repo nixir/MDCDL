@@ -125,7 +125,7 @@ function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::A
         upm, optim_state = updateamount(optr, Δvecpm, itr, optim_state)
         vecpm_opt -= upm
 
-        vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, ||∇loss|| = $(norm(Δvecpm))")
+        vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, loss = $(f(vecpm_opt)), ||∇loss|| = $(norm(Δvecpm))")
     end
     params_opt = compose_params(DT, vecpm_opt, pminfo)
     loss_opt = f(vecpm_opt)

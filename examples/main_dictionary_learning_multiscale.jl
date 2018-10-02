@@ -14,10 +14,10 @@ TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
 df = (2,2)
 # polyphase order: (<:NTuple{D,Int} where D)
-ord = (2,2)
+ord = (4,4)
 # number of channels: (<:Union{Integer,Tuple{Int,Int}} for Rnsolt)
 #                     (<:Integer for Cnsolt)
-nch = 6
+nch = 8
 # number of tree level (<: Integer)
 level = 3
 
@@ -37,11 +37,11 @@ do_export_atoms = false
 # sparsecoder = SparseCoders.IHT( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
 sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros=trunc(Int,0.25*prod(szx)))
 # options for dictionary update
-# optimizer = Optimizers.Steepest(iterations = 100, rate = 1e-3)
-optimizer = Optimizers.Adam( iterations = 10)
+optimizer = Optimizers.Steepest(iterations = 1000, rate = 1e-4)
+# optimizer = Optimizers.Adam( iterations = 100)
 
 # general options of dictionary learning
-options = ( epochs  = 1,
+options = ( epochs  = 1000,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,

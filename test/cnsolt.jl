@@ -52,11 +52,6 @@ using Random
 
                 nsolt = Cnsolt(df, ord, nch)
 
-                # if iseven(sum(nch))
-                #     @test isa(nsolt, Cnsolt{defaultType,d,:TypeI})
-                # else
-                #     @test isa(nsolt, Cnsolt{defaultType,d,:TypeII})
-                # end
                 if iseven(sum(nch))
                     @test istype1(nsolt) == true && istype2(nsolt) == false
                 else
