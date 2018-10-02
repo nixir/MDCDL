@@ -41,7 +41,7 @@ sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros=trunc(Int,0.25*prod(sz
 optimizer = Optimizers.Adam( iterations = 10)
 
 # general options of dictionary learning
-options = ( epochs  = 1000,
+options = ( epochs  = 1,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,
@@ -79,6 +79,6 @@ MDCDL.train!(msnsolt, trainingSet; options...)
 
 if logdir != nothing && do_export_atoms
     for idx = 1:length(msnsolt)
-        png(plot(msnsolt[idx]), joinpath(logdir, string("nsolt_",idx,".png")))
+        png(plot(msnsolt.filterbanks[idx]), joinpath(logdir, string("nsolt_",idx,".png")))
     end
 end
