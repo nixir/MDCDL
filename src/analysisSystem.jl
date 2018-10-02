@@ -31,9 +31,9 @@ function extendAtomsPerDims(::Type{NS}, ::TypeI, pvx::AbstractMatrix, nBlock::In
     nShift = fld(size(pvx, 2), nBlock)
     pvx = permutedimspv(pvx, nBlock)
     # submatrices
-    x  = view(pvx, :, :)
-    xu = view(pvx, 1:fld(P, 2), :)
-    xl = view(pvx, (fld(P, 2)+1):P, :)
+    x  = @view pvx[:,:]
+    xu = @view pvx[1:fld(P, 2), :]
+    xl = @view pvx[(fld(P, 2)+1):P, :]
     for k = 1:ordd
         B = getMatrixB(P, paramAngsd[k])
 
@@ -56,11 +56,11 @@ function extendAtomsPerDims(::Type{NS}, ::TypeII, pvx::AbstractMatrix, nBlock::I
     nShift = fld(size(pvx, 2), nBlock)
     pvx = permutedimspv(pvx, nBlock)
     # submatrices
-    xe  = view(pvx, 1:P-1, :)
-    xu1 = view(pvx, 1:fld(P,2), :)
-    xl1 = view(pvx, (fld(P,2)+1):(P-1), :)
-    xu2 = view(pvx, 1:cld(P,2), :)
-    xl2 = view(pvx, cld(P,2):P, :)
+    xe  = @view pvx[1:P-1,:]
+    xu1 = @view pvx[1:fld(P,2),:]
+    xl1 = @view pvx[(fld(P,2)+1):(P-1),:]
+    xu2 = @view pvx[1:cld(P,2),:]
+    xl2 = @view pvx[cld(P,2):P,:]
     for k = 1:nStages
         # first step
         B = getMatrixB(P, paramAngsd[2k-1])
@@ -114,8 +114,8 @@ function extendAtomsPerDims(::Type{NS}, ::TypeI, pvx::AbstractMatrix, nBlock::In
     nShift = fld(size(pvx, 2), nBlock)
     pvx = permutedimspv(pvx, nBlock)
     # submatrices
-    xu = view(pvx, 1:hP, :)
-    xl = view(pvx, (1:hP) .+ hP, :)
+    xu = @view pvx[1:hP,:]
+    xl = @view pvx[(1:hP) .+ hP,:]
     for k = 1:ordd
         # pvx .= B * pvx
         unnormalized_butterfly!(xu, xl)
@@ -144,12 +144,12 @@ function extendAtomsPerDims(::Type{NS}, ::TypeII, pvx::AbstractMatrix, nBlock::I
     nShift = fld(size(pvx,2), nBlock)
     pvx = permutedimspv(pvx, nBlock)
     # submatrices
-    xu  = view(pvx, 1:minP, :)
-    xl  = view(pvx, (P-minP+1):P, :)
-    xs1 = view(pvx, (minP+1):P, :)
-    xs2 = view(pvx, 1:maxP, :)
-    xmj = view(pvx, chMajor, :)
-    xmn = view(pvx, chMinor, :)
+    xu  = @view pvx[1:minP,:]
+    xl  = @view pvx[(P-minP+1):P,:]
+    xs1 = @view pvx[(minP+1):P,:]
+    xs2 = @view pvx[1:maxP,:]
+    xmj = @view pvx[chMajor,:]
+    xmn = @view pvx[chMinor,:]
     for k = 1:nStages
         # first step
         unnormalized_butterfly!(xu, xl)

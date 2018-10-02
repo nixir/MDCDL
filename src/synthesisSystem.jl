@@ -31,9 +31,9 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBloc
     pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
     nShift = fld(size(pvy, 2), nBlock)
     # submatrices
-    y  = view(pvy, :, :)
-    yu = view(pvy, 1:fld(P,2), :)
-    yl = view(pvy, (fld(P,2)+1):P, :)
+    y  = @view pvy[:,:]
+    yu = @view pvy[1:fld(P,2),:]
+    yl = @view pvy[(fld(P,2)+1):P,:]
     for k = ordd:-1:1
         yu .= propMtsd[2k-1]' * yu
         yl .= propMtsd[2k]'   * yl
@@ -58,11 +58,11 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlo
     pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
     nShift = fld(size(pvy,2), nBlock)
     # submatrices
-    ye  = view(pvy, 1:(P-1), :)
-    yu1 = view(pvy, 1:fld(P,2), :)
-    yl1 = view(pvy, (fld(P,2)+1):(P-1), :)
-    yu2 = view(pvy, 1:cld(P,2), :)
-    yl2 = view(pvy, cld(P,2):P, :)
+    ye  = @view pvy[1:(P-1),:]
+    yu1 = @view pvy[1:fld(P,2),:]
+    yl1 = @view pvy[(fld(P,2)+1):(P-1),:]
+    yu2 = @view pvy[1:cld(P,2),:]
+    yl2 = @view pvy[cld(P,2):P,:]
     for k = nStages:-1:1
         # second step
         yu2 .= propMtsd[4k-1]' * yu2
@@ -111,8 +111,8 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBloc
     pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
     nShift = fld(size(pvy, 2), nBlock)
     # submatrices
-    yu = view(pvy, 1:hP, :)
-    yl = view(pvy, (1:hP) .+ hP, :)
+    yu = @view pvy[1:hP,:]
+    yl = @view pvy[(1:hP) .+ hP,:]
     for k = ordd:-1:1
         yl .= propMtsd[k]' * yl
 
@@ -139,12 +139,12 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlo
     pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
     nShift = fld(size(pvy,2), nBlock)
     # submatrices
-    yu  = view(pvy, 1:minP, :)
-    yl  = view(pvy, (P-minP+1):P, :)
-    ys1 = view(pvy, (minP+1):P, :)
-    ys2 = view(pvy, 1:maxP, :)
-    ymj = view(pvy, chMajor, :)
-    ymn = view(pvy, chMinor, :)
+    yu  = @view pvy[1:minP,:]
+    yl  = @view pvy[(P-minP+1):P,:]
+    ys1 = @view pvy[(minP+1):P,:]
+    ys2 = @view pvy[1:maxP,:]
+    ymj = @view pvy[chMajor,:]
+    ymn = @view pvy[chMinor,:]
     for k = nStages:-1:1
         # second step
         ymj .= propMtsd[2k]' * ymj
@@ -186,7 +186,7 @@ subsynthesize(::Shapes.Arrayed, sy::AbstractArray, abop::AbstractOperator) = syn
 # shape == Shapes.Vec
 function subsynthesize(shape::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator, args...)
     lny = nchannels(abop) * prod(fld.(abop.shape.insize, decimations(abop))) - prod(args[1].shape.insize)
-    
+
     ya = [ vec(subsynthesize(shape, sy[lny+1:end], args...)); sy[1:lny] ]
     synthesize(abop, ya)
 end
