@@ -26,7 +26,7 @@ export mdarray2polyphase, polyphase2mdarray
 export iht
 export AbstractOperator
 export TransformSystem
-export createOperator, createAnalyzer, createSynthesizer
+export createTransform
 export Shapes, Optimizers, SparseCoders
 export readfb, savefb
 

@@ -88,7 +88,7 @@ using Random
 
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
-        oms = [ Shapes.Default(), Shapes.Augumented(), Shapes.Vec() ]
+        oms = [ Shapes.Default, Shapes.Arrayed, Shapes.Vec ]
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
             szx = df .* (ord .+ 1)
             nsolt = Cnsolt(df, ord, nch)
@@ -97,7 +97,7 @@ using Random
             x = rand(Complex{Float64}, szx...)
 
             foreach(oms) do om
-                nsop = createOperator(nsolt, x; shape=om)
+                nsop = createTransform(nsolt, om(size(x)))
 
                 y = analyze(nsop, x)
                 rx = synthesize(nsop, y)
@@ -116,7 +116,7 @@ using Random
             nsolt = Cnsolt(df, ord, nch)
             rand!(nsolt)
 
-            ana = createOperator(nsolt, x; shape=Shapes.Default())
+            ana = createTransform(nsolt, Shapes.Default())
             ya = analyze(ana, x)
 
             afs = analysiskernels(nsolt)
@@ -144,7 +144,7 @@ using Random
 
             y = [ rand(Complex{Float64},((ord.+1) .* df)...) for p in 1:sum(nch) ]
 
-            syn = createOperator(nsolt, ord.+1; shape=Shapes.Default())
+            syn = createTransform(nsolt, Shapes.Default())
             x = synthesize(syn, y)
 
             sfs = synthesiskernels(nsolt)

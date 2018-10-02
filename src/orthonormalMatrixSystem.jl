@@ -1,6 +1,8 @@
 ngivensangles(n::Integer) = fld(n*(n-1),2)
 
-function mat2rotations(mtx::AbstractMatrix{T}) where T <: Real
+mat2rotations(args...) = mat2rotations_lowmemory(args...)
+
+function mat2rotations_normal(mtx::AbstractMatrix{T}) where T <: Real
     P = size(mtx, 1)
 
     res = similar(mtx, fld(P*(P-1),2))
@@ -24,11 +26,33 @@ function mat2rotations(mtx::AbstractMatrix{T}) where T <: Real
     (res, round.(diag(mtx)))
 end
 
+function mat2rotations_lowmemory(mtx::AbstractMatrix{T}) where {T<:Real}
+    P = size(mtx, 1)
+
+    res = similar(mtx, fld(P*(P-1),2))
+    ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
+
+    mtx = Array(mtx)
+    for nr in 1:length(ids)
+        a = givens(mtx, ids[nr][1], ids[nr][2], ids[nr][1])
+        g = a[1]
+
+        res[nr] = atan(g.s, g.c)
+
+        row1 = mtx[g.i1,:]
+        mtx[g.i1,:] =  g.c * row1 + g.s * @view mtx[g.i2,:]
+        mtx[g.i2,:] = -g.s * row1 + g.c * @view mtx[g.i2,:]
+    end
+    (res, round.(diag(mtx)))
+end
+
 function rotations2mat(θs::AbstractArray, sig::AbstractArray)
     rotations2mat(θs, sig, round(Integer, (1 + sqrt(1+8*length(θs))) / 2))
 end
 
-function rotations2mat(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
+rotations2mat(θs, sig, P) = rotations2mat_lowmemory(θs, sig, P)
+
+function rotations2mat_normal(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
     mtx = Matrix{TA}(I,P,P)
     R = similar(mtx)
 
@@ -44,6 +68,22 @@ function rotations2mat(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Intege
         R[idx2, idx2] =  c
 
         mtx .= mtx*R
+    end
+    mtx * diagm(0 => sig)
+end
+
+function rotations2mat_lowmemory(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
+    mtx = Matrix{TA}(I,P,P)
+
+    ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
+    for nr in 1:length(ids)
+        s, c = sincos(θs[nr])
+        idx1, idx2 = ids[nr]
+
+        col1 = mtx[:,idx1]
+
+        mtx[:, idx1] =  c * col1 + s * @view mtx[:,idx2]
+        mtx[:, idx2] = -s * col1 + c * @view mtx[:,idx2]
     end
     mtx * diagm(0 => sig)
 end
