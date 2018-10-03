@@ -1,6 +1,56 @@
 using TiledIteration: TileIterator
 using FFTW: fft, dct
 
+Base.@pure function get_rnsolt_default_matrices(::TypeI, ::Type{T}, ppo::NTuple{D}, nChs::Tuple{Int,Int}) where {T,D}
+    initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
+    propMts = Vector{Matrix{T}}[
+        [
+            (iseven(n) ? 1 : -1) .* Matrix(I, nChs[1], nChs[1])
+        for n in 1:ppo[pd] ]
+    for pd in 1:D ]
+
+    (initMts, propMts)
+end
+
+Base.@pure function get_rnsolt_default_matrices(::TypeII, ::Type{T}, ppo::NTuple{D}, nChs::Tuple{Int,Int}) where {T,D}
+    initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
+    chx, chn = maximum(nChs), minimum(nChs)
+    propMts = Vector{Matrix{T}}[
+        vcat(
+            fill([ -Matrix(I, chn, chn), Matrix(I, chx, chx) ], fld(ppo[pd],2))...
+        )
+    for pd in 1:D ]
+
+    (initMts, propMts)
+end
+
+Base.@pure function get_cnsolt_default_matrices(::TypeI, ::Type{T}, ppo::NTuple{D}, nChs::Integer) where {T,D}
+    initMts = Matrix{T}[ Matrix(I,nChs,nChs) ]
+    propMts = Vector{Matrix{T}}[
+        [
+            (iseven(n) ? -1 : 1) * Matrix(I,fld(nChs,2),fld(nChs,2))
+        for n in 1:2*ppo[pd] ]
+    for pd in 1:D ]
+
+    (initMts, propMts)
+end
+
+Base.@pure function get_cnsolt_default_matrices(::TypeII, ::Type{T}, ppo::NTuple{D}, nChs::Integer) where {T,D}
+    if any(isodd.(ppo))
+        throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
+    end
+    cch = cld(nChs, 2)
+    fch = fld(nChs, 2)
+    initMts = Matrix{T}[ Matrix(I, nChs, nChs) ]
+    propMts = Vector{Matrix{T}}[
+        vcat(fill([
+            Matrix(I,fch,fch), -Matrix(I,fch,fch), Matrix(I,cch,cch), Matrix(Diagonal(vcat(fill(-1, fld(nChs,2))..., 1)))
+        ], fld(ppo[pd],2))...)
+    for pd in 1:D]
+
+    (initMts, propMts)
+end
+
 # upsampler
 function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
     szx = size(x)

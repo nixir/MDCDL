@@ -92,24 +92,8 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
     Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {D,T} = Rnsolt(T, df, ppo, (cld(nChs,2), fld(nChs,2)))
 
     function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}) where {T,D}
-        if nChs[1] == nChs[2]   # Type-I R-NSOLT
-            initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
-            propMts = Vector{Matrix{T}}[
-                [
-                    (iseven(n) ? 1 : -1) .* Matrix(I, nChs[1], nChs[1])
-                for n in 1:ppo[pd] ]
-            for pd in 1:D ]
-        else                    # Type-II R-NSOLT
-            initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
-            chx, chn = maximum(nChs), minimum(nChs)
-            propMts = Vector{Matrix{T}}[
-                vcat(
-                    fill([ -Matrix(I, chn, chn), Matrix(I, chx, chx) ], fld(ppo[pd],2))...
-                )
-            for pd in 1:D ]
-        end
-
-        Rnsolt(df, ppo, nChs, initMts, propMts)
+        mts = get_rnsolt_default_matrices(Val(nChs[1]==nChs[2]), T, ppo, nChs)
+        Rnsolt(df, ppo, nChs, mts...)
     end
 
     function Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}, initMts::Vector{MT}, propMts::Vector{Vector{MT}}) where {T,D,MT<:AbstractArray{T}}
@@ -126,6 +110,12 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
         mtxc = reverse(permdctmtx(TC, df...); dims=2)
 
         new{T,D}(df, ppo, nChs, initMts, propMts, mtxc)
+    end
+
+    Rnsolt(df::Integer, ppo::Integer, nChs; dims) = Rnsolt(Float64, df, ppo, nChs; dims=dims)
+    Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims) where {T} = Rnsolt(T, df, ppo, (cld(nChs,2),fld(nChs,2)); dims=dims)
+    function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Tuple{Int,Int}; dims::Integer) where {T}
+        Rnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
     end
 end
 
@@ -153,32 +143,13 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
     Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
 
     function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
-        if iseven(nChs) # Type-I C-NSOLT
-            initMts = Matrix{T}[ Matrix(I,nChs,nChs) ]
-            propMts = Vector{Matrix{T}}[
-                [
-                    (iseven(n) ? -1 : 1) * Matrix(I,fld(nChs,2),fld(nChs,2))
-                for n in 1:2*ppo[pd] ]
-            for pd in 1:D ]
-        else            # Type-II C-NSOLT
-            if any(isodd.(ppo))
-                throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
-            end
-            cch = cld(nChs, 2)
-            fch = fld(nChs, 2)
-            initMts = Matrix{T}[ Matrix(I, nChs, nChs) ]
-            propMts = Vector{Matrix{T}}[
-                vcat(fill([
-                    Matrix(I,fch,fch), -Matrix(I,fch,fch), Matrix(I,cch,cch), Matrix(Diagonal(vcat(fill(-1, fld(nChs,2))..., 1)))
-                ], fld(ppo[pd],2))...)
-            for pd in 1:D]
-        end
+        mts = get_cnsolt_default_matrices(Val(iseven(nChs)), T, ppo, nChs)
         paramAngs = Vector{Vector{T}}[ [ zeros(fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
 
-        Cnsolt(df, ppo, nChs, initMts, propMts, paramAngs)
+        Cnsolt(df, ppo, nChs, mts..., paramAngs)
     end
 
-    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
+    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
         if prod(df) > nChs
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
@@ -188,6 +159,11 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
         mtxf = reverse(cdftmtx(TF, df...); dims=2)
 
         new{T,D}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
+    end
+
+    Cnsolt(df::Integer, ppo::Integer, nChs::Integer; dims) = Cnsolt(Float64, df, ppo, nChs; dims=dims)
+    function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims::Integer) where {T}
+        Cnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
     end
 end
 
