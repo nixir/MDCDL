@@ -39,8 +39,8 @@ module Shapes
     struct Vectorized <: AbstractShape
         insize::Tuple
         Vectorized(sz::Integer...) = new(sz)
-        Vectorized(sz::AbstractVector) = Vec(sz...)
-        Vectorized(sz::Tuple) = Vec(sz...)
+        Vectorized(sz::AbstractVector) = Vectorized(sz...)
+        Vectorized(sz::Tuple) = Vectorized(sz...)
     end
     struct Combined <: AbstractShape
         Combined(sz...) = new()
