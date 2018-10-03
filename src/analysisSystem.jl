@@ -174,22 +174,22 @@ end
 
 # analyze(msop::MultiscaleOperator{TF,D}, x::AbstractArray{TX,D}) where {TF,TX,D} = subanalyze(msop.shape, x, msop.operators...)
 
-# shape == Shapes.Default
-function subanalyze(shape::Shapes.Default, sx::AbstractArray, abop::AbstractOperator, args...)
+# shape == Shapes.Separated
+function subanalyze(shape::Shapes.Separated, sx::AbstractArray, abop::AbstractOperator, args...)
     sy = analyze(abop, sx)
     [sy[2:end], subanalyze(shape, sy[1], args...)...]
 end
 
-subanalyze(::Shapes.Default, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
+subanalyze(::Shapes.Separated, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
 
-# shape == Shapes.Arrayed
-function subanalyze(shape::Shapes.Arrayed, sx::AbstractArray{T,D}, abop::AbstractOperator, args...) where {T,D}
+# shape == Shapes.Combined
+function subanalyze(shape::Shapes.Combined, sx::AbstractArray{T,D}, abop::AbstractOperator, args...) where {T,D}
     sy = analyze(abop, sx)
     clns = fill(:,D)
     [ sy[clns...,2:end], subanalyze(shape, sy[clns...,1], args...)... ]
 end
 
-subanalyze(::Shapes.Arrayed, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
+subanalyze(::Shapes.Combined, sx::AbstractArray, abop::AbstractOperator) = [ analyze(abop, sx) ]
 
 # shape == Shapes.Vec
 function subanalyze(shape::Shapes.Vec, sx::AbstractArray, abop::AbstractOperator, args...)

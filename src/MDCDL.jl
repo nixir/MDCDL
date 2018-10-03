@@ -33,19 +33,20 @@ export readfb, savefb
 module Shapes
     abstract type AbstractShape end
 
-    struct Default <: AbstractShape
-        Default(sz...) = new()
+    struct Separated <: AbstractShape
+        Separated(sz...) = new()
     end
-    struct Vec <: AbstractShape
+    struct Vectorized <: AbstractShape
         insize::Tuple
-        Vec(sz::Integer...) = new(sz)
-        Vec(sz::AbstractVector) = Vec(sz...)
-        Vec(sz::Tuple) = Vec(sz...)
+        Vectorized(sz::Integer...) = new(sz)
+        Vectorized(sz::AbstractVector) = Vec(sz...)
+        Vectorized(sz::Tuple) = Vec(sz...)
     end
-    struct Arrayed <: AbstractShape
-        Arrayed(sz...) = new()
+    struct Combined <: AbstractShape
+        Combined(sz...) = new()
     end
 
+    Vec = Vectorized
 end
 
 isfixedsize(::A) where {A<:Shapes.AbstractShape} = isfixedsize(A)
@@ -248,7 +249,7 @@ struct TransformSystem{OP} <: AbstractOperator
     operator::OP
     options::Base.Iterators.Pairs
 
-    function TransformSystem(operator::OP, shape=Shapes.Default(); options...) where {OP<:FilterBank}
+    function TransformSystem(operator::OP, shape=Shapes.Separated(); options...) where {OP<:FilterBank}
         new{OP}(shape, operator, options)
     end
 
@@ -268,12 +269,12 @@ struct JoinedTransformSystems{T} <: AbstractOperator
     transforms::Array
 
     JoinedTransformSystems(ts::Tuple{TS}, args...; kwargs...) where{TS<:TransformSystem} = JoinedTransformSystems(Multiscale(ts...), args...; kwargs...)
-    function JoinedTransformSystems(mst::MS, shape=Shapes.Default()) where {TS<:TransformSystem,MS<:Multiscale}
+    function JoinedTransformSystems(mst::MS, shape=Shapes.Separated()) where {TS<:TransformSystem,MS<:Multiscale}
         new{MS}(shape, collect(mst.filterbanks))
     end
 end
 
-function createTransform(ms::MS, shape::S=Shapes.Default()) where {MS<:Multiscale,S<:Shapes.AbstractShape}
+function createTransform(ms::MS, shape::S=Shapes.Separated()) where {MS<:Multiscale,S<:Shapes.AbstractShape}
     opsarr = map(1:length(ms.filterbanks)) do lv
         sp = if isfixedsize(S)
             S(fld.(shape.insize, decimations(ms.filterbanks[lv]).^(lv-1)))

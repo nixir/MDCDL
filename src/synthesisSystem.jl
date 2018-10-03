@@ -167,21 +167,21 @@ function synthesize(jts::JoinedTransformSystems{MS}, y::AbstractArray) where {MS
     subsynthesize(jts.shape, y, jts.transforms...)
 end
 
-# shape == Shapes.Default
-function subsynthesize(shape::Shapes.Default, sy::AbstractArray, abop::AbstractOperator, args...)
+# shape == Shapes.Separated
+function subsynthesize(shape::Shapes.Separated, sy::AbstractArray, abop::AbstractOperator, args...)
     ya = [ subsynthesize(shape, sy[2:end], args...), sy[1]... ]
     synthesize(abop, ya)
 end
 
-subsynthesize(::Shapes.Default, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
+subsynthesize(::Shapes.Separated, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
 
-# shape == Shapes.Arrayed
-function subsynthesize(shape::Shapes.Arrayed, sy::AbstractArray, abop::AbstractOperator, args...)
+# shape == Shapes.Combined
+function subsynthesize(shape::Shapes.Combined, sy::AbstractArray, abop::AbstractOperator, args...)
     rx = subsynthesize(shape, sy[2:end], args...)
     synthesize(abop, cat(rx, sy[1]; dims=ndims(sy[1]) ))
 end
 
-subsynthesize(::Shapes.Arrayed, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
+subsynthesize(::Shapes.Combined, sy::AbstractArray, abop::AbstractOperator) = synthesize(abop, sy[1])
 
 # shape == Shapes.Vec
 function subsynthesize(shape::Shapes.Vec, sy::AbstractArray, abop::AbstractOperator, args...)
