@@ -87,7 +87,7 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
             setParamsDictionary!(target, params_dic)
         end
         if vlevel >= 1
-            println("--- epoch #$itr, sum(loss) = $(sum(loss_dus)), var(loss) = $(var(loss_dus))")
+            println("--- epoch #$itr, sum(loss) = $(sum(loss_sps)), var(loss) = $(var(loss_sps))")
         end
         savelogs(logdir, target, itr;
             vlevel=vlevel,
