@@ -4,5 +4,6 @@ Install
 -------
 
 ```julia
-Pkg.clone("https://github.com/sngy/MDCDL.git")
+using Pkg
+Pkg.add(PackageSpec(url="https://github.com/sngy/MDCDL.git",rev="master"))
 ```
