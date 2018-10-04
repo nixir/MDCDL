@@ -22,7 +22,7 @@ nch = 8
 nsolt = Rnsolt(df, ord, nch)
 rand!(nsolt)
 
-tmsa = Array{Float64}(undef, lnszxs)
+tms = Array{Float64}(undef, lnszxs)
 for idx = 1:lnszxs
     transform = createTransform(nsolt, Shapes.Vec(szxs[idx]...))
     xs = [ rand(szxs[idx]...) for n = 1:lnx ]
