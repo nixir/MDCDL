@@ -357,7 +357,7 @@ function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where 
     outdata = similar(x, prod(szBlock), prod(nBlocks))
     tiles = collect(TileIterator(axes(x), szBlock))
     for idx in 1:length(tiles)
-        outdata[:,idx] = vec(x[tiles[idx]...])
+        outdata[:,idx] = vec(@view x[tiles[idx]...])
     end
     PolyphaseVector(outdata, nBlocks)
 end
@@ -376,7 +376,7 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
     out = similar(x.data, (x.nBlocks .* szBlock)...)
     tiles = collect(TileIterator(axes(out), szBlock))
     for idx in 1:length(tiles)
-        out[tiles[idx]...] = reshape(x.data[:,idx], szBlock...)
+        out[tiles[idx]...] = reshape(@view(x.data[:,idx]), szBlock...)
     end
     out
 end
@@ -389,7 +389,7 @@ function shiftdimspv(x::AbstractMatrix, nBlocks::Integer)
     S = fld(size(x,2), nBlocks)
     data = similar(x)
     for idx = 0:nBlocks - 1
-        data[:,(1:S) .+ idx*S] = x[:, (1:nBlocks:end) .+ idx]
+        data[:,(1:S) .+ idx*S] = @view x[:, (1:nBlocks:end) .+ idx]
     end
     data
 end
@@ -398,7 +398,7 @@ function ishiftdimspv(x::AbstractMatrix, nBlocks::Integer)
     S = fld(size(x, 2), nBlocks)
     data = similar(x)
     for idx = 0:S-1
-        data[:,(1:nBlocks) .+ idx*nBlocks] = x[:, (1:S:end) .+ idx]
+        data[:,(1:nBlocks) .+ idx*nBlocks] = @view x[:, (1:S:end) .+ idx]
     end
     data
 end

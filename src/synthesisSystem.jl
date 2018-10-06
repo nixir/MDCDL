@@ -2,8 +2,8 @@ using ImageFiltering: imfilter, reflect, FIR
 using OffsetArrays: OffsetArray
 
 function synthesize(syn::TransformSystem{NS}, y::AbstractArray) where {TF,D,NS<:AbstractNsolt{TF,D}}
-    pvy = reshape_coefs(syn.shape, syn.operator, y)
-    pvx = synthesize(syn.operator, pvy; syn.options...)
+    y = reshape_coefs(syn.shape, syn.operator, y)
+    pvx = synthesize(syn.operator, y; syn.options...)
     polyphase2mdarray(pvx, decimations(syn.operator))
 end
 
@@ -12,8 +12,8 @@ synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {
 synthesize(cc::NS, py::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
 
 function synthesize(::Type{NS}, tp::Val, y::AbstractMatrix, nBlocks::NTuple, matrixF::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple, ord::NTuple, nch::Integer; kwargs...) where {NS<:Cnsolt}
-    uy = concatenateAtoms(NS, tp, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
-    finalStep(NS, tp, uy, matrixF, initMts, df, nch; kwargs...)
+    y = concatenateAtoms(NS, tp, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
+    finalStep(NS, tp, y, matrixF, initMts, df, nch; kwargs...)
 end
 
 function finalStep(::Type{NS}, ::Val, y::AbstractMatrix, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Integer; kwargs...) where {TM<:AbstractMatrix, NS<:Cnsolt}
