@@ -112,9 +112,9 @@ struct Rnsolt{T,D} <: AbstractNsolt{T,D}
         new{T,D}(df, ppo, nChs, initMts, propMts, mtxc)
     end
 
-    Rnsolt(df::Integer, ppo::Integer, nChs; dims) = Rnsolt(Float64, df, ppo, nChs; dims=dims)
-    Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims) where {T} = Rnsolt(T, df, ppo, (cld(nChs,2),fld(nChs,2)); dims=dims)
-    function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Tuple{Int,Int}; dims::Integer) where {T}
+    Rnsolt(df::Integer, ppo::Integer, nChs; kwargs...) = Rnsolt(Float64, df, ppo, nChs; kwargs...)
+    Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; kwargs...) where {T} = Rnsolt(T, df, ppo, (cld(nChs,2),fld(nChs,2)); kwargs...)
+    function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Tuple{Int,Int}; dims::Integer=1) where {T}
         Rnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
     end
 end
@@ -161,8 +161,8 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
         new{T,D}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
     end
 
-    Cnsolt(df::Integer, ppo::Integer, nChs::Integer; dims) = Cnsolt(Float64, df, ppo, nChs; dims=dims)
-    function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims::Integer) where {T}
+    Cnsolt(df::Integer, ppo::Integer, nChs::Integer; kwargs...) = Cnsolt(Float64, df, ppo, nChs; kwargs...)
+    function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims::Integer=1) where {T}
         Cnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
     end
 end
