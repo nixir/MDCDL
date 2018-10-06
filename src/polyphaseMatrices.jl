@@ -431,13 +431,13 @@ end
 shiftbackward!(tp::Val{:circular}, mtx, nShift) = shiftforward!(tp, mtx, -nShift)
 
 function shiftforward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
-    mtx[:,1+nShift:end] .= mtx[:,1:end-nShift]
+    mtx[:,1+nShift:end] .= @view mtx[:,1:end-nShift]
     mtx[:,1:nShift] .= 0
     mtx
 end
 
 function shiftbackward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
-    mtx[:,1:end-nShift] .= mtx[:,1+nShift:end]
+    mtx[:,1:end-nShift] .= @view mtx[:,1+nShift:end]
     mtx[:,end-nShift+1:end] .= 0
     mtx
 end
