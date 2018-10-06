@@ -48,7 +48,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBloc
         end
         y .= B * y
     end
-    return ipermutedimspv(pvy, nBlock)
+    return ishiftdimspv(pvy, nBlock)
 end
 
 function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
@@ -82,7 +82,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlo
         shiftbackward!(Val(border), yl1, nShift)
         ye  .= B * ye
     end
-    return ipermutedimspv(pvy, nBlock)
+    return ishiftdimspv(pvy, nBlock)
 end
 
 synthesize(cc::NS, py::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
@@ -124,7 +124,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBloc
         end
         half_butterfly!(yu, yl)
     end
-    return ipermutedimspv(pvy, nBlock)
+    return ishiftdimspv(pvy, nBlock)
 end
 
 function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
@@ -160,7 +160,7 @@ function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlo
         shiftbackward!(Val(border), ys1, nShift)
         half_butterfly!(yu, yl)
     end
-    ipermutedimspv(pvy, nBlock)
+    ishiftdimspv(pvy, nBlock)
 end
 
 function synthesize(jts::JoinedTransformSystems{MS}, y::AbstractArray) where {MS<:Multiscale}

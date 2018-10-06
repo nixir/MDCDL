@@ -385,20 +385,20 @@ function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
     reshape(transpose(x.data), x.nBlocks..., size(x.data, 1))
 end
 
-function permutedimspv(x::AbstractMatrix, nShift::Integer)
-    S = fld(size(x,2), nShift)
+function shiftdimspv(x::AbstractMatrix, nBlocks::Integer)
+    S = fld(size(x,2), nBlocks)
     data = similar(x)
-    for idx = 0:nShift - 1
-        data[:,(1:S) .+ idx*S] = x[:, (1:nShift:end) .+ idx]
+    for idx = 0:nBlocks - 1
+        data[:,(1:S) .+ idx*S] = x[:, (1:nBlocks:end) .+ idx]
     end
     data
 end
 
-function ipermutedimspv(x::AbstractMatrix, nShift::Integer)
-    S = fld(size(x, 2), nShift)
+function ishiftdimspv(x::AbstractMatrix, nBlocks::Integer)
+    S = fld(size(x, 2), nBlocks)
     data = similar(x)
     for idx = 0:S-1
-        data[:,(1:nShift) .+ idx*nShift] = x[:, (1:S:end) .+ idx]
+        data[:,(1:nBlocks) .+ idx*nBlocks] = x[:, (1:S:end) .+ idx]
     end
     data
 end

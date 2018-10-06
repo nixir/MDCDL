@@ -29,7 +29,7 @@ end
 
 function extendAtomsPerDims(::Type{NS}, ::TypeI, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM},  paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
     nShift = fld(size(pvx, 2), nBlock)
-    pvx = permutedimspv(pvx, nBlock)
+    pvx = shiftdimspv(pvx, nBlock)
     # submatrices
     x  = @view pvx[:,:]
     xu = @view pvx[1:fld(P, 2), :]
@@ -54,7 +54,7 @@ end
 function extendAtomsPerDims(::Type{NS}, ::TypeII, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM},  paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
     nStages = fld(ordd, 2)
     nShift = fld(size(pvx, 2), nBlock)
-    pvx = permutedimspv(pvx, nBlock)
+    pvx = shiftdimspv(pvx, nBlock)
     # submatrices
     xe  = @view pvx[1:P-1,:]
     xu1 = @view pvx[1:fld(P,2),:]
@@ -112,7 +112,7 @@ end
 function extendAtomsPerDims(::Type{NS}, ::TypeI, pvx::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
     hP = nch[1]
     nShift = fld(size(pvx, 2), nBlock)
-    pvx = permutedimspv(pvx, nBlock)
+    pvx = shiftdimspv(pvx, nBlock)
     # submatrices
     xu = @view pvx[1:hP,:]
     xl = @view pvx[(1:hP) .+ hP,:]
@@ -142,7 +142,7 @@ function extendAtomsPerDims(::Type{NS}, ::TypeII, pvx::AbstractMatrix, nBlock::I
     end
 
     nShift = fld(size(pvx,2), nBlock)
-    pvx = permutedimspv(pvx, nBlock)
+    pvx = shiftdimspv(pvx, nBlock)
     # submatrices
     xu  = @view pvx[1:minP,:]
     xl  = @view pvx[(P-minP+1):P,:]
