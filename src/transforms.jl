@@ -1,5 +1,5 @@
 function reshape_polyvec(::Shapes.Separated, ::AbstractNsolt, pvy::PolyphaseVector)
-    [ reshape(pvy.data[p,:], pvy.nBlocks) for p in 1:size(pvy.data,1) ]
+    [ reshape(@view(pvy.data[p,:]), pvy.nBlocks) for p in 1:size(pvy.data,1) ]
 end
 
 function reshape_polyvec(::Shapes.Combined, ::AbstractNsolt, pvy::PolyphaseVector)

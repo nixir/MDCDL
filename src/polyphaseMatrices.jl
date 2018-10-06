@@ -387,20 +387,12 @@ end
 
 function shiftdimspv(x::AbstractMatrix, nBlocks::Integer)
     S = fld(size(x,2), nBlocks)
-    data = similar(x)
-    for idx = 0:nBlocks - 1
-        data[:,(1:S) .+ idx*S] = @view x[:, (1:nBlocks:end) .+ idx]
-    end
-    data
+    hcat([ @view x[:, (1:nBlocks:end) .+ idx] for idx = 0:nBlocks-1]...)
 end
 
 function ishiftdimspv(x::AbstractMatrix, nBlocks::Integer)
     S = fld(size(x, 2), nBlocks)
-    data = similar(x)
-    for idx = 0:S-1
-        data[:,(1:nBlocks) .+ idx*nBlocks] = @view x[:, (1:S:end) .+ idx]
-    end
-    data
+    hcat([ @view x[:, (1:S:end) .+ idx] for idx = 0:S-1]...)
 end
 
 function butterfly!(x::AbstractMatrix, p::Integer)
