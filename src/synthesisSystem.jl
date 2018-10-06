@@ -94,8 +94,8 @@ end
 
 function finalStep(::Type{NS}, ::Val, y::AbstractMatrix, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,NS<:Rnsolt}
     M = prod(df)
-    W0ty = (initMts[1] * Matrix(I, nch[1], cld(M,2)))' * y[1:nch[1],:]
-    U0ty = (initMts[2] * Matrix(I, nch[2], fld(M,2)))' * y[(nch[1]+1):end,:]
+    W0ty = (initMts[1] * Matrix(I, nch[1], cld(M,2)))' * @view y[1:nch[1],:]
+    U0ty = (initMts[2] * Matrix(I, nch[2], fld(M,2)))' * @view y[(nch[1]+1):end,:]
 
     reverse(matrixC, dims=2)' * vcat(W0ty, U0ty)
 end
@@ -106,9 +106,10 @@ function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTu
     end
 end
 
-function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
+function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix{TP}, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TP,TN,TM<:AbstractMatrix,NS<:Rnsolt{TN}}
     hP = nch[1]
-    pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
+    # pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
+    pvy = convert(Array{promote_type(TN,TP)}, pvy)
     nShift = fld(size(pvy, 2), nBlock)
     # submatrices
     yu = @view pvy[1:hP,:]
