@@ -27,7 +27,7 @@ function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTu
     end
 end
 
-function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
+function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix{TP}, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TN,TP,TM<:AbstractMatrix,NS<:Cnsolt{TN}}
     # pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
     pvy = convert(Array{promote_type(TN,TP)}, pvy)
     nShift = fld(size(pvy, 2), nBlock)
@@ -95,9 +95,6 @@ end
 
 function finalStep(::Type{NS}, ::Val, y::AbstractMatrix, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,NS<:Rnsolt}
     M = prod(df)
-    # W0ty = (initMts[1] * Matrix(I, nch[1], cld(M,2)))' * @view y[1:nch[1],:]
-    # U0ty = (initMts[2] * Matrix(I, nch[2], fld(M,2)))' * @view y[(nch[1]+1):end,:]
-
     W0ty = (initMts[1] * Matrix(I, nch[1], cld(M,2)))' * @view y[1:nch[1],:]
     U0ty = (initMts[2] * Matrix(I, nch[2], fld(M,2)))' * @view y[(nch[1]+1):end,:]
 

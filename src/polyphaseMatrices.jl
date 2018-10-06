@@ -74,7 +74,7 @@ end
 
 Base.@pure function haarbasis(d::Integer)
     w = walsh(d)
-    [ reshape(w[p,:], fill(2,d)...) |> Array for p in 1:size(w, 1)]
+    [ reshape(@view(w[p,:]), fill(2,d)...) |> Array for p in 1:size(w, 1)]
 end
 
 Base.@pure function walsh(n::Integer)
@@ -113,7 +113,7 @@ Base.@pure function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     isevenids = map(ci->iseven(sum(ci.I .- 1)), CartesianIndices(sz)) |> vec
     permids = sortperm(isevenids; rev=true, alg=Base.DEFAULT_STABLE)
 
-    vcat([ transpose(mtx[pi,:]) for pi in permids ]...)
+    vcat([ transpose(@view mtx[pi,:]) for pi in permids ]...)
 end
 
 
@@ -164,11 +164,11 @@ function analysisbank(::TypeI, cc::Cnsolt{T,D}) where {D,T}
 
             # B Λ(z_d) B'
             ppm = B' * ppm
-            ppm[rngLower...] = circshift(ppm[rngLower...],(0, nStride))
+            ppm[rngLower...] = circshift(@view(ppm[rngLower...]),(0, nStride))
             ppm = B * ppm
 
-            ppm[rngUpper...] = W * ppm[rngUpper...]
-            ppm[rngLower...] = U * ppm[rngLower...]
+            ppm[rngUpper...] = W * @view ppm[rngUpper...]
+            ppm[rngLower...] = U * @view ppm[rngLower...]
         end
         nStride *= ord[d] + 1
     end
@@ -203,12 +203,12 @@ function analysisbank(::TypeII, cc::Cnsolt{T,D}) where {D,T}
             U = propMats[4k-2]
 
             # B Λ(z_d) B'
-            ppm[chEven,:] = B' * ppm[chEven,:]
-            ppm[chLower,:] = circshift(ppm[chLower,:],(0, nStride))
-            ppm[chEven,:] = B * ppm[chEven,:]
+            ppm[chEven,:] = B' * @view ppm[chEven,:]
+            ppm[chLower,:] = circshift(@view(ppm[chLower,:]),(0, nStride))
+            ppm[chEven,:] = B * @view ppm[chEven,:]
 
-            ppm[chUpper,:] = W * ppm[chUpper,:]
-            ppm[chLower,:] = U * ppm[chLower,:]
+            ppm[chUpper,:] = W * @view ppm[chUpper,:]
+            ppm[chLower,:] = U * @view ppm[chLower,:]
 
             # second step
             chUpper = 1:cld(P,2)
@@ -219,12 +219,12 @@ function analysisbank(::TypeII, cc::Cnsolt{T,D}) where {D,T}
             hU = propMats[4k]
 
             # B Λ(z_d) B'
-            ppm[chEven,:] = B' * ppm[chEven,:]
-            ppm[chLower,:] = circshift(ppm[chLower,:],(0, nStride))
-            ppm[chEven,:] = B * ppm[chEven,:]
+            ppm[chEven,:] = B' * @view ppm[chEven,:]
+            ppm[chLower,:] = circshift(@view(ppm[chLower,:]),(0, nStride))
+            ppm[chEven,:] = B * @view ppm[chEven,:]
 
-            ppm[chLower,:] = hU * ppm[chLower,:]
-            ppm[chUpper,:] = hW * ppm[chUpper,:]
+            ppm[chLower,:] = hU * @view ppm[chLower,:]
+            ppm[chUpper,:] = hW * @view ppm[chUpper,:]
         end
         nStride *= ord[d] + 1
     end
@@ -243,12 +243,12 @@ function analysisbank(::TypeI, rc::Rnsolt{T,D}) where {D,T}
 
     # output
     ppm = zeros(T, P, prod(df .* (ord .+ 1)))
-    ppm[1:cld(M,2), 1:M] = rc.matrixC[1:cld(M,2),:]
-    ppm[nch[1].+(1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
+    ppm[1:cld(M,2), 1:M] = @view rc.matrixC[1:cld(M,2),:]
+    ppm[nch[1].+(1:fld(M,2)), 1:M] = @view rc.matrixC[cld(M,2)+1:end,:]
 
     # Initial matrix process
-    ppm[rngUpper...] = rc.initMatrices[1] * ppm[rngUpper...]
-    ppm[rngLower...] = rc.initMatrices[2] * ppm[rngLower...]
+    ppm[rngUpper...] = rc.initMatrices[1] * @view ppm[rngUpper...]
+    ppm[rngLower...] = rc.initMatrices[2] * @view ppm[rngLower...]
 
     nStride = M
     for d = 1:D
@@ -258,10 +258,10 @@ function analysisbank(::TypeI, rc::Rnsolt{T,D}) where {D,T}
 
             # B Λ(z_d) B'
             butterfly!(ppm, nch[1])
-            ppm[rngLower...] = circshift(ppm[rngLower...],(0, nStride))
+            ppm[rngLower...] = circshift(@view(ppm[rngLower...]),(0, nStride))
             butterfly!(ppm, nch[1])
 
-            ppm[rngLower...] = U * ppm[rngLower...]
+            ppm[rngLower...] = U * @view ppm[rngLower...]
         end
         nStride *= ord[d] + 1
     end
@@ -284,12 +284,12 @@ function analysisbank(::TypeII, rc::Rnsolt{T,D}) where {D,T}
     # output
     ppm = zeros(T, P, prod(df .* (ord .+ 1)))
     # ppm[1:M,1:M] = rc.matrixF
-    ppm[1:cld(M,2), 1:M] = rc.matrixC[1:cld(M,2),:]
-    ppm[nch[1] .+ (1:fld(M,2)), 1:M] = rc.matrixC[cld(M,2)+1:end,:]
+    ppm[1:cld(M,2), 1:M] = @view rc.matrixC[1:cld(M,2),:]
+    ppm[nch[1] .+ (1:fld(M,2)), 1:M] = @view rc.matrixC[cld(M,2)+1:end,:]
 
     # Initial matrix process
-    ppm[1:nch[1],:] = rc.initMatrices[1] * ppm[1:nch[1],:]
-    ppm[(nch[1]+1):end,:] = rc.initMatrices[2] * ppm[(nch[1]+1):end,:]
+    ppm[1:nch[1],:] = rc.initMatrices[1] * @view ppm[1:nch[1],:]
+    ppm[(nch[1]+1):end,:] = rc.initMatrices[2] * @view ppm[(nch[1]+1):end,:]
 
     nStride = M
     for d = 1:D
@@ -301,20 +301,20 @@ function analysisbank(::TypeII, rc::Rnsolt{T,D}) where {D,T}
 
             # B Λ(z_d) B'
             butterfly!(ppm, minP)
-            ppm[(minP+1):end,:] = circshift(ppm[(minP+1):end,:], (0, nStride))
+            ppm[(minP+1):end,:] = circshift(@view(ppm[(minP+1):end,:]), (0, nStride))
             butterfly!(ppm, minP)
 
-            ppm[chMinor,:] = U * ppm[chMinor,:]
+            ppm[chMinor,:] = U * @view ppm[chMinor,:]
 
             # second step
             W = propMats[2k]
 
             # B Λ(z_d) B'
             butterfly!(ppm, minP)
-            ppm[(maxP+1):end,:] = circshift(ppm[(maxP+1):end,:], (0, nStride))
+            ppm[(maxP+1):end,:] = circshift(@view(ppm[(maxP+1):end,:]), (0, nStride))
             butterfly!(ppm, minP)
 
-            ppm[chMajor,:] = W * ppm[chMajor,:]
+            ppm[chMajor,:] = W * @view ppm[chMajor,:]
         end
         nStride *= ord[d] + 1
     end
@@ -336,7 +336,7 @@ function analysiskernels(pfb::PolyphaseFB)
 
         for idx in LinearIndices(ordm)
             sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
-            out[tilesout[idx]...] = reshape(afb[p, sub], df...)
+            out[tilesout[idx]...] = reshape(@view(afb[p, sub]), df...)
         end
         out
     end
