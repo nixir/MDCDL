@@ -58,3 +58,24 @@ function intervals(lns::AbstractVector, offset::Integer=0)
 end
 
 intervals(lns::Tuple, args...) = (intervals(collect(lns), args...)...,)
+
+vm1constraint!(ns::AbstractNsolt) = vm1constraint!(Val(istype1(ns)), ns)
+
+function vm1constraint!(::TypeI, ns::Rnsolt)
+    θ, μ = mat2rotations(ns.initMatrices[1])
+    θ[1:ns.nChannels[1]-1] .= 0
+    ns.initMatrices[1] .= rotations2mat(θ, μ)
+
+    ns
+end
+
+function vm1constraint!(::TypeI, ns::Cnsolt)
+    ws = foldl(ns.propMatrices,init=I) do wtmp, mts
+        prod(reverse(mts[1:2:end])) * wtmp
+    end
+    θ, μ = mat2rotations(ns.initMatrices[1])
+    θ[1:ns.nChannels-1] .= 0
+    ns.initMatrices[1] .= cat(ws', Matrix(I, size(ws)...), dims=[1,2]) * rotations2mat(θ, μ)
+
+    ns
+end

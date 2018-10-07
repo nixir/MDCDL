@@ -328,17 +328,14 @@ function analysiskernels(pfb::PolyphaseFB)
     P = nchannels(pfb)
 
     afb = analysisbank(pfb)
-    ordm = orders(pfb) .+ 1
-
     return map(1:P) do p
-        out = similar(afb, df .* ordm )
+        out = similar(afb, kernelsize(pfb)...)
         tilesout = collect(TileIterator(axes(out), df))
 
-        for idx in LinearIndices(ordm)
+        foldl(1:length(tilesout), init=out) do mtx, idx
             sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
-            out[tilesout[idx]...] = reshape(@view(afb[p, sub]), df...)
+            setindex!(mtx, reshape(@view(afb[p, sub]), df...), tilesout[idx]...)
         end
-        out
     end
 end
 
@@ -386,14 +383,10 @@ function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
 end
 
 function shiftdimspv(x::AbstractMatrix, nBlocks::Integer)
-    S = fld(size(x,2), nBlocks)
-    hcat([ @view x[:, (1:nBlocks:end) .+ idx] for idx = 0:nBlocks-1]...)
+    hcat([ @view x[:, (1:nBlocks:end) .+ idx] for idx = 0:nBlocks-1 ]...)
 end
 
-function ishiftdimspv(x::AbstractMatrix, nBlocks::Integer)
-    S = fld(size(x, 2), nBlocks)
-    hcat([ @view x[:, (1:S:end) .+ idx] for idx = 0:S-1]...)
-end
+ishiftdimspv(x::AbstractMatrix, nBlocks::Integer) = shiftdimspv(x, fld(size(x, 2), nBlocks))
 
 function butterfly!(x::AbstractMatrix, p::Integer)
     xu = x[1:p,:]

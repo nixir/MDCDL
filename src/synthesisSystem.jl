@@ -28,8 +28,8 @@ function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTu
 end
 
 function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix{TP}, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TN,TP,TM<:AbstractMatrix,NS<:Cnsolt{TN}}
-    # pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
-    pvy = convert(Array{promote_type(TN,TP)}, pvy)
+    pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
+    # pvy = convert(Array{promote_type(TN),TP)}, pvy)
     nShift = fld(size(pvy, 2), nBlock)
     # submatrices
     y  = @view pvy[:,:]

@@ -14,7 +14,7 @@ TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
 df = (2,2)
 # polyphase order: (<:NTuple{D,Int} where D)
-ord = (4,4)
+ord = (2,2)
 # number of channels: (<:Union{Integer,Tuple{Int,Int}} for Rnsolt)
 #                     (<:Integer for Cnsolt)
 nch = 8
@@ -35,9 +35,9 @@ do_export_atoms = false
 
 # options for sparse coding
 # sparsecoder = SparseCoders.IHT( iterations = 1000, sparsity = 0.5, filter_domain=:convolution)
-sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros=trunc(Int,0.25*prod(szx)))
+sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros=trunc(Int,0.2*prod(szx)))
 # options for dictionary update
-optimizer = Optimizers.Steepest(iterations = 1000, rate = 1e-4)
+optimizer = Optimizers.Steepest(iterations = 1, rate = 1e-4)
 # optimizer = Optimizers.Adam( iterations = 100)
 
 # general options of dictionary learning
@@ -67,12 +67,11 @@ end
 # create NSOLT instance
 nsolt = Nsolt(TP, df, ord, nch)
 # set random orthonormal matrices to the initial matrices.
-# MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
-# MDCDL.rand!(nsolt)
-# nsolt.initMatrices[1] .= cat(1, qr(rand((size(nsolt.initMatrices[1]) .- 1)...)).Q, dims=[1,2])
+MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
+istype1(nsolt) && MDCDL.vm1constraint!(nsolt)
 
 msnsolt = Multiscale([ deepcopy(nsolt) for l in 1:level ]...)
-rand!(msnsolt.filterbanks[level], isSymmetry = false, isPropAng=false, isPropMat = false)
+# rand!(msnsolt.filterbanks[level], isSymmetry = false, isPropAng=false, isPropMat = false)
 
 # dictionary learning
 MDCDL.train!(msnsolt, trainingSet; options...)
