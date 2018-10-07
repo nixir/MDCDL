@@ -143,8 +143,8 @@ function analysisbank(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     M = prod(df)
     ord = cc.polyphaseOrder
 
-    rngUpper = (1:fld(P,2), :)
-    rngLower = (fld(P,2)+1:P, :)
+    # rngUpper = (1:fld(P,2), :)
+    # rngLower = (fld(P,2)+1:P, :)
 
     # output
     ppm = zeros(complex(T), P, prod(df .* (ord .+ 1)))
@@ -153,24 +153,23 @@ function analysisbank(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     # Initial matrix process
     ppm = cc.initMatrices[1] * ppm
 
-    nStride = M
+    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
         angs = cc.paramAngles[d]
         propMats = cc.propMatrices[d]
+        ppmup = @view ppm[1:fld(P,2),:]
+        ppmlw = @view ppm[fld(P,2)+1:P,:]
         for k = 1:ord[d]
             B = getMatrixB(P, angs[k])
-            W = propMats[2k-1]
-            U = propMats[2k]
 
             # B Λ(z_d) B'
-            ppm = B' * ppm
-            ppm[rngLower...] = circshift(@view(ppm[rngLower...]),(0, nStride))
-            ppm = B * ppm
+            ppm .= B' * ppm
+            ppmlw .= circshift(ppmlw, (0, nStrides[d]))
+            ppm .= B * ppm
 
-            ppm[rngUpper...] = W * @view ppm[rngUpper...]
-            ppm[rngLower...] = U * @view ppm[rngLower...]
+            ppmup .= propMats[2k-1] * ppmup
+            ppmlw .= propMats[2k] * ppmlw
         end
-        nStride *= ord[d] + 1
     end
     cc.symmetry * ppm
 end
@@ -181,7 +180,6 @@ function analysisbank(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     M = prod(df)
     ord = cc.polyphaseOrder
     nStages = fld.(ord,2)
-    chEven = 1:P-1
 
     # output
     ppm = zeros(complex(T), P, prod(df .* (ord .+ 1)))
@@ -190,43 +188,39 @@ function analysisbank(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     # Initial matrix process
     ppm = cc.initMatrices[1] * ppm
 
-    nStride = M
+    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
         angs = cc.paramAngles[d]
         propMats = cc.propMatrices[d]
+        ppmev = @view ppm[1:P-1,:]
+        ppmup1 = @view ppm[1:fld(P,2),:]
+        ppmlw1 = @view ppm[fld(P,2)+1:P-1,:]
+        ppmup2 = @view ppm[1:cld(P,2),:]
+        ppmlw2 = @view ppm[cld(P,2):P,:]
         for k = 1:nStages[d]
             # first step
-            chUpper = 1:fld(P,2)
-            chLower = fld(P,2)+1:P-1
             B = getMatrixB(P, angs[2k-1])
-            W = propMats[4k-3]
-            U = propMats[4k-2]
 
             # B Λ(z_d) B'
-            ppm[chEven,:] = B' * @view ppm[chEven,:]
-            ppm[chLower,:] = circshift(@view(ppm[chLower,:]),(0, nStride))
-            ppm[chEven,:] = B * @view ppm[chEven,:]
+            ppmev .= B' * ppmev
+            ppmlw1 .= circshift(ppmlw1,(0, nStrides[d]))
+            ppmev .= B * ppmev
 
-            ppm[chUpper,:] = W * @view ppm[chUpper,:]
-            ppm[chLower,:] = U * @view ppm[chLower,:]
+            ppmup1 .= propMats[4k-3] * ppmup1
+            ppmlw1 .= propMats[4k-2] * ppmlw1
 
             # second step
-            chUpper = 1:cld(P,2)
-            chLower = cld(P,2):P
 
             B = getMatrixB(P, angs[2k])
-            hW = propMats[4k-1]
-            hU = propMats[4k]
 
             # B Λ(z_d) B'
-            ppm[chEven,:] = B' * @view ppm[chEven,:]
-            ppm[chLower,:] = circshift(@view(ppm[chLower,:]),(0, nStride))
-            ppm[chEven,:] = B * @view ppm[chEven,:]
+            ppmev .= B' * ppmev
+            ppmlw2 .= circshift(ppmlw2,(0, nStrides[d]))
+            ppmev .= B * ppmev
 
-            ppm[chLower,:] = hU * @view ppm[chLower,:]
-            ppm[chUpper,:] = hW * @view ppm[chUpper,:]
+            ppmlw2 .= propMats[4k] * ppmlw2
+            ppmup2 .= propMats[4k-1] * ppmup2
         end
-        nStride *= ord[d] + 1
     end
     cc.symmetry * ppm
 end
@@ -250,20 +244,19 @@ function analysisbank(::TypeI, rc::Rnsolt{T,D}) where {D,T}
     ppm[rngUpper...] = rc.initMatrices[1] * @view ppm[rngUpper...]
     ppm[rngLower...] = rc.initMatrices[2] * @view ppm[rngLower...]
 
-    nStride = M
+    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
         propMats = rc.propMatrices[d]
+        ppmup = @view ppm[1:nch[1],:]
+        ppmlw = @view ppm[nch[1]+1:P,:]
         for k = 1:ord[d]
-            U = propMats[k]
-
             # B Λ(z_d) B'
             butterfly!(ppm, nch[1])
-            ppm[rngLower...] = circshift(@view(ppm[rngLower...]),(0, nStride))
+            ppmlw .= circshift(ppmlw, (0, nStrides[d]))
             butterfly!(ppm, nch[1])
 
-            ppm[rngLower...] = U * @view ppm[rngLower...]
+            ppmlw .= propMats[k] * ppmlw
         end
-        nStride *= ord[d] + 1
     end
     ppm
 end
@@ -291,32 +284,32 @@ function analysisbank(::TypeII, rc::Rnsolt{T,D}) where {D,T}
     ppm[1:nch[1],:] = rc.initMatrices[1] * @view ppm[1:nch[1],:]
     ppm[(nch[1]+1):end,:] = rc.initMatrices[2] * @view ppm[(nch[1]+1):end,:]
 
-    nStride = M
+    # nStride = M
+    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
         propMats = rc.propMatrices[d]
+        ppmlw1 = @view ppm[(minP+1):end,:]
+        ppmmn  = @view ppm[chMinor,:]
+        ppmlw2 = @view ppm[(maxP+1):end,:]
+        ppmmx  = @view ppm[chMajor,:]
         for k = 1:nStages[d]
             # first step
 
-            U = propMats[2k-1]
-
             # B Λ(z_d) B'
             butterfly!(ppm, minP)
-            ppm[(minP+1):end,:] = circshift(@view(ppm[(minP+1):end,:]), (0, nStride))
+            ppmlw1 .= circshift(ppmlw1, (0, nStrides[d]))
             butterfly!(ppm, minP)
 
-            ppm[chMinor,:] = U * @view ppm[chMinor,:]
+            ppmmn .= propMats[2k-1] * ppmmn
 
             # second step
-            W = propMats[2k]
-
             # B Λ(z_d) B'
             butterfly!(ppm, minP)
-            ppm[(maxP+1):end,:] = circshift(@view(ppm[(maxP+1):end,:]), (0, nStride))
+            ppmlw2 .= circshift(ppmlw2, (0, nStrides[d]))
             butterfly!(ppm, minP)
 
-            ppm[chMajor,:] = W * @view ppm[chMajor,:]
+            ppmmx .= propMats[2k] * ppmmx
         end
-        nStride *= ord[d] + 1
     end
     ppm
 end
