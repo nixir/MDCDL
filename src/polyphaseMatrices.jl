@@ -143,9 +143,6 @@ function analysisbank(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     M = prod(df)
     ord = cc.polyphaseOrder
 
-    # rngUpper = (1:fld(P,2), :)
-    # rngLower = (fld(P,2)+1:P, :)
-
     # output
     ppm = zeros(complex(T), P, prod(df .* (ord .+ 1)))
     ppm[1:M,1:M] = cc.matrixF
@@ -281,10 +278,11 @@ function analysisbank(::TypeII, rc::Rnsolt{T,D}) where {D,T}
     ppm[nch[1] .+ (1:fld(M,2)), 1:M] = @view rc.matrixC[cld(M,2)+1:end,:]
 
     # Initial matrix process
-    ppm[1:nch[1],:] = rc.initMatrices[1] * @view ppm[1:nch[1],:]
-    ppm[(nch[1]+1):end,:] = rc.initMatrices[2] * @view ppm[(nch[1]+1):end,:]
+    ppmiu = @view ppm[1:nch[1],:]
+    ppmil = @view ppm[(nch[1]+1):end,:]
+    ppmiu .= rc.initMatrices[1] * ppmiu
+    ppmil .= rc.initMatrices[2] * ppmil
 
-    # nStride = M
     nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
         propMats = rc.propMatrices[d]
