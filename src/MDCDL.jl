@@ -20,6 +20,7 @@ export upsample, downsample
 export permdctmtx, cdftmtx
 export serialize, deserialize
 export analysisbank
+export decimations, orders, nchannels
 export kernels, analysiskernels, synthesiskernels, kernelsize
 export getrotations, setrotations!
 export mdarray2polyphase, polyphase2mdarray
