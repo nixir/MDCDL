@@ -9,7 +9,7 @@ using NLopt
 
 ########## Configurations #########
 # choose NSOLT type: (Rnsolt | Cnsolt)
-Nsolt = Rnsolt
+Nsolt = Cnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
@@ -31,15 +31,15 @@ do_save_trainingset = false
 do_export_atoms = false
 
 # options for sparse coding
-sparsity = 0.25
-sparsecoder = SparseCoders.IHT(iterations = 1000, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
+sparsity = 0.2
+sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
 # options for dictionary update
 # optimizer = Optimizers.Steepest(iterations = 100, rate = 1e-4 )
-optimizer = Optimizers.GlobalOpt(iterations=200)
+optimizer = Optimizers.GlobalOpt(iterations=500)
 # optimizer = Optimizers.AdaGrad(iterations = 30)
 
 # general options of dictionary learning
-options = ( epochs  = 1000,
+options = ( epochs  = 20,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             optimizer = optimizer,

@@ -12,3 +12,4 @@ FFTW
 JSON
 TiledIteration
 ForwardDiff
+NLopt
