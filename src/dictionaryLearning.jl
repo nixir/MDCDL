@@ -4,6 +4,7 @@ using Statistics
 using Dates
 using FileIO: load
 using ImageCore: channelview
+using NLopt
 
 module SparseCoders
     abstract type AbstractSparseCoder end
@@ -50,13 +51,24 @@ module Optimizers
         Adam(; iterations=1, rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-8) = new(iterations, rate, beta1, beta2, epsilon)
     end
 
+    struct GlobalOpt <: AbstractOptimizer
+        iterations::Integer
+        xtolrel::Real
+        GlobalOpt(; iterations=1, xtolrel=eps()) = new(iterations, xtolrel)
+    end
 end
 
 iterations(abopt::Optimizers.AbstractOptimizer) = abopt.iterations
 
 LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}, Multiscale}
 
-function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Integer=1, shape=nothing,  sparsecoder::SparseCoders.AbstractSparseCoder=SparseCoders.IHT(), optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(), verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing)
+function train!(target::LearningTarget, trainingSet::AbstractArray;
+    epochs::Integer=1, shape=nothing,
+    sparsecoder::SparseCoders.AbstractSparseCoder=SparseCoders.IHT(),
+    optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(),
+    verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing,
+    plot_function=t->nothing)
+
     vlevel = verboselevel(verbose)
 
     savesettings(logdir, target, trainingSet;
@@ -89,6 +101,8 @@ function train!(target::LearningTarget, trainingSet::AbstractArray; epochs::Inte
         if vlevel >= 1
             println("--- epoch #$itr, sum(loss) = $(sum(loss_sps)), var(loss) = $(var(loss_sps))")
         end
+        # plot_function(target)
+
         savelogs(logdir, target, itr;
             vlevel=vlevel,
             time=string(now()),
@@ -130,6 +144,24 @@ function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::A
     params_opt = compose_params(DT, vecpm_opt, pminfo)
     loss_opt = f(vecpm_opt)
     return (params_opt, loss_opt,)
+end
+
+function updateDictionary(nlopt::Optimizers.GlobalOpt, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
+    vecpm, pminfo = decompose_params(DT, params)
+    f(t, grad=nothing) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
+
+    opt = Opt(:GN_MLSL_LDS, length(vecpm))
+    lower_bounds!(opt, -1*pi*ones(size(vecpm)))
+    upper_bounds!(opt,  1*pi*ones(size(vecpm)))
+    xtol_rel!(opt, nlopt.xtolrel)
+    xtol_abs!(opt, eps())
+    maxeval!(opt, nlopt.iterations)
+
+    min_objective!(opt, f)
+    minf, vecpm_opt, ret = optimize(opt, vecpm)
+    params_opt = compose_params(DT, vecpm_opt, pminfo)
+    # vlevel >= 0 && println("fopt(θ) = $minf, f(θ) = $(f(minx))")
+    return (params_opt, minf)
 end
 
 savesettings(::Nothing, args...; kwargs...) = nothing
@@ -271,3 +303,7 @@ namestring(nsolt::AbstractNsolt{T,D}, strnsolt::AbstractString) where {T,D} = "$
 verbosenames() = Dict(:none => 0, :standard => 1, :specified => 2, :loquacious => 3)
 verboselevel(sym::Symbol) = verbosenames()[sym]
 verboselevel(lv::Integer) = lv
+
+display_filters(::Val{false}, args...; kwargs...) = nothing
+
+display_filters(::Val{true}, nsolt::AbstractNsolt) = display(plot(nsolt))
