@@ -9,7 +9,7 @@ using TiledIteration
 
     layout :=  (2,nch)
     size -->  100 .* df .* (ord .+ 1) .* (nch, 2)
-    
+
     atmsreim = map(analysiskernels(cc)) do fp
         apply_colorscheme(Val{coordinate}, fp, cscheme, rangescale, atomscale)
     end
@@ -105,6 +105,29 @@ end
     afs = analysiskernels(cc)
 
     apply_colorscheme(afs[p], cscheme, rangescale, atomscale)
+end
+
+@recipe function atmimshow(cc::Rnsolt{T,2}, ::Val{:onecolumn}; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10) where {T}
+    mxP = maximum(cc.nChannels)
+    ord = orders(cc)
+    df =  decimations(cc)
+    nch = nchannels(cc)
+
+    layout     :=  (1, nch)
+    size -->  200 .* df .* (ord .+ 1) .* (nch, 1)
+
+    afsout = map(f->apply_colorscheme(f, cscheme, rangescale, atomscale), analysiskernels(cc))
+
+    for idx = 1:nch
+        @series begin
+            subplot := idx
+            axis    := false
+            grid    := false
+            aspect_ratio := :equal
+
+            afsout[idx]
+        end
+    end
 end
 
 apply_colorscheme(x::AbstractArray, args...; kwargs...) = apply_colorscheme(Val{:cartesian}, x, args...; kwargs...)
