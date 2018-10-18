@@ -183,6 +183,8 @@ Cnsolt3D{T} = Cnsolt{T,3}
 TypeI = Val{true}
 TypeII = Val{false}
 
+Cnsolt(nsolt::Rnsolt) = lifting(Val(istype1(nsolt)), nsolt)
+
 struct ParallelFilters{T,D} <: FilterBank{T,D}
     decimationFactor::NTuple{D,Int}
     polyphaseOrder::NTuple{D,Int}

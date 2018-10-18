@@ -421,3 +421,14 @@ end
 shiftforward(tp::Val, mtx::AbstractMatrix, nShift) = shiftforward!(tp, deepcopy(mtx), nShift)
 
 shiftbackward(tp::Val, mtx::AbstractMatrix, nShift) = shiftbackward!(tp, deepcopy(mtx), nShift)
+
+# function lifting(::Val{TypeI}, nsolt::Rnsolt{T,D}) where {T,D}
+#     initmtx = cat(nsolt.initMatrices[1:2]..., dims=[1,2])
+#
+#     for d = 1:D
+#         propMatrices[d] = [[ ]...]
+#     end
+# end
+function lifting(::Val{TypeI}, nsolt::Rnsolt{T,D}) where {T,D}
+    return Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt))
+end
