@@ -29,7 +29,7 @@ export AbstractOperator
 export TransformSystem
 export createTransform
 export Shapes, Optimizers, SparseCoders
-export readfb, savefb
+export loadfb, savefb
 
 module Shapes
     abstract type AbstractShape end

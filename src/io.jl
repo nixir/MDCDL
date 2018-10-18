@@ -32,7 +32,7 @@ end
 deserialize(dic::Dict; format::AbstractString="JSON") = deserialize(Val(Symbol(dic["Name"])), dic)
 
 function deserialize(::Val{:CNSOLT}, dic::Dict)
-    dtSet = Dict([ string(Complex{slf}) => slf for slf in subtypes(AbstractFloat) ])
+    dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
 
     T = dtSet[dic["DataType"]]
     D = dic["Dimensions"]
