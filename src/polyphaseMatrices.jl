@@ -448,11 +448,7 @@ function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
         ppmd = repeat([ Matrix{T}(I, Pw, Pw), Matrix{T}(I, Pu, Pu) ] , nsolt.polyphaseOrder[d])
 
         for k = 1:nsolt.polyphaseOrder[d]
-            ppmd[2k] = nsolt.propMatrices[d][k]
-        end
-        for hk = 1:fld(nsolt.polyphaseOrder[d], 2)
-            # ppmd[4hk-1] .*= -1
-            # ppmd[4hk  ] .*= -1
+            ppmd[2k] = copy(nsolt.propMatrices[d][k])
         end
         ppmd
     end
@@ -462,12 +458,7 @@ function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
 
     symmetry = [ ones(nsolt.nChannels[1]); -1im * ones(nsolt.nChannels[2]) ];
 
-    # symmetry = ones(P)
-
     matrixF = diagm(0=>[ ones(cM); 1im * ones(fM) ]) * nsolt.matrixC
 
     Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt), initmtx, propMatrices, paramAngs; symmetry=symmetry, matrixF=matrixF)
 end
-# function lifting(::Val{TypeI}, nsolt::Rnsolt{T,D}) where {T,D}
-#     return Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt))
-# end
