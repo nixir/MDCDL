@@ -52,6 +52,10 @@ end
     end
 end
 
+# @recipe function atmimshow(cc::Cnsolt{T,2}, ::Val{:onecolumn}; kwargs...)
+#     atmimshow(cc; kwargs...)
+# end
+
 @recipe function atmimshow(cc::Rnsolt{T,2}; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10) where {T}
     mxP = maximum(cc.nChannels)
     ord = cc.polyphaseOrder
