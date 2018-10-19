@@ -166,6 +166,8 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
     function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims::Integer=1) where {T}
         Cnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
     end
+
+    Cnsolt(nsolt::Rnsolt) = lifting(Val(istype1(nsolt)), nsolt)
 end
 
 promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
@@ -182,8 +184,6 @@ Cnsolt3D{T} = Cnsolt{T,3}
 
 TypeI = Val{true}
 TypeII = Val{false}
-
-Cnsolt(nsolt::Rnsolt) = lifting(Val(istype1(nsolt)), nsolt)
 
 struct ParallelFilters{T,D} <: FilterBank{T,D}
     decimationFactor::NTuple{D,Int}
