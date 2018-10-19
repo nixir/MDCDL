@@ -426,10 +426,10 @@ function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
     Pw = nsolt.nChannels[1]
     Pu = nsolt.nChannels[2]
     P = Pw + Pu
+    M = prod(nsolt.decimationFactor)
+    cM, fM = cld(M,2), fld(M,2)
+
     initmtx = begin
-        M = prod(nsolt.decimationFactor)
-        cM, fM = cld(M,2), fld(M,2)
-        # perms = [ cM, Pw-cM, fM, Pu-fM ]
         perms = [ collect(1:cM)...,
                   collect((1:Pw-cM) .+ M)...,
                   collect((1:fM) .+ cM)...,
@@ -443,10 +443,9 @@ function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
 
         [ V0 * pmtx ]
     end
-    # return initmtx
 
     propMatrices = map(1:D) do d
-        ppmd = repeat([ Matrix{T}(I, Pw, Pw), -Matrix{T}(I, Pu, Pu) ] , nsolt.polyphaseOrder[d])
+        ppmd = repeat([ Matrix{T}(I, Pw, Pw), Matrix{T}(I, Pu, Pu) ] , nsolt.polyphaseOrder[d])
 
         for k = 1:nsolt.polyphaseOrder[d]
             ppmd[2k] = nsolt.propMatrices[d][k]
@@ -461,11 +460,13 @@ function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
     paramAngs = Vector{Vector{T}}[ [ zeros(fld(nchannels(nsolt),4)) for n in 1:nsolt.polyphaseOrder[pd] ] for pd in 1:D ]
 
 
-    # symmetry = [ ones(nsolt.nChannels[1]); 1 * ones(nsolt.nChannels[2]) ];
+    symmetry = [ ones(nsolt.nChannels[1]); -1im * ones(nsolt.nChannels[2]) ];
 
-    symmetry = ones(P)
+    # symmetry = ones(P)
 
-    Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt), initmtx, propMatrices, paramAngs; symmetry=symmetry, matrixF=nsolt.matrixC)
+    matrixF = diagm(0=>[ ones(cM); 1im * ones(fM) ]) * nsolt.matrixC
+
+    Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt), initmtx, propMatrices, paramAngs; symmetry=symmetry, matrixF=matrixF)
 end
 # function lifting(::Val{TypeI}, nsolt::Rnsolt{T,D}) where {T,D}
 #     return Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt))
