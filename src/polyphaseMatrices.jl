@@ -422,13 +422,51 @@ shiftforward(tp::Val, mtx::AbstractMatrix, nShift) = shiftforward!(tp, deepcopy(
 
 shiftbackward(tp::Val, mtx::AbstractMatrix, nShift) = shiftbackward!(tp, deepcopy(mtx), nShift)
 
-# function lifting(::Val{TypeI}, nsolt::Rnsolt{T,D}) where {T,D}
-#     initmtx = cat(nsolt.initMatrices[1:2]..., dims=[1,2])
-#
-#     for d = 1:D
-#         propMatrices[d] = [[ ]...]
-#     end
-# end
-function lifting(::Val{TypeI}, nsolt::Rnsolt{T,D}) where {T,D}
-    return Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt))
+function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
+    Pw = nsolt.nChannels[1]
+    Pu = nsolt.nChannels[2]
+    P = Pw + Pu
+    initmtx = begin
+        M = prod(nsolt.decimationFactor)
+        cM, fM = cld(M,2), fld(M,2)
+        # perms = [ cM, Pw-cM, fM, Pu-fM ]
+        perms = [ collect(1:cM)...,
+                  collect((1:Pw-cM) .+ M)...,
+                  collect((1:fM) .+ cM)...,
+                  collect((1:Pu-fM) .+ (Pw+fM))... ]
+        pmtx = zeros(T,P,P)
+        for idx = 1:length(perms)
+            pmtx[idx, perms[idx]] = 1
+        end
+
+        V0 = cat(nsolt.initMatrices[1], nsolt.initMatrices[2], dims=[1,2])
+
+        [ V0 * pmtx ]
+    end
+    # return initmtx
+
+    propMatrices = map(1:D) do d
+        ppmd = repeat([ Matrix{T}(I, Pw, Pw), -Matrix{T}(I, Pu, Pu) ] , nsolt.polyphaseOrder[d])
+
+        for k = 1:nsolt.polyphaseOrder[d]
+            ppmd[2k] = nsolt.propMatrices[d][k]
+        end
+        for hk = 1:fld(nsolt.polyphaseOrder[d], 2)
+            # ppmd[4hk-1] .*= -1
+            # ppmd[4hk  ] .*= -1
+        end
+        ppmd
+    end
+
+    paramAngs = Vector{Vector{T}}[ [ zeros(fld(nchannels(nsolt),4)) for n in 1:nsolt.polyphaseOrder[pd] ] for pd in 1:D ]
+
+
+    # symmetry = [ ones(nsolt.nChannels[1]); 1 * ones(nsolt.nChannels[2]) ];
+
+    symmetry = ones(P)
+
+    Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt), initmtx, propMatrices, paramAngs; symmetry=symmetry, matrixF=nsolt.matrixC)
 end
+# function lifting(::Val{TypeI}, nsolt::Rnsolt{T,D}) where {T,D}
+#     return Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt))
+# end
