@@ -143,20 +143,20 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
 
     Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
 
-    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int) where {T,D}
+    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {T,D}
         mts = get_cnsolt_default_matrices(Val(iseven(nChs)), T, ppo, nChs)
         paramAngs = Vector{Vector{T}}[ [ zeros(fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
 
-        Cnsolt(df, ppo, nChs, mts..., paramAngs)
+        Cnsolt(df, ppo, nChs, mts..., paramAngs; kwargs...)
     end
 
-    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
+    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}; symmetry::AbstractVector=ones(nChs)) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
         if prod(df) > nChs
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
 
         TF = if T <: AbstractFloat; T else Float64 end
-        sym = Diagonal{Complex{TF}}(ones(nChs))
+        sym = Diagonal{Complex{TF}}(symmetry)
         mtxf = reverse(cdftmtx(TF, df...); dims=2)
 
         new{T,D}(df, ppo, nChs, initMts, propMts, paramAngs, sym, mtxf)
