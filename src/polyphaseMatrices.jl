@@ -120,7 +120,6 @@ Base.@pure function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     vcat([ transpose(@view mtx[pi,:]) for pi in permids ]...)
 end
 
-
 function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     hP = fld(P,2)
     psangs = (2 .* angs .+ pi) ./ 4
@@ -130,11 +129,9 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     LC = [[ (-1im*cs[n]) (-1im*ss[n]); (cs[n]) (-ss[n]) ] for n in 1:fld(hP,2) ]
     LS = [[ (ss[n]) (cs[n]); (1im*ss[n]) (-1im*cs[n]) ] for n in 1:fld(hP,2) ]
 
-    C, S = if iseven(hP)
-        (cat(LC...; dims=[1,2]), cat(LS...; dims=[1,2]))
-    else
-        (cat(LC...,1; dims=[1,2]), cat(LS...,1im; dims=[1,2]))
-    end
+    pbm = ones(fill(hP % 2,2)...)
+    C = cat(LC..., pbm; dims=[1,2])
+    S = cat(LS..., 1im*pbm; dims=[1,2])
 
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
