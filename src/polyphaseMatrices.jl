@@ -102,7 +102,7 @@ Base.@pure function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     mtx = representationmatrix(x->fft(T.(x)), sz)
     rm = Diagonal(Complex{T}[ exp(-1im*angle(mtx[n,end])/2) for n in 1:len ])
 
-    T.(rm * mtx / sqrt(len))
+    complex(T).(rm * mtx / sqrt(len))
 end
 
 permdctmtx(sz::NTuple) = permdctmtx(sz...)

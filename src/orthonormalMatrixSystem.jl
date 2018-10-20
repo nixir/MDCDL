@@ -1,3 +1,5 @@
+givensids(P) = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
+
 ngivensangles(n::Integer) = fld(n*(n-1),2)
 
 mat2rotations(args...) = mat2rotations_lowmemory(args...)
@@ -5,9 +7,8 @@ mat2rotations(args...) = mat2rotations_lowmemory(args...)
 function mat2rotations_normal(mtx::AbstractMatrix{T}) where T <: Real
     P = size(mtx, 1)
 
-    res = similar(mtx, fld(P*(P-1),2))
-    ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
-
+    ids = givensids(P)
+    res = similar(mtx, length(ids))
     mtx = Array(mtx)
     R = similar(mtx)
     for nr in 1:length(ids)
@@ -27,10 +28,8 @@ function mat2rotations_normal(mtx::AbstractMatrix{T}) where T <: Real
 end
 
 function mat2rotations_lowmemory(mtx::AbstractMatrix{T}) where {T<:Real}
-    P = size(mtx, 1)
-
-    res = similar(mtx, fld(P*(P-1),2))
-    ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
+    ids = givensids(size(mtx, 1))
+    res = similar(mtx, length(ids))
 
     mtx = Array(mtx)
     for nr in 1:length(ids)
@@ -56,7 +55,7 @@ function rotations2mat_normal(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P:
     mtx = Matrix{TA}(I,P,P)
     R = similar(mtx)
 
-    ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
+    ids = givensids(P)
     for nr in 1:length(ids)
         c, s = cos(θs[nr]), sin(θs[nr])
         idx1, idx2 = ids[nr]
@@ -75,7 +74,7 @@ end
 function rotations2mat_lowmemory(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
     mtx = Matrix{TA}(I,P,P)
 
-    ids = [ (idx1, idx2) for idx1 = 1:P-1 for idx2 = (idx1+1):P ]
+    ids = givensids(P)
     for nr in 1:length(ids)
         s, c = sincos(θs[nr])
         idx1, idx2 = ids[nr]
