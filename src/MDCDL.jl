@@ -150,13 +150,13 @@ struct Cnsolt{T,D} <: AbstractNsolt{T,D}
         Cnsolt(df, ppo, nChs, mts..., paramAngs; kwargs...)
     end
 
-    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}; symmetry::AbstractVector=ones(nChs), matrixF::AbstractMatrix=reverse(cdftmtx(TF, df...); dims=2)) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
+    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}; symmetry::AbstractVector=ones(nChs), matrixF::AbstractMatrix=reverse(cdftmtx(df...); dims=2)) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
         if prod(df) > nChs
             throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
         end
 
         TF = if T <: AbstractFloat; T else Float64 end
-        sym = Diagonal{Complex{TF}}(symmetry)
+        sym = Diagonal{complex(TF)}(symmetry)
 
         new{T,D}(df, ppo, nChs, initMts, propMts, paramAngs, sym, matrixF)
     end

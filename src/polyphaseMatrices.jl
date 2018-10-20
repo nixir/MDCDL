@@ -92,6 +92,8 @@ sub_walsh(::Val{0}) = 1
 cdftmtx(sz::NTuple) = cdftmtx(sz...)
 cdftmtx(sz::Integer...) = cdftmtx(Float64, sz...)
 cdftmtx(T::Type, sz::NTuple) = cdftmtx(T, sz...)
+cdftmtx(::Type, sz::Integer...) = cdftmtx(Float64, sz...)
+
 cdftmtx(::Type{Complex{T}}, sz...) where {T} = cdftmtx(T, sz...)
 
 Base.@pure function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
@@ -100,12 +102,14 @@ Base.@pure function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     mtx = representationmatrix(x->fft(T.(x)), sz)
     rm = Diagonal(Complex{T}[ exp(-1im*angle(mtx[n,end])/2) for n in 1:len ])
 
-    rm * mtx / sqrt(T(len))
+    T.(rm * mtx / sqrt(len))
 end
 
 permdctmtx(sz::NTuple) = permdctmtx(sz...)
 permdctmtx(sz::Integer...) = permdctmtx(Float64, sz...)
 permdctmtx(T::Type, sz::NTuple) = permdctmtx(T, sz...)
+
+permdctmtx(::Type, sz::Integer...) = permdctmtx(Float64, sz...)
 
 Base.@pure function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     mtx = representationmatrix(x->dct(T.(x)), sz)
@@ -316,16 +320,15 @@ kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))
 
 function analysiskernels(pfb::PolyphaseFB)
     df = decimations(pfb)
-    P = nchannels(pfb)
 
     afb = analysisbank(pfb)
-    return map(1:P) do p
-        out = similar(afb, kernelsize(pfb)...)
+    return map([ @view(afb[p,:]) for p in 1:size(afb, 1) ]) do vf
+        out = similar(vf, kernelsize(pfb)...)
         tilesout = collect(TileIterator(axes(out), df))
 
         foldl(1:length(tilesout), init=out) do mtx, idx
             sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
-            setindex!(mtx, reshape(@view(afb[p, sub]), df...), tilesout[idx]...)
+            setindex!(mtx, reshape(@view(vf[sub]), df...), tilesout[idx]...)
         end
     end
 end
