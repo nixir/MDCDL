@@ -434,9 +434,9 @@ function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
                   collect((1:Pw-cM) .+ M)...,
                   collect((1:fM) .+ cM)...,
                   collect((1:Pu-fM) .+ (Pw+fM))... ]
-        pmtx = zeros(T,P,P)
-        for idx = 1:length(perms)
-            pmtx[idx, perms[idx]] = 1
+
+        pmtx = foldl(1:length(perms), init=zeros(T,P,P)) do mtx, idx
+            setindex!(mtx, 1, idx, perms[idx])
         end
 
         V0 = cat(nsolt.initMatrices[1], nsolt.initMatrices[2], dims=[1,2])
@@ -444,17 +444,13 @@ function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
         [ V0 * pmtx ]
     end
 
-    propMatrices = map(1:D) do d
-        ppmd = repeat([ Matrix{T}(I, Pw, Pw), Matrix{T}(I, Pu, Pu) ] , nsolt.polyphaseOrder[d])
+    propMatrices = map(nsolt.propMatrices) do ppmold
+        ppmnew = [ [ Matrix{T}(I, Pw, Pw), copy(mtx) ] for mtx in ppmold ]
 
-        for k = 1:nsolt.polyphaseOrder[d]
-            ppmd[2k] = copy(nsolt.propMatrices[d][k])
-        end
-        ppmd
+        reduce( (lhs, rhs)->[lhs..., rhs...] , ppmnew)
     end
 
     paramAngs = Vector{Vector{T}}[ [ zeros(fld(nchannels(nsolt),4)) for n in 1:nsolt.polyphaseOrder[pd] ] for pd in 1:D ]
-
 
     symmetry = [ ones(nsolt.nChannels[1]); -1im * ones(nsolt.nChannels[2]) ];
 
