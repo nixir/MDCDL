@@ -31,6 +31,8 @@ export createTransform
 export Shapes, Optimizers, SparseCoders
 export loadfb, savefb
 
+include("sparsecoders/SparseCoders.jl")
+
 module Shapes
     abstract type AbstractShape end
 
@@ -264,7 +266,7 @@ function createTransform(ms::MS, shape::S=Shapes.Separated()) where {MS<:Multisc
     JoinedTransformSystems(MS(opsarr...), shape)
 end
 
-include("sparseCoding.jl")
+# include("sparseCoding.jl")
 
 include("orthonormalMatrixSystem.jl")
 include("polyphaseMatrices.jl")

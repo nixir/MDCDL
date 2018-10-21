@@ -4,19 +4,8 @@ using Statistics
 using Dates
 using FileIO: load
 using ImageCore: channelview
+using Colors
 using NLopt
-
-module SparseCoders
-    abstract type AbstractSparseCoder end
-    struct IHT{T} <: AbstractSparseCoder
-        iterations::Integer
-        nonzeros::T
-
-        filter_domain::Symbol
-
-        IHT(; iterations=1, nonzeros::T, filter_domain=:convolution) where {T<:Union{Integer,Tuple}} = new{T}(iterations, nonzeros, filter_domain)
-    end
-end
 
 module Optimizers
     abstract type AbstractOptimizer end
@@ -307,3 +296,15 @@ verboselevel(lv::Integer) = lv
 display_filters(::Val{false}, args...; kwargs...) = nothing
 
 display_filters(::Val{true}, nsolt::AbstractNsolt) = display(plot(nsolt))
+
+
+
+function iht(cb::CodeBook, x, args...; kwargs...)
+    syn = createSynthesizer(cb, x; shape=Shapes.Vec())
+    adj = createAnalyzer(cb, x; shape=Shapes.Vec())
+    iht(syn, adj, x, args...; kwargs...)
+end
+
+function iht(a::AbstractOperator, s::AbstractOperator, x, args...; kwargs...)
+    SparseCoders.iht(t->synthesize(a, t), t->analyze(s, t), x, args...; kwargs...)
+end
