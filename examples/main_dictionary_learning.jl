@@ -7,7 +7,7 @@ using Base.Filesystem
 using Dates
 
 ########## Configurations #########
-# choose NSOLT type: (Rnsolt | Cnsolt)
+# choose NSOLT type: (Rnsolt | Cnsolt)>
 Nsolt = Rnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64

@@ -12,7 +12,7 @@ export rand, rand!
 
 export PolyphaseVector
 export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt, ParallelFilters
-export Multiscale, MultiLayerCsc
+export Multiscale
 
 export istype1, istype2
 export analyze, synthesize, adjoint_synthesize
@@ -32,6 +32,8 @@ export Shapes, Optimizers, SparseCoders
 export loadfb, savefb
 
 include("sparsecoders/SparseCoders.jl")
+include("optimizers/Optimizers.jl")
+using MDCDL.Optimizers: iterations
 
 module Shapes
     abstract type AbstractShape end
@@ -265,8 +267,6 @@ function createTransform(ms::MS, shape::S=Shapes.Separated()) where {MS<:Multisc
     end
     JoinedTransformSystems(MS(opsarr...), shape)
 end
-
-# include("sparseCoding.jl")
 
 include("orthonormalMatrixSystem.jl")
 include("polyphaseMatrices.jl")
