@@ -9,7 +9,7 @@ using NLopt
 
 ########## Configurations #########
 # choose NSOLT type: (Rnsolt | Cnsolt)
-Nsolt = Cnsolt
+Nsolt = Rnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
@@ -31,18 +31,19 @@ do_save_trainingset = false
 do_export_atoms = false
 
 # options for sparse coding
-sparsity = 0.2
+sparsity = 0.4
 sparsecoder = SparseCoders.IHT
 sparsecoder_options = (
-    iterations = 100,
+    iterations = 1000,
     nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution,)
 # options for dictionary update
-optimizer = Optimizers.GlobalOpt
+optimizer = Optimizers.Steepest
 optimizer_options = (
-    iterations=500,)
+    rate = 1e-4,
+    iterations=1,)
 
 # general options of dictionary learning
-options = ( epochs  = 20,
+options = ( epochs  = 1000,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
             sparsecoder_options = sparsecoder_options,
@@ -61,7 +62,7 @@ trainingSet = [ imresize(orgImg, szx) .|> Float64 ]
 # create NSOLT instance
 nsolt = Nsolt(TP, df, ord, nch)
 # set random orthonormal matrices to the initial matrices.
-# MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
+MDCDL.rand!(nsolt, isPropMat = false, isPropAng = false, isSymmetry = false)
 
 # dictionary learning
 MDCDL.train!(nsolt, trainingSet; options...)

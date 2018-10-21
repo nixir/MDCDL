@@ -4,7 +4,7 @@ using Statistics
 using Dates
 using FileIO: load
 using ImageCore: channelview
-using Colors
+using ColorTypes
 using NLopt
 
 LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}, Multiscale}
@@ -64,34 +64,24 @@ end
 
 function stepSparseCoding(ihtsc::Type{SparseCoders.IHT}, options, cb::DT, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
     ts = createTransform(cb, shape)
-
-    # initial sparse vector y0
-    y0 = analyze(ts, x)
     # number of non-zero coefficients
     iht = ihtsc(x, t->synthesize(ts, t), t->analyze(ts, t); options...)
 
+    # initial sparse vector y0
+    y0 = analyze(ts, x)
     y_opt, loss_iht = iht(y0, isverbose=(vlevel>=3))
 
     return (y_opt, loss_iht)
 end
 
-updateDictionary(::Optimizers.AbstractOptimizer, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
-
 function updateDictionary(optr_t::Type{AG}, opt_params, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray,AG<:Optimizers.AbstractGradientDescent}
-    optr = optr_t(; opt_params...)
     vecpm, pminfo = decompose_params(DT, params)
     f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
     ∇f(t) = ForwardDiff.gradient(f, t)
+    optr = optr_t(∇f; opt_params...)
 
-    vecpm_opt = vecpm
-    optim_state = initialstate(optr, ∇f, vecpm)
-    for itr = 1:iterations(optr)
-        Δvecpm = ∇f(vecpm_opt)
-        upm, optim_state = updateamount(optr, Δvecpm, itr, optim_state)
-        vecpm_opt -= upm
+    vecpm_opt = optr(vecpm)
 
-        vlevel >= 3 && println("Dic. Up. Stage: #Iter. = $itr, loss = $(f(vecpm_opt)), ||∇loss|| = $(norm(Δvecpm))")
-    end
     params_opt = compose_params(DT, vecpm_opt, pminfo)
     loss_opt = f(vecpm_opt)
     return (params_opt, loss_opt,)
@@ -224,26 +214,6 @@ function compose_params(::Type{Multiscale}, vp::AbstractArray, pminfo::Tuple) wh
     map((lhs,rhs)->(lhs,rhs,), arrpms, pminfo[2])
 end
 
-initialstate(spr::Optimizers.Steepest, args...) = ()
-initialstate(spr::Optimizers.AdaGrad, args...) = 0.0
-initialstate(adam::Optimizers.Adam, ∇f::Function, vecpm::AbstractArray) = (zero(vecpm), 0.0)
-
-updateamount(stp::Optimizers.Steepest, grad, args...) = (stp.rate .* grad, ())
-function updateamount(agd::Optimizers.AdaGrad, grad::AbstractArray, ::Integer, v::AbstractFloat)
-    v = v + norm(grad)^2
-    upm = agd.rate / (sqrt(v) + agd.ϵ) * grad
-    (upm, v)
-end
-function updateamount(adam::Optimizers.Adam, grad::AbstractArray, itr::Integer, (m, v)::Tuple{TM,TV}) where {TM<:AbstractArray,TV<:AbstractFloat}
-    m = adam.β1 * m + (1 - adam.β1) * grad
-    v = adam.β2 * v + (1 - adam.β2) * norm(grad)^2
-    m̂ = m / (1 - adam.β1^(itr))
-    v̂ = v / (1 - adam.β2^(itr))
-
-    upm = adam.rate * m̂ / (sqrt(v̂) + adam.ϵ)
-    (upm, (m, v))
-end
-
 getvalidshape(shape::Shapes.AbstractShape, args...) = shape
 getvalidshape(::Nothing, ::LearningTarget, sc, du, x::AbstractArray) = Shapes.Vec(size(x))
 getvalidshape(::Nothing, ::Multiscale, ::SparseCoders.IHT{T}, args...) where {N,T<:NTuple{N}} = Shapes.Arrayed()
@@ -259,15 +229,3 @@ verboselevel(lv::Integer) = lv
 display_filters(::Val{false}, args...; kwargs...) = nothing
 
 display_filters(::Val{true}, nsolt::AbstractNsolt) = display(plot(nsolt))
-
-
-
-# function iht(cb::CodeBook, x, args...; kwargs...)
-#     syn = createSynthesizer(cb, x; shape=Shapes.Vec())
-#     adj = createAnalyzer(cb, x; shape=Shapes.Vec())
-#     iht(syn, adj, x, args...; kwargs...)
-# end
-#
-# function iht(a::AbstractOperator, s::AbstractOperator, x, args...; kwargs...)
-#     SparseCoders.iht(t->synthesize(a, t), t->analyze(s, t), x, args...; kwargs...)
-# end
