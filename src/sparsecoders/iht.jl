@@ -1,11 +1,15 @@
 
 struct IHT{T} <: AbstractSparseCoder
+    x
+    Φ
+    Φᵀ
     iterations::Integer
     nonzeros::T
 
+    absTol
     filter_domain::Symbol
 
-    IHT(; iterations=1, nonzeros::T, filter_domain=:convolution) where {T<:Union{Integer,Tuple}} = new{T}(iterations, nonzeros, filter_domain)
+    IHT(x, Φ, Φᵀ; iterations=1, nonzeros::T, absTol=1e2*eps(), filter_domain=:convolution) where {T<:Union{Integer,Tuple}} = new{T}(x, Φ, Φᵀ, iterations, nonzeros, absTol, filter_domain)
 end
 
 # argmin_{y} || x - Φy ||_2^2/2 s.t. ||y||_0 ≤ K
@@ -37,4 +41,8 @@ function iht(Φ::Function, Φᵀ::Function, x, y0, S; iterations::Integer=1, abs
         end
     end
     (yₖ, εx)
+end
+
+function (_iht::IHT)(y0; isverbose)
+    iht(_iht.Φ, _iht.Φᵀ, _iht.x, y0, _iht.nonzeros; iterations=_iht.iterations, absTol=_iht.absTol, isverbose=isverbose)
 end

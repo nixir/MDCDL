@@ -11,8 +11,10 @@ LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}, Multiscale}
 
 function train!(target::LearningTarget, trainingSet::AbstractArray;
     epochs::Integer=1, shape=nothing,
-    sparsecoder::SparseCoders.AbstractSparseCoder=SparseCoders.IHT(),
-    optimizer::Optimizers.AbstractOptimizer=Optimizers.Steepest(),
+    sparsecoder=SparseCoders.IHT,
+    sparsecoder_options=(),
+    optimizer=Optimizers.Steepest,
+    optimizer_options=(),
     verbose::Union{Integer,Symbol}=1, logdir=Union{Nothing,AbstractString}=nothing,
     plot_function=t->nothing)
 
@@ -34,11 +36,11 @@ function train!(target::LearningTarget, trainingSet::AbstractArray;
             shapek = getvalidshape(shape, target, sparsecoder, optimizer, x)
 
             vlevel >= 3 && println("start Sparse Coding Stage.")
-            sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, target, x; shape=shapek, vlevel=vlevel)
+            sparse_coefs, loss_sps[k] = stepSparseCoding(sparsecoder, sparsecoder_options, target, x; shape=shapek, vlevel=vlevel)
             vlevel >= 3 && println("end Sparse Coding Stage.")
 
             vlevel >= 3 && println("start Dictionary Update.")
-            params_dic, loss_dus[k] = updateDictionary(optimizer, target, x, sparse_coefs, params_dic; shape=shapek, vlevel=vlevel)
+            params_dic, loss_dus[k] = updateDictionary(optimizer, optimizer_options, target, x, sparse_coefs, params_dic; shape=shapek, vlevel=vlevel)
             vlevel >= 3 && println("end Dictionary Update Stage.")
 
             vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
@@ -60,21 +62,23 @@ function train!(target::LearningTarget, trainingSet::AbstractArray;
     return setParamsDictionary!(target, params_dic)
 end
 
-function stepSparseCoding(ihtsc::SparseCoders.IHT, cb::DT, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
+function stepSparseCoding(ihtsc::Type{SparseCoders.IHT}, options, cb::DT, x::AbstractArray; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
     ts = createTransform(cb, shape)
 
     # initial sparse vector y0
     y0 = analyze(ts, x)
     # number of non-zero coefficients
+    iht = ihtsc(x, t->synthesize(ts, t), t->analyze(ts, t); options...)
 
-    y_opt, loss_iht = iht(ts, ts, x, y0, ihtsc.nonzeros; iterations=ihtsc.iterations, isverbose=(vlevel>=3))
+    y_opt, loss_iht = iht(y0, isverbose=(vlevel>=3))
 
     return (y_opt, loss_iht)
 end
 
 updateDictionary(::Optimizers.AbstractOptimizer, cb::LearningTarget, x::AbstractArray, hy::AbstractArray; kwargs...) = updateDictionary(cb, x, hy, getParamsDictionary(cb), kwargs...)
 
-function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray}
+function updateDictionary(optr_t::Type{AG}, opt_params, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape::Shapes.AbstractShape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget,TT<:AbstractArray,TM<:AbstractArray,AG<:Optimizers.AbstractGradientDescent}
+    optr = optr_t(; opt_params...)
     vecpm, pminfo = decompose_params(DT, params)
     f(t) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
     ∇f(t) = ForwardDiff.gradient(f, t)
@@ -93,7 +97,8 @@ function updateDictionary(optr::Optimizers.AbstractGradientDescent, cb::DT, x::A
     return (params_opt, loss_opt,)
 end
 
-function updateDictionary(nlopt::Optimizers.GlobalOpt, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
+function updateDictionary(nlopt_t::Type{Optimizers.GlobalOpt}, opt_params, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
+    nlopt = nlopt_t(; opt_params...)
     vecpm, pminfo = decompose_params(DT, params)
     f(t, grad=nothing) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
 
@@ -257,12 +262,12 @@ display_filters(::Val{true}, nsolt::AbstractNsolt) = display(plot(nsolt))
 
 
 
-function iht(cb::CodeBook, x, args...; kwargs...)
-    syn = createSynthesizer(cb, x; shape=Shapes.Vec())
-    adj = createAnalyzer(cb, x; shape=Shapes.Vec())
-    iht(syn, adj, x, args...; kwargs...)
-end
-
-function iht(a::AbstractOperator, s::AbstractOperator, x, args...; kwargs...)
-    SparseCoders.iht(t->synthesize(a, t), t->analyze(s, t), x, args...; kwargs...)
-end
+# function iht(cb::CodeBook, x, args...; kwargs...)
+#     syn = createSynthesizer(cb, x; shape=Shapes.Vec())
+#     adj = createAnalyzer(cb, x; shape=Shapes.Vec())
+#     iht(syn, adj, x, args...; kwargs...)
+# end
+#
+# function iht(a::AbstractOperator, s::AbstractOperator, x, args...; kwargs...)
+#     SparseCoders.iht(t->synthesize(a, t), t->analyze(s, t), x, args...; kwargs...)
+# end

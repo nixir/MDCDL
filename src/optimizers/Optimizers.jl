@@ -40,4 +40,8 @@ module Optimizers
     end
 
     iterations(abopt::AbstractOptimizer) = abopt.iterations
+
+    function optimize(abopt::AbstractGradientDescent, x0; kwargs...)
+
+    end
 end

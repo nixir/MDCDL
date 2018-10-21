@@ -32,17 +32,22 @@ do_export_atoms = false
 
 # options for sparse coding
 sparsity = 0.2
-sparsecoder = SparseCoders.IHT(iterations = 100, nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution)
+sparsecoder = SparseCoders.IHT
+sparsecoder_options = (
+    iterations = 100,
+    nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution,)
 # options for dictionary update
-# optimizer = Optimizers.Steepest(iterations = 100, rate = 1e-4 )
-optimizer = Optimizers.GlobalOpt(iterations=500)
-# optimizer = Optimizers.AdaGrad(iterations = 30)
+optimizer = Optimizers.GlobalOpt
+optimizer_options = (
+    iterations=500,)
 
 # general options of dictionary learning
 options = ( epochs  = 20,
             verbose = :standard, # :none, :standard, :specified, :loquacious
             sparsecoder = sparsecoder,
+            sparsecoder_options = sparsecoder_options,
             optimizer = optimizer,
+            optimizer_options = optimizer_options,
             logdir = logdir,)
 ####################################
 logdir != nothing && !isdir(logdir) && mkpath(logdir)

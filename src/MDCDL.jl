@@ -14,10 +14,9 @@ export PolyphaseVector
 export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt, ParallelFilters
 export Multiscale
 
-export istype1, istype2
+export istype1, istype2, permdctmtx, cdftmtx
 export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
-export permdctmtx, cdftmtx
 export serialize, deserialize
 export analysisbank
 export decimations, orders, nchannels
@@ -128,12 +127,6 @@ promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsol
 
 similar(nsolt::Rnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimationFactor, ord::NTuple{DD}=nsolt.polyphaseOrder, nch::Union{Integer,Tuple{Int,Int}}=nsolt.nChannels) where {T,DS,DD} = Rnsolt(element_type, df, ord, nch)
 
-istype1(nsolt::Rnsolt) = nsolt.nChannels[1] == nsolt.nChannels[2]
-
-Rnsolt1D{T} = Rnsolt{T,1}
-Rnsolt2D{T} = Rnsolt{T,2}
-Rnsolt3D{T} = Rnsolt{T,3}
-
 struct Cnsolt{T,D} <: AbstractNsolt{T,D}
     decimationFactor::NTuple{D, Int}
     polyphaseOrder::NTuple{D, Int}
@@ -178,12 +171,9 @@ promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsol
 similar(nsolt::Cnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimationFactor, ord::NTuple{DD}=nsolt.polyphaseOrder, nch::Integer=nsolt.nChannels) where {T,DS,DD} = Cnsolt(element_type, df, ord, nch)
 
 istype1(nsolt::Cnsolt) = iseven(nsolt.nChannels)
+istype1(nsolt::Rnsolt) = nsolt.nChannels[1] == nsolt.nChannels[2]
 
 istype2(nsolt::AbstractNsolt) = !istype1(nsolt)
-
-Cnsolt1D{T} = Cnsolt{T,1}
-Cnsolt2D{T} = Cnsolt{T,2}
-Cnsolt3D{T} = Cnsolt{T,3}
 
 TypeI = Val{true}
 TypeII = Val{false}
