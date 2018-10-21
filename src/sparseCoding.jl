@@ -1,40 +1,69 @@
 using LinearAlgebra
 using ColorTypes, ColorVectorSpace
+
+struct ISTA
+    ∇f
+    prox
+    η::Real
+    iterations::Integer
+
+    absTol::Real
+end
+
+
+function ISTA(∇f; iterations=nothing, prox=(t,λ)->t, η::Real=1.0, absTol=1e2*eps())
+    ISTA(∇f, prox, η, iterations, absTol)
+end
+
 # iterative shrinkage/thresholding algorithm
 # solve a regularized convex optimization problem e.x. f(x) + g(x)
 # ∇loss : gradient of loss function f(x)
 # prox  : proximity function of g(x)
 # x0    : initial value
 # η     : step size of update
-function ista(∇loss::Function, prox::Function, x0; η::Real=1.0, iterations::Integer=20, absTol::Real=1e2*eps(), verboseFunction::Function=(args...)->nothing)
+
+function (ista::ISTA)(x0; iterations=ista.iterations, verboseFunction::Function=(args...)->nothing)
     xₖ = x0
     errx = Inf
     len = length(x0)
-    for k = 1:iterations
+    for k = 1:ista.iterations
         xₖ₋₁ = xₖ
-        xₖ = prox(xₖ - η*∇loss(xₖ), η)
+        xₖ = ista.prox(xₖ - ista.η*ista.∇f(xₖ), ista.η)
 
         errx = norm(xₖ - xₖ₋₁)^2 / 2
 
         verboseFunction(k, xₖ, errx)
 
-        if errx <= absTol
+        if errx <= ista.absTol
             break
         end
     end
     xₖ
 end
 
-function fista(∇loss::Function, prox::Function, x0; η::Real=1.0, iterations::Integer=100, absTol::Real=1e2*eps(), verboseFunction::Function=(itrs,tx,err)->nothing)
+struct FISTA
+    ∇f
+    prox
+    η::Real
+    iterations::Integer
+
+    absTol::Real
+end
+
+function FISTA(∇f; iterations=nothing, prox=(t,λ)->t, η::Real=1.0, absTol=1e2*eps())
+    FISTA(∇f, prox, η, iterations, absTol)
+end
+
+function (fista::FISTA)(x0; iterations=fista.iterations, verboseFunction::Function=(itrs,tx,err)->nothing)
     xₖ = x0
     errx = Inf
     len = length(x0)
     y = x0
     tₖ = 1
-    for k = 1:iterations
+    for k = 1:fista.iterations
         xₖ₋₁, tₖ₋₁ = xₖ, tₖ
 
-        xₖ = prox(y - η*∇loss(y), η)
+        xₖ = fista.prox(y - fista.η*fista.∇f(y), fista.η)
         tₖ = (1 + sqrt(1+4*tₖ^2)) / 2
         t̂ = (tₖ₋₁ - 1) / tₖ
         y = xₖ + t̂*(xₖ - xₖ₋₁)
@@ -43,13 +72,31 @@ function fista(∇loss::Function, prox::Function, x0; η::Real=1.0, iterations::
 
         verboseFunction(k, xₖ, errx)
 
-        if errx <= absTol
+        if errx <= fista.absTol
             break
         end
     end
     xₖ
 end
 
+struct PDS
+    ∇h
+    proxF
+    proxG
+    L
+    Lᵀ
+
+    iterations::Integer
+    τ::Real
+    σ::Real
+    λ::Real
+
+    absTol::Real
+end
+
+function PDS(∇h; proxF=(t,a)->t, proxG=(t,a)->t, L=identity, adjL=identity, τ=1.0, σ=1.0, λ=1.0, iterations=nothing, absTol=1e2*eps())
+    PDS(∇h, proxF, proxG, L, adjL, iterations, τ, σ, λ, absTol)
+end
 
 # FB-based primal-dual splitting algorithm
 # N. Komodakis and J. Pesquet, "Playing with Duality," IEEE Signal Processing Magazine, vol. 32, no. 6, pp. 31--54, 2015.
@@ -60,14 +107,14 @@ end
 # ∇loss : gradient of loss function f(x)
 # L: linear operator
 # Lᵀ: adjoint of L
-function pds(∇loss::Function, proxF::Function, proxG::Function, L::Function, Lᵀ::Function, x0, v0=L(x0); τ::Real=1.0, σ::Real=1.0, λ::Real=1.0, iterations::Integer=100, absTol::Real=1e-10, verboseFunction::Function=(args...)->nothing)
+function (pds::PDS)(x0, v0=pds.L(x0); iterations=pds.iterations, verboseFunction::Function=(args...)->nothing)
     xₖ = x0
     v = v0
-    cproxG = fmconj(proxG)
+    cproxG = fmconj(pds.proxG)
     for k = 1:iterations
         xₖ₋₁ = xₖ
-        p = proxF(xₖ - τ*(∇loss(xₖ) + Lᵀ(v)), τ)
-        q = cproxG(v + L(2.0*p - xₖ₋₁), σ^-1)
+        p = pds.proxF(xₖ - pds.τ*(pds.∇h(xₖ) + pds.Lᵀ(v)), pds.τ)
+        q = cproxG(v + pds.L(2.0*p - xₖ₋₁), pds.σ^-1)
 
         # (x, v) <- (x, v) + λ((p,q) - (x,v)) for　λ == 1
         xₖ, v = (x, v) + λ .* (p - x, q - v)
@@ -75,6 +122,7 @@ function pds(∇loss::Function, proxF::Function, proxG::Function, L::Function, L
 
         errx = norm(xₖ - xₖ₋₁)^2 /2
         verboseFunction(nItr, xₖ, errx)
+        # TODO: break condition
     end
     xₖ
 end
@@ -145,7 +193,7 @@ end
 
 function l2ballProj(x::AbstractArray, radius::Real, c::AbstractArray)
     dist = norm(x - centerVec)
-    
+
     ifelse(dist <= radius, x, (λ / dist) * (x - c) + c)
 end
 
