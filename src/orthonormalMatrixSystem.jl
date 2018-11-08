@@ -104,3 +104,42 @@ function graph_one_factorization(::Val{false}, P::Integer)
     oddgf = graph_one_factorization(P-1)
     [ [ elem..., (idx, P) ] for (idx, elem) in enumerate(oddgf) ]
 end
+
+# function mat2rotations_permutated(mtx::AbstractMatrix{T}) where T <: Real
+#     P = size(mtx, 1)
+#
+#     res = similar(mtx, fld(P*(P-1),2))
+#     mtx = Array(mtx)
+#
+#     for (nr, (idx1, idx2)) in enumerate(vcat(graph_one_factorization(P)...))
+#         a = givens(mtx, idx1, idx2, idx1)
+#         g = a[1]
+#
+#         res[nr] = atan(g.s, g.c)
+#
+#         R = Matrix{T}(I,P,P)
+#         R[g.i1, g.i1] =  g.c
+#         R[g.i1, g.i2] =  g.s
+#         R[g.i2, g.i1] = -g.s
+#         R[g.i2, g.i2] =  g.c
+#         mtx .= R*mtx
+#     end
+#     (res, round.(diag(mtx)))
+# end
+#
+# function rotations2mat_permutated(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
+#     θrsp = reshape(θs, 2*cld(P,2)-1, fld(P,2))
+#     mtx = mapreduce(*, enumerate(graph_one_factorization(P))) do (blk, ids)
+#         R = Matrix{TA}(I,P,P)
+#         for (nr, (idx1, idx2)) in enumerate(ids)
+#             s = sin(θrsp[blk, nr])
+#             c = cos(θrsp[blk, nr])
+#             R[idx1, idx1] =  c
+#             R[idx1, idx2] = -s
+#             R[idx2, idx1] =  s
+#             R[idx2, idx2] =  c
+#         end
+#         R
+#     end
+#     mtx * diagm(0 => sig)
+# end
