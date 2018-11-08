@@ -86,3 +86,21 @@ function rotations2mat_lowmemory(θs::AbstractArray{TA}, sig::AbstractArray{TS},
     end
     mtx * diagm(0 => sig)
 end
+
+graph_one_factorization(P::Integer) = graph_one_factorization(Val(isodd(P)), P)
+
+# When P is odd.
+function graph_one_factorization(::Val{true}, P::Integer)
+    map(0:P-1) do pivot_idx
+        map(1:fld(P,2)) do offset
+            ids = [ pivot_idx - offset, pivot_idx + offset ]
+            (sort(mod.(ids, P) .+ 1)...,)
+        end
+    end
+end
+
+# When P is even.
+function graph_one_factorization(::Val{false}, P::Integer)
+    oddgf = graph_one_factorization(P-1)
+    [ [ elem..., (idx, P) ] for (idx, elem) in enumerate(oddgf) ]
+end
