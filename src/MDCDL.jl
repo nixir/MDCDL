@@ -11,7 +11,7 @@ import Random: rand, rand!
 export rand, rand!
 
 export PolyphaseVector
-export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, Rnsolt, ParallelFilters
+export FilterBank, PolyphaseFB, AbstractNsolt, Cnsolt, CnsoltTypeI, CnsoltTypeII, Rnsolt, RnsoltTypeI, RnsoltTypeII, ParallelFilters
 export Multiscale
 
 export istype1, istype2, permdctmtx, cdftmtx
@@ -67,7 +67,6 @@ promote_rule(::Type{PolyphaseVector{TA,D}}, ::Type{PolyphaseVector{TB,D}}) where
 abstract type CodeBook{T,D} end
 abstract type FilterBank{T,D} <: CodeBook{T,D} end
 abstract type PolyphaseFB{T,D} <: FilterBank{T,D} end
-abstract type AbstractNsolt{T,D} <: PolyphaseFB{T,D} end
 
 eltype(::Type{CB}) where {T,D,CB<:CodeBook{T,D}} = T
 ndims(::Type{CB}) where {T,D,CB<:CodeBook{T,D}} = D
@@ -79,104 +78,6 @@ orders(fb::FilterBank) = fb.polyphaseOrder
 
 kernels(fb::FilterBank) = fb.kernels
 kernelsize(fb::FilterBank) = decimations(fb) .* (1 .+ orders(fb))
-
-struct Rnsolt{T,D} <: AbstractNsolt{T,D}
-    decimationFactor::NTuple{D, Int}
-    polyphaseOrder::NTuple{D, Int}
-    nChannels::Tuple{Int,Int}
-
-    initMatrices::Array{AbstractMatrix{T},1}
-    propMatrices::Array{Array{AbstractMatrix{T},1},1}
-
-    matrixC::Matrix
-
-    # Constructors
-    Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
-
-    Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {D,T} = Rnsolt(T, df, ppo, (cld(nChs,2), fld(nChs,2)))
-
-    function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}) where {T,D}
-        mts = get_rnsolt_default_matrices(Val(nChs[1]==nChs[2]), T, ppo, nChs)
-        Rnsolt(df, ppo, nChs, mts...)
-    end
-
-    function Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}, initMts::Vector{MT}, propMts::Vector{Vector{MT}}) where {T,D,MT<:AbstractArray{T}}
-        P = sum(nChs)
-        M = prod(df)
-        if !(cld(M,2) <= nChs[1] <= P - fld(M,2)) || !(fld(M,2) <= nChs[2] <= P - cld(M,2))
-            throw(ArgumentError("Invalid number of channels. "))
-        end
-        if nChs[1] != nChs[2] && any(isodd.(ppo))
-            throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet. received values: decimationFactor=$df, nChannels=$nChs, polyphaseOrder = $ppo"))
-        end
-
-        TC = if T <: AbstractFloat; T else Float64 end
-        mtxc = reverse(permdctmtx(TC, df...); dims=2)
-
-        new{T,D}(df, ppo, nChs, initMts, propMts, mtxc)
-    end
-
-    Rnsolt(df::Integer, ppo::Integer, nChs; kwargs...) = Rnsolt(Float64, df, ppo, nChs; kwargs...)
-    Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; kwargs...) where {T} = Rnsolt(T, df, ppo, (cld(nChs,2),fld(nChs,2)); kwargs...)
-    function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Tuple{Int,Int}; dims::Integer=1) where {T}
-        Rnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
-    end
-end
-
-promote_rule(::Type{Rnsolt{TA,D}}, ::Type{Rnsolt{TB,D}}) where {D,TA,TB} = Rnsolt{promote_type(TA,TB),D}
-
-similar(nsolt::Rnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimationFactor, ord::NTuple{DD}=nsolt.polyphaseOrder, nch::Union{Integer,Tuple{Int,Int}}=nsolt.nChannels) where {T,DS,DD} = Rnsolt(element_type, df, ord, nch)
-
-struct Cnsolt{T,D} <: AbstractNsolt{T,D}
-    decimationFactor::NTuple{D, Int}
-    polyphaseOrder::NTuple{D, Int}
-    nChannels::Int
-
-    initMatrices::Vector{AbstractMatrix{T}}
-    propMatrices::Vector{Vector{AbstractMatrix{T}}}
-    paramAngles::Vector{Vector{AbstractVector{T}}}
-    symmetry::Diagonal
-    matrixF::Matrix
-
-    Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
-
-    function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Int; kwargs...) where {T,D}
-        mts = get_cnsolt_default_matrices(Val(iseven(nChs)), T, ppo, nChs)
-        paramAngs = Vector{Vector{T}}[ [ zeros(fld(nChs,4)) for n in 1:ppo[pd] ] for pd in 1:D ]
-
-        Cnsolt(df, ppo, nChs, mts..., paramAngs; kwargs...)
-    end
-
-    function Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer, initMts::Vector{MT}, propMts::Vector{Vector{MT}}, paramAngs::Vector{Vector{VT}}; symmetry::AbstractVector=ones(nChs), matrixF::AbstractMatrix=reverse(cdftmtx(df...); dims=2)) where {T,D,MT<:AbstractMatrix{T},VT<:AbstractVector{T}}
-        if prod(df) > nChs
-            throw(ArgumentError("The number of channels must be equal or greater than a product of the decimation factor."))
-        end
-
-        TF = if T <: AbstractFloat; T else Float64 end
-        sym = Diagonal{complex(TF)}(symmetry)
-
-        new{T,D}(df, ppo, nChs, initMts, propMts, paramAngs, sym, matrixF)
-    end
-
-    Cnsolt(df::Integer, ppo::Integer, nChs::Integer; kwargs...) = Cnsolt(Float64, df, ppo, nChs; kwargs...)
-    function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims::Integer=1) where {T}
-        Cnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
-    end
-
-    Cnsolt(nsolt::Rnsolt) = lifting(Val(istype1(nsolt)), nsolt)
-end
-
-promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
-
-similar(nsolt::Cnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=nsolt.decimationFactor, ord::NTuple{DD}=nsolt.polyphaseOrder, nch::Integer=nsolt.nChannels) where {T,DS,DD} = Cnsolt(element_type, df, ord, nch)
-
-istype1(nsolt::Cnsolt) = iseven(nsolt.nChannels)
-istype1(nsolt::Rnsolt) = nsolt.nChannels[1] == nsolt.nChannels[2]
-
-istype2(nsolt::AbstractNsolt) = !istype1(nsolt)
-
-TypeI = Val{true}
-TypeII = Val{false}
 
 struct ParallelFilters{T,D} <: FilterBank{T,D}
     decimationFactor::NTuple{D,Int}
@@ -260,6 +161,8 @@ end
 
 include("orthonormalMatrixSystem.jl")
 include("polyphaseMatrices.jl")
+
+include("nsolt.jl")
 
 include("analysisSystem.jl")
 include("synthesisSystem.jl")
