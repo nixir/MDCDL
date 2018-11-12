@@ -32,7 +32,7 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
 
     function RnsoltTypeI(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
         @assert (nchs[1] == nchs[2]) "channel size mismatch!"
-        CJ = reverse(permdctmtx(T, df...), dims=2)
+        CJ = permdctmtx(T, df...)
 
         W0 = Matrix{T}(I, nch[1], nch[1])
         Udks = ([
@@ -59,21 +59,20 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
     Udks::NTuple{D, Vector{AbstractMatrix{T}}} # parameter matrices of propagation matrices
 
     function RnsoltTypeII(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
-        CJ = reverse(permdctmtx(T, df...), dims=2)
+        CJ = permdctmtx(T, df...)
 
-        W0 = Matrix{T}(I, nch[1], nch[1])
-        U0 = Matrix{T}(I, nch[2], nch[2])
+        W0 = Matrix{T}(I, nchs[1], nchs[1])
+        U0 = Matrix{T}(I, nchs[2], nchs[2])
 
         @assert all(iseven.(ppo)) "polyphase order of each dimension must be odd"
         nStages = fld.(ppo, 2)
-        chU, chW = minmax(nchs...)
 
         Wdks = ([
-            [ Matrix{T}(I, chW, chW) for k in 1:nStages[d] ]
+            [ Matrix{T}(I, nchs[1], nchs[1]) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         Udks = ([
-            [ Matrix{T}(I, chU, chU) for k in 1:nStages[d] ]
+            [ Matrix{T}(I, nchs[2], nchs[2]) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         new{T,D}(df, nStages, nchs, W0, U0, Wdks, Udks)
@@ -113,7 +112,7 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
     Φ::Diagonal
 
     function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
-        FJ = reverse(cdftmtx(T, df...), dims=2)
+        FJ = cdftmtx(T, df...)
 
         V0 = Matrix{T}(I, nChs, nChs)
 
@@ -153,7 +152,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
     θ2dks::NTuple{D, Vector{AbstractVector{T}}}
 
     function CnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
-        FJ = reverse(cdftmtx(T, df...), dims=2)
+        FJ = cdftmtx(T, df...)
 
         V0 = Matrix{T}(I, nChs, nChs)
 
