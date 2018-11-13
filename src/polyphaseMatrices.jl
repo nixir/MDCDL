@@ -86,19 +86,17 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-function analysisbank(nsolt::AbstractNsolt{T,D}) where {T,D}
-    P = nchannels(nsolt)
+function analysisbank(nsolt::AbstractNsolt)
     M = prod(decimations(nsolt))
     ord = orders(nsolt)
+
+    krncenter = initialStep(nsolt, Matrix(I, M, M))
+
     nStrides = ([1, cumprod(collect(ord[1:end-1] .+ 1))... ]...,) .* M
-
-    x0 = Matrix(I, M, M)
-    krncenter = initialStep(nsolt, x0)
-
-    pxe = [ krncenter zeros(P, M .* (prod(ord .+ 1)-1)) ]
+    pxe = [ krncenter zeros(size(krncenter, 1), M .* (prod(ord .+ 1)-1)) ]
 
     rotdimsfcns = (fill(identity, ndims(nsolt))...,)
-    return MDCDL.extendAtoms(nsolt, pxe, nStrides, rotdimsfcns, border=:circular_oneway)
+    return extendAtoms(nsolt, pxe, nStrides, rotdimsfcns, border=:circular_oneway)
 end
 
 kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))
