@@ -37,12 +37,6 @@ function finalStep(nsolt::RnsoltTypeII, py::AbstractMatrix; kwargs...)
     return nsolt.CJ' * [ tyup[1:cM, :]; tylw[1:fM, :] ]
 end
 
-# function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}}
-#     foldr(1:D; init=pvy) do d, ty
-#         concatenateAtomsPerDims(NS, tp, ty, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
-#     end
-# end
-
 function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns::NTuple; border=:circular)
     px = Array(px)
     params = (irotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
@@ -165,66 +159,6 @@ function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTup
     end
     return px
 end
-
-
-# function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix{TP}, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TN,TP,TM<:AbstractMatrix,NS<:Cnsolt{TN}}
-#     pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
-#     # pvy = convert(Array{promote_type(TN),TP)}, pvy)
-#     nShift = fld(size(pvy, 2), nBlock)
-#     # submatrices
-#     y  = @view pvy[:,:]
-#     yu = @view pvy[1:fld(P,2),:]
-#     yl = @view pvy[(fld(P,2)+1):P,:]
-#     for k = ordd:-1:1
-#         yu .= propMtsd[2k-1]' * yu
-#         yl .= propMtsd[2k]'   * yl
-#
-#         B = getMatrixB(P, paramAngsd[k])
-#         y .= B' * y
-#
-#         if isodd(k)
-#             shiftbackward!(Val(border), yl, nShift)
-#         else
-#             shiftforward!(Val(border), yu, nShift)
-#         end
-#         y .= B * y
-#     end
-#     return ishiftdimspv(pvy, nBlock)
-# end
-#
-# function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TM<:AbstractMatrix,NS<:Cnsolt}
-#     nStages = fld(ordd, 2)
-#     chEven = 1:(P-1)
-#
-#     pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
-#     nShift = fld(size(pvy,2), nBlock)
-#     # submatrices
-#     ye  = @view pvy[1:(P-1),:]
-#     yu1 = @view pvy[1:fld(P,2),:]
-#     yl1 = @view pvy[(fld(P,2)+1):(P-1),:]
-#     yu2 = @view pvy[1:cld(P,2),:]
-#     yl2 = @view pvy[cld(P,2):P,:]
-#     for k = nStages:-1:1
-#         # second step
-#         yu2 .= propMtsd[4k-1]' * yu2
-#         yl2 .= propMtsd[4k]'   * yl2
-#
-#         B = getMatrixB(P, paramAngsd[2k])
-#         ye  .= B' * ye
-#         shiftforward!(Val(border), yu1, nShift)
-#         ye  .= B * ye
-#
-#         # first step
-#         yu1 .= propMtsd[4k-3]' * yu1
-#         yl1 .= propMtsd[4k-2]' * yl1
-#
-#         B = getMatrixB(P, paramAngsd[2k-1])
-#         ye  .= B' * ye
-#         shiftbackward!(Val(border), yl1, nShift)
-#         ye  .= B * ye
-#     end
-#     return ishiftdimspv(pvy, nBlock)
-# end
 
 function synthesize(jts::JoinedTransformSystems{MS}, y::AbstractArray) where {MS<:Multiscale}
     subsynthesize(jts.shape, y, jts.transforms...)
