@@ -14,7 +14,7 @@ function analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple; kwar
 
     nShifts = fld.(size(px, 2), nBlocks)
     rotatedimsfcns = ([ t->shiftdimspv(t, blk) for blk in nBlocks ]...,)
-    extendAtoms(nsolt, px, nShifts, rotatefcns; kwargs...)
+    extendAtoms(nsolt, ty, nShifts, rotatedimsfcns; kwargs...)
 end
 
 function initialStep(nsolt::RnsoltTypeI, px::AbstractMatrix; kwargs...)

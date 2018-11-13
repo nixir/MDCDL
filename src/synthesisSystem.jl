@@ -10,11 +10,11 @@ end
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
 function synthesize(nsolt::AbstractNsolt, py::AbstractMatrix, nBlocks::NTuple; kwargs...) where {TF,TX,D}
-    nShifts = fld.(size(px, 2), nBlocks)
-    irotatedimsfcns = ([ t->shiftdimspv(t, blk) for blk in nBlocks ]...,)
-    tx = concatenateAtoms(nsolt, py, nShifts, irotatedimsfcns; kwargs...)
+    nShifts = fld.(size(py, 2), nBlocks)
+    irotatedimsfcns = ([ t->ishiftdimspv(t, blk) for blk in nBlocks ]...,)
+    ty = concatenateAtoms(nsolt, py, nShifts, irotatedimsfcns; kwargs...)
 
-    finalStep(nsolt, tx; kwargs...)
+    finalStep(nsolt, ty; kwargs...)
 end
 
 function finalStep(nsolt::RnsoltTypeI, py::AbstractMatrix; kwargs...)
@@ -44,9 +44,9 @@ end
 # end
 
 function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns::NTuple; border=:circular)
+    px = Array(px)
     params = (irotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
     foreach(reverse.(params)...) do rdfcn, nshift, nstage, Uks
-        px = rdfcn(px)
         xu = @view px[1:nsolt.nChannels[1], :]
         xl = @view px[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
 
@@ -61,6 +61,41 @@ function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
             end
             half_butterfly!(xu, xl)
         end
+        px = rdfcn(px)
+    end
+    return px
+end
+
+function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
+    px = Array(px)
+    mnP, mxP = minmax(nsolt.nChannels...)
+    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
+    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks
+        xu = @view px[1:mnP, :]
+        xl = @view px[end-mnP+1:end, :]
+        xum = @view px[1:mxP, :]
+        xml = @view px[end-mxP+1:end, :]
+
+        params_d = (1:nstage, Wks, Uks)
+        foreach(reverse.(params_d)...) do k, W, U
+            if nsolt.nChannels[1] < nsolt.nChannels[2]
+                xml .= U' * xml
+            else
+                xum .= W' * xum
+            end
+            unnormalized_butterfly!(xu, xl)
+            shiftforward!(Val(border), xl, nshift)
+            half_butterfly!(xu, xl)
+            if nsolt.nChannels[1] < nsolt.nChannels[2]
+                xu .= W' * xu
+            else
+                xl .= U' * xl
+            end
+            unnormalized_butterfly!(xu, xl)
+            shiftbackward!(Val(border), xml, nshift)
+            half_butterfly!(xu, xl)
+        end
+        px = rdfcn(px)
     end
     return px
 end
@@ -122,85 +157,6 @@ end
 #         ye  .= B * ye
 #     end
 #     return ishiftdimspv(pvy, nBlock)
-# end
-
-synthesize(cc::NS, py::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixC, cc.initMatrices, cc.propMatrices, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels; kwargs...)
-
-function synthesize(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, propMts::AbstractArray, df::NTuple{D}, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,D,TF,NS<:Rnsolt{TF,D}}
-    uy = concatenateAtoms(NS, tp, pvy, nBlocks, propMts, ord, nch; kwargs...)
-    finalStep(NS, tp, uy, matrixC, initMts, df, nch; kwargs...)
-end
-
-function finalStep(::Type{NS}, ::Val, y::AbstractMatrix, matrixC::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Tuple{Int,Int}; kwargs...) where {TM<:AbstractMatrix,NS<:Rnsolt}
-    M = prod(df)
-    W0ty = (initMts[1] * Matrix(I, nch[1], cld(M,2)))' * @view y[1:nch[1],:]
-    U0ty = (initMts[2] * Matrix(I, nch[2], fld(M,2)))' * @view y[(nch[1]+1):end,:]
-
-    reverse(matrixC, dims=2)' * vcat(W0ty, U0ty)
-end
-
-function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, ord::NTuple{D}, nch::Tuple{Int,Int}; kwargs...) where {TF,D,NS<:Rnsolt{TF,D}}
-    foldr(1:D; init=pvy) do d, ty
-        concatenateAtomsPerDims(NS, tp, ty, nBlocks[d], propMts[d], ord[d], nch; kwargs...)
-    end
-end
-
-# function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix{TP}, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TP,TN,TM<:AbstractMatrix,NS<:Rnsolt{TN}}
-#     hP = nch[1]
-#     # pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
-#     pvy = convert(Array{promote_type(TN,TP)}, pvy)
-#     nShift = fld(size(pvy, 2), nBlock)
-#     # submatrices
-#     yu = @view pvy[1:hP,:]
-#     yl = @view pvy[(1:hP) .+ hP,:]
-#     for k = ordd:-1:1
-#         yl .= propMtsd[k]' * yl
-#
-#         unnormalized_butterfly!(yu, yl)
-#         if isodd(k)
-#             shiftbackward!(Val(border), yl, nShift)
-#         else
-#             shiftforward!(Val(border), yu, nShift)
-#         end
-#         half_butterfly!(yu, yl)
-#     end
-#     return ishiftdimspv(pvy, nBlock)
-# end
-#
-# function concatenateAtomsPerDims(::Type{NS}, ::TypeII, pvy::AbstractMatrix, nBlock::Integer, propMtsd::AbstractArray{TM}, ordd::Integer, nch::Tuple{Int,Int}; border=:circular) where {TM<:AbstractMatrix,NS<:Rnsolt}
-#     nStages = fld(ordd, 2)
-#     P = sum(nch)
-#     maxP, minP, chMajor, chMinor = if nch[1] > nch[2]
-#         (nch[1], nch[2], 1:nch[1], (nch[1]+1):P)
-#     else
-#         (nch[2], nch[1], (nch[1]+1):P, 1:nch[1])
-#     end
-#
-#     pvy = TM(Matrix(I,sum(nch),sum(nch))) * pvy
-#     nShift = fld(size(pvy,2), nBlock)
-#     # submatrices
-#     yu  = @view pvy[1:minP,:]
-#     yl  = @view pvy[(P-minP+1):P,:]
-#     ys1 = @view pvy[(minP+1):P,:]
-#     ys2 = @view pvy[1:maxP,:]
-#     ymj = @view pvy[chMajor,:]
-#     ymn = @view pvy[chMinor,:]
-#     for k = nStages:-1:1
-#         # second step
-#         ymj .= propMtsd[2k]' * ymj
-#
-#         unnormalized_butterfly!(yu, yl)
-#         shiftforward!(Val(border), ys2, nShift)
-#         half_butterfly!(yu, yl)
-#
-#         # first step
-#         ymn .= propMtsd[2k-1]' * ymn
-#
-#         unnormalized_butterfly!(yu, yl)
-#         shiftbackward!(Val(border), ys1, nShift)
-#         half_butterfly!(yu, yl)
-#     end
-#     ishiftdimspv(pvy, nBlock)
 # end
 
 function synthesize(jts::JoinedTransformSystems{MS}, y::AbstractArray) where {MS<:Multiscale}

@@ -31,6 +31,7 @@ function rand!(nsolt::CnsoltTypeI{T,D}; isInitMat=true, isPropMat=true, isPropAn
             end
         end
     end
+    return nsolt
 end
 
 function rand!(nsolt::CnsoltTypeII{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {T,D}
@@ -58,6 +59,7 @@ function rand!(nsolt::CnsoltTypeII{T,D}; isInitMat=true, isPropMat=true, isPropA
             end
         end
     end
+    return nsolt
 end
 
 function rand!(nsolt::RnsoltTypeI{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {T,D}
@@ -73,6 +75,7 @@ function rand!(nsolt::RnsoltTypeI{T,D}; isInitMat=true, isPropMat=true, isPropAn
             end
         end
     end
+    return nsolt
 end
 
 function rand!(nsolt::RnsoltTypeII{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {T,D}
@@ -90,6 +93,7 @@ function rand!(nsolt::RnsoltTypeII{T,D}; isInitMat=true, isPropMat=true, isPropA
             end
         end
     end
+    return nsolt
 end
 
 intervals(lns::Tuple, args...) = (intervals(collect(lns), args...)...,)
