@@ -86,60 +86,56 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-analysisbank(cc::AbstractNsolt) = analysisbank(Val(istype1(cc)), cc)
-
 function analysisbank(cc::CnsoltTypeI{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
-    ord = cc.polyphaseOrder
+    ord = orders(cc)
 
     # output
     ppm = zeros(complex(T), P, prod(df .* (ord .+ 1)))
-    ppm[1:M,1:M] = cc.matrixF
+    ppm[1:M,1:M] = cc.FJ
 
     # Initial matrix process
-    ppm = cc.initMatrices[1] * ppm
+    ppm = cc.V0 * ppm
 
     nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
-        angs = cc.paramAngles[d]
-        propMats = cc.propMatrices[d]
+        # angs = cc.paramAngles[d]
+        # propMats = cc.propMatrices[d]
         ppmup = @view ppm[1:fld(P,2),:]
         ppmlw = @view ppm[fld(P,2)+1:P,:]
         for k = 1:ord[d]
-            B = getMatrixB(P, angs[k])
+            B = getMatrixB(P, cc.θdks[d][k])
 
             # B Λ(z_d) B'
             ppm .= B' * ppm
             ppmlw .= circshift(ppmlw, (0, nStrides[d]))
             ppm .= B * ppm
 
-            ppmup .= propMats[2k-1] * ppmup
-            ppmlw .= propMats[2k] * ppmlw
+            ppmup .= cc.Wdks[d][k] * ppmup
+            ppmlw .= cc.Udks[d][k] * ppmlw
         end
     end
-    cc.symmetry * ppm
+    cc.Φ * ppm
 end
 
 function analysisbank(cc::CnsoltTypeII{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
-    ord = cc.polyphaseOrder
-    nStages = fld.(ord,2)
+    ord = orders(cc)
+    nStages = cc.nStages
 
     # output
     ppm = zeros(complex(T), P, prod(df .* (ord .+ 1)))
-    ppm[1:M,1:M] = cc.matrixF
+    ppm[1:M,1:M] = cc.FJ
 
     # Initial matrix process
-    ppm = cc.initMatrices[1] * ppm
+    ppm = cc.V0 * ppm
 
     nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
-        angs = cc.paramAngles[d]
-        propMats = cc.propMatrices[d]
         ppmev = @view ppm[1:P-1,:]
         ppmup1 = @view ppm[1:fld(P,2),:]
         ppmlw1 = @view ppm[fld(P,2)+1:P-1,:]
@@ -147,30 +143,30 @@ function analysisbank(cc::CnsoltTypeII{T,D}) where {D,T}
         ppmlw2 = @view ppm[cld(P,2):P,:]
         for k = 1:nStages[d]
             # first step
-            B = getMatrixB(P, angs[2k-1])
+            B = getMatrixB(P, cc.θ1dks[d][k])
 
             # B Λ(z_d) B'
             ppmev .= B' * ppmev
-            ppmlw1 .= circshift(ppmlw1,(0, nStrides[d]))
+            ppmlw1 .= circshift(ppmlw1, (0, nStrides[d]))
             ppmev .= B * ppmev
 
-            ppmup1 .= propMats[4k-3] * ppmup1
-            ppmlw1 .= propMats[4k-2] * ppmlw1
+            ppmup1 .= cc.Wdks[d][k] * ppmup1
+            ppmlw1 .= cc.Udks[d][k] * ppmlw1
 
             # second step
 
-            B = getMatrixB(P, angs[2k])
+            B = getMatrixB(P, cc.θ2dks[d][k])
 
             # B Λ(z_d) B'
             ppmev .= B' * ppmev
-            ppmlw2 .= circshift(ppmlw2,(0, nStrides[d]))
+            ppmlw2 .= circshift(ppmlw2, (0, nStrides[d]))
             ppmev .= B * ppmev
 
-            ppmlw2 .= propMats[4k] * ppmlw2
-            ppmup2 .= propMats[4k-1] * ppmup2
+            ppmlw2 .= cc.Ûdks[d][k] * ppmlw2
+            ppmup2 .= cc.Ŵdks[d][k] * ppmup2
         end
     end
-    cc.symmetry * ppm
+    cc.Φ * ppm
 end
 
 function analysisbank(rc::RnsoltTypeI{T,D}) where {D,T}
@@ -178,23 +174,22 @@ function analysisbank(rc::RnsoltTypeI{T,D}) where {D,T}
     nch = rc.nChannels
     P = sum(nch)
     M = prod(df)
-    ord = rc.polyphaseOrder
+    ord = orders(rc)
 
     rngUpper = (1:nch[1], :)
     rngLower = (nch[1]+1:P, :)
 
     # output
     ppm = zeros(T, P, prod(df .* (ord .+ 1)))
-    ppm[1:cld(M,2), 1:M] = @view rc.matrixC[1:cld(M,2),:]
-    ppm[nch[1].+(1:fld(M,2)), 1:M] = @view rc.matrixC[cld(M,2)+1:end,:]
+    ppm[1:cld(M,2), 1:M] = @view rc.CJ[1:cld(M,2),:]
+    ppm[nch[1].+(1:fld(M,2)), 1:M] = @view rc.CJ[cld(M,2)+1:end,:]
 
     # Initial matrix process
-    ppm[rngUpper...] = rc.initMatrices[1] * @view ppm[rngUpper...]
-    ppm[rngLower...] = rc.initMatrices[2] * @view ppm[rngLower...]
+    ppm[rngUpper...] = rc.W0 * @view ppm[rngUpper...]
+    ppm[rngLower...] = rc.U0 * @view ppm[rngLower...]
 
     nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
-        propMats = rc.propMatrices[d]
         ppmup = @view ppm[1:nch[1],:]
         ppmlw = @view ppm[nch[1]+1:P,:]
         for k = 1:ord[d]
@@ -203,7 +198,7 @@ function analysisbank(rc::RnsoltTypeI{T,D}) where {D,T}
             ppmlw .= circshift(ppmlw, (0, nStrides[d]))
             butterfly!(ppm, nch[1])
 
-            ppmlw .= propMats[k] * ppmlw
+            ppmlw .= rc.Udks[d][k] * ppmlw
         end
     end
     ppm
@@ -212,31 +207,31 @@ end
 function analysisbank(rc::RnsoltTypeII{T,D}) where {D,T}
     df = rc.decimationFactor
     M = prod(df)
-    ord = rc.polyphaseOrder
-    nStages = fld.(rc.polyphaseOrder,2)
+    ord = orders(rc)
+    nStages = rc.nStages
     nch = rc.nChannels
     P = sum(nch)
-    maxP, minP, chMajor, chMinor = if rc.nChannels[1] > rc.nChannels[2]
-        (rc.nChannels[1], rc.nChannels[2], 1:rc.nChannels[1], (rc.nChannels[1]+1):P)
-    else
-        (rc.nChannels[2], rc.nChannels[1], (rc.nChannels[1]+1):P, 1:rc.nChannels[1])
-    end
+    # maxP, minP, chMajor, chMinor = if rc.nChannels[1] > rc.nChannels[2]
+    #     (rc.nChannels[1], rc.nChannels[2], 1:rc.nChannels[1], (rc.nChannels[1]+1):P)
+    # else
+    #     (rc.nChannels[2], rc.nChannels[1], (rc.nChannels[1]+1):P, 1:rc.nChannels[1])
+    # end
+    minP, maxP = minmax(rc.nChannels)
 
     # output
     ppm = zeros(T, P, prod(df .* (ord .+ 1)))
     # ppm[1:M,1:M] = rc.matrixF
-    ppm[1:cld(M,2), 1:M] = @view rc.matrixC[1:cld(M,2),:]
-    ppm[nch[1] .+ (1:fld(M,2)), 1:M] = @view rc.matrixC[cld(M,2)+1:end,:]
+    ppm[1:cld(M,2), 1:M] = @view rc.CJ[1:cld(M,2),:]
+    ppm[nch[1] .+ (1:fld(M,2)), 1:M] = @view rc.CJ[cld(M,2)+1:end,:]
 
     # Initial matrix process
     ppmiu = @view ppm[1:nch[1],:]
     ppmil = @view ppm[(nch[1]+1):end,:]
-    ppmiu .= rc.initMatrices[1] * ppmiu
-    ppmil .= rc.initMatrices[2] * ppmil
+    ppmiu .= rc.W0 * ppmiu
+    ppmil .= rc.U0 * ppmil
 
     nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
     for d = 1:D
-        propMats = rc.propMatrices[d]
         ppmlw1 = @view ppm[(minP+1):end,:]
         ppmmn  = @view ppm[chMinor,:]
         ppmlw2 = @view ppm[(maxP+1):end,:]
@@ -249,7 +244,8 @@ function analysisbank(rc::RnsoltTypeII{T,D}) where {D,T}
             ppmlw1 .= circshift(ppmlw1, (0, nStrides[d]))
             butterfly!(ppm, minP)
 
-            ppmmn .= propMats[2k-1] * ppmmn
+            # ppmmn .= propMats[2k-1] * ppmmn
+
 
             # second step
             # B Λ(z_d) B'

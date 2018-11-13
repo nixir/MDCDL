@@ -3,15 +3,15 @@ abstract type Rnsolt{T,D} <: AbstractNsolt{T,D} end
 
 Rnsolt(df::Integer, ppo::Integer, nChs; kwargs...) = Rnsolt(Float64, df, ppo, nChs; kwargs...)
 Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; kwargs...) where {T} = Rnsolt(T, df, ppo, (cld(nChs,2),fld(nChs,2)); kwargs...)
-function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Tuple{Int,Int}; dims::Integer=1) where {T}
-    Rnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs)
+function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Tuple{Int,Int}; dims::Integer=1, kwargs...) where {T}
+    Rnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs; kwargs...)
 end
 
 Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
 
 Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer; kwargs...) where {D,T} = Rnsolt(T, df, ppo, (cld(nChs,2), fld(nChs,2)); kwargs...)
 
-function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}) where {T,D}
+function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}; kwargs...) where {T,D}
     return if nChs[1] == nChs[2]
         RnsoltTypeI(T, df, ppo, nChs; kwargs...)
     else
@@ -27,6 +27,7 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
     CJ::AbstractMatrix # reverse of permutated DCT
 
     W0::AbstractMatrix{T} # parameter matrix of initial matrix
+    U0::AbstractMatrix{T}
 
     Udks::NTuple{D, Vector{AbstractMatrix{T}}} # parameter matrices of propagation matrices
 
@@ -34,12 +35,13 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
         @assert (nchs[1] == nchs[2]) "channel size mismatch!"
         CJ = permdctmtx(T, df...)
 
-        W0 = Matrix{T}(I, nch[1], nch[1])
+        W0 = Matrix{T}(I, nchs[1], nchs[1])
+        U0 = Matrix{T}(I, nchs[2], nchs[2])
         Udks = ([
-            [ (iseven(k) ? 1 : -1) * Matrix{T}(I, nch[2], nch[2]) for k in 1:ppo[d] ]
+            [ (iseven(k) ? 1 : -1) * Matrix{T}(I, nchs[2], nchs[2]) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
 
-        new{T,D}(df, ppo, nchs, CJ, W0, Udks)
+        new{T,D}(df, ppo, nchs, CJ, W0, U0, Udks)
     end
 end
 
@@ -188,7 +190,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
 
         Φ = Diagonal(cis.(zeros(nChs)))
 
-        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
+        new{T,D}(df, nStages, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
     end
 end
 

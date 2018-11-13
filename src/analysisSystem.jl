@@ -22,7 +22,7 @@ function initialStep(nsolt::RnsoltTypeI, px::AbstractMatrix; kwargs...)
 
     return [
         nsolt.W0 * Matrix(I, nsolt.nChannels[1], cM) * CJup * px;
-        Matrix(I, nsolt.nChannels[2], fM) * CJlw * px
+        nsolt.U0 * Matrix(I, nsolt.nChannels[2], fM) * CJlw * px
     ]
 end
 
