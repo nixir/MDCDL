@@ -9,9 +9,12 @@ end
 
 analyze(fb::PolyphaseFB{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D} = PolyphaseVector(analyze(fb, pvx.data, pvx.nBlocks; kwargs...), pvx.nBlocks)
 
-function analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {D}
+function analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple; kwargs...)
     ty = initialStep(nsolt, px; kwargs...)
-    extendAtoms(nsolt, ty, nBlocks; kwargs...)
+
+    nShifts = fld.(size(px, 2), nBlocks)
+    rotatedimsfcns = ([ t->shiftdimspv(t, blk) for blk in nBlocks ]...,)
+    extendAtoms(nsolt, px, nShifts, rotatefcns; kwargs...)
 end
 
 function initialStep(nsolt::RnsoltTypeI, px::AbstractMatrix; kwargs...)
@@ -38,10 +41,10 @@ function initialStep(nsolt::RnsoltTypeII, px::AbstractMatrix; kwargs...)
     ]
 end
 
-function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
-    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Udks)
-    foreach(params...) do nblk, nshift, nstage, Uks
-        px = shiftdimspv(px, nblk)
+function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::NTuple; border=:circular)
+    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
+    foreach(params...) do rdfcn, nshift, nstage, Uks
+        px = rdfcn(px)
         xu = @view px[1:nsolt.nChannels[1], :]
         xl = @view px[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
 
@@ -61,11 +64,11 @@ function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple; bo
     return px
 end
 
-function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
+function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
     mnP, mxP = minmax(nsolt.nChannels...)
-    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Wdks, nsolt.Udks)
-    foreach(params...) do nblk, nshift, nstage, Wks, Uks
-        px = shiftdimspv(px, nblk)
+    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
+    foreach(params...) do rdfcn, nshift, nstage, Wks, Uks
+        px = rdfcn(px)
 
         xu = @view px[1:mnP, :]
         xl = @view px[end-mnP+1:end, :]
@@ -101,11 +104,11 @@ function initialStep(nsolt::Cnsolt, px::AbstractMatrix; kwargs...)
     return nsolt.V0 * Ipm * nsolt.FJ * px
 end
 
-function extendAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
+function extendAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::NTuple; border=:circular)
     hP = fld(nsolt.nChannels, 2)
-    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θdks)
-    foreach(params...) do nblk, nshift, nstage, Wks, Uks, θks
-        px = shiftdimspv(px, nblk)
+    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θdks)
+    foreach(params...) do rdfcn, nshift, nstage, Wks, Uks, θks
+        px = rdfcn(px)
         xu = @view px[1:hP, :]
         xl = @view px[(1:hP) .+ hP, :]
 
@@ -124,11 +127,11 @@ function extendAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple; bo
     return px
 end
 
-function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
+function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
     fP, cP = fld(nsolt.nChannels, 2), cld(nsolt.nChannels, 2)
-    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
-    foreach(params...) do nblk, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
-        px = shiftdimspv(px, nblk)
+    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
+    foreach(params...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
+        px = rdfcn(px)
 
         xu1 = @view px[1:fP, :]
         xl1 = @view px[(1:fP) .+ fP, :]

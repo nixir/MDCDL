@@ -86,177 +86,19 @@ function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
     [ C conj(C); S conj(S) ] / sqrt(convert(T,2))
 end
 
-function analysisbank(cc::CnsoltTypeI{T,D}) where {D,T}
-    df = cc.decimationFactor
-    P = cc.nChannels
-    M = prod(df)
-    ord = orders(cc)
+function analysisbank(nsolt::AbstractNsolt{T,D}) where {T,D}
+    P = nchannels(nsolt)
+    M = prod(decimations(nsolt))
+    ord = orders(nsolt)
+    nStrides = ([1, cumprod(collect(ord[1:end-1] .+ 1))... ]...,) .* M
 
-    # output
-    ppm = zeros(complex(T), P, prod(df .* (ord .+ 1)))
-    ppm[1:M,1:M] = cc.FJ
+    x0 = Matrix(I, M, M)
+    krncenter = initialStep(nsolt, x0)
 
-    # Initial matrix process
-    ppm = cc.V0 * ppm
+    pxe = [ krncenter zeros(P, M .* (prod(ord .+ 1)-1)) ]
 
-    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
-    for d = 1:D
-        # angs = cc.paramAngles[d]
-        # propMats = cc.propMatrices[d]
-        ppmup = @view ppm[1:fld(P,2),:]
-        ppmlw = @view ppm[fld(P,2)+1:P,:]
-        for k = 1:ord[d]
-            B = getMatrixB(P, cc.θdks[d][k])
-
-            # B Λ(z_d) B'
-            ppm .= B' * ppm
-            ppmlw .= circshift(ppmlw, (0, nStrides[d]))
-            ppm .= B * ppm
-
-            ppmup .= cc.Wdks[d][k] * ppmup
-            ppmlw .= cc.Udks[d][k] * ppmlw
-        end
-    end
-    cc.Φ * ppm
-end
-
-function analysisbank(cc::CnsoltTypeII{T,D}) where {D,T}
-    df = cc.decimationFactor
-    P = cc.nChannels
-    M = prod(df)
-    ord = orders(cc)
-    nStages = cc.nStages
-
-    # output
-    ppm = zeros(complex(T), P, prod(df .* (ord .+ 1)))
-    ppm[1:M,1:M] = cc.FJ
-
-    # Initial matrix process
-    ppm = cc.V0 * ppm
-
-    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
-    for d = 1:D
-        ppmev = @view ppm[1:P-1,:]
-        ppmup1 = @view ppm[1:fld(P,2),:]
-        ppmlw1 = @view ppm[fld(P,2)+1:P-1,:]
-        ppmup2 = @view ppm[1:cld(P,2),:]
-        ppmlw2 = @view ppm[cld(P,2):P,:]
-        for k = 1:nStages[d]
-            # first step
-            B = getMatrixB(P, cc.θ1dks[d][k])
-
-            # B Λ(z_d) B'
-            ppmev .= B' * ppmev
-            ppmlw1 .= circshift(ppmlw1, (0, nStrides[d]))
-            ppmev .= B * ppmev
-
-            ppmup1 .= cc.Wdks[d][k] * ppmup1
-            ppmlw1 .= cc.Udks[d][k] * ppmlw1
-
-            # second step
-
-            B = getMatrixB(P, cc.θ2dks[d][k])
-
-            # B Λ(z_d) B'
-            ppmev .= B' * ppmev
-            ppmlw2 .= circshift(ppmlw2, (0, nStrides[d]))
-            ppmev .= B * ppmev
-
-            ppmlw2 .= cc.Ûdks[d][k] * ppmlw2
-            ppmup2 .= cc.Ŵdks[d][k] * ppmup2
-        end
-    end
-    cc.Φ * ppm
-end
-
-function analysisbank(rc::RnsoltTypeI{T,D}) where {D,T}
-    df = rc.decimationFactor
-    nch = rc.nChannels
-    P = sum(nch)
-    M = prod(df)
-    ord = orders(rc)
-
-    rngUpper = (1:nch[1], :)
-    rngLower = (nch[1]+1:P, :)
-
-    # output
-    ppm = zeros(T, P, prod(df .* (ord .+ 1)))
-    ppm[1:cld(M,2), 1:M] = @view rc.CJ[1:cld(M,2),:]
-    ppm[nch[1].+(1:fld(M,2)), 1:M] = @view rc.CJ[cld(M,2)+1:end,:]
-
-    # Initial matrix process
-    ppm[rngUpper...] = rc.W0 * @view ppm[rngUpper...]
-    ppm[rngLower...] = rc.U0 * @view ppm[rngLower...]
-
-    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
-    for d = 1:D
-        ppmup = @view ppm[1:nch[1],:]
-        ppmlw = @view ppm[nch[1]+1:P,:]
-        for k = 1:ord[d]
-            # B Λ(z_d) B'
-            butterfly!(ppm, nch[1])
-            ppmlw .= circshift(ppmlw, (0, nStrides[d]))
-            butterfly!(ppm, nch[1])
-
-            ppmlw .= rc.Udks[d][k] * ppmlw
-        end
-    end
-    ppm
-end
-
-function analysisbank(rc::RnsoltTypeII{T,D}) where {D,T}
-    df = rc.decimationFactor
-    M = prod(df)
-    ord = orders(rc)
-    nStages = rc.nStages
-    nch = rc.nChannels
-    P = sum(nch)
-    # maxP, minP, chMajor, chMinor = if rc.nChannels[1] > rc.nChannels[2]
-    #     (rc.nChannels[1], rc.nChannels[2], 1:rc.nChannels[1], (rc.nChannels[1]+1):P)
-    # else
-    #     (rc.nChannels[2], rc.nChannels[1], (rc.nChannels[1]+1):P, 1:rc.nChannels[1])
-    # end
-    minP, maxP = minmax(rc.nChannels)
-
-    # output
-    ppm = zeros(T, P, prod(df .* (ord .+ 1)))
-    # ppm[1:M,1:M] = rc.matrixF
-    ppm[1:cld(M,2), 1:M] = @view rc.CJ[1:cld(M,2),:]
-    ppm[nch[1] .+ (1:fld(M,2)), 1:M] = @view rc.CJ[cld(M,2)+1:end,:]
-
-    # Initial matrix process
-    ppmiu = @view ppm[1:nch[1],:]
-    ppmil = @view ppm[(nch[1]+1):end,:]
-    ppmiu .= rc.W0 * ppmiu
-    ppmil .= rc.U0 * ppmil
-
-    nStrides = [1, cumprod(collect(ord[1:end-1] .+ 1))... ] .* M
-    for d = 1:D
-        ppmlw1 = @view ppm[(minP+1):end,:]
-        ppmmn  = @view ppm[chMinor,:]
-        ppmlw2 = @view ppm[(maxP+1):end,:]
-        ppmmx  = @view ppm[chMajor,:]
-        for k = 1:nStages[d]
-            # first step
-
-            # B Λ(z_d) B'
-            butterfly!(ppm, minP)
-            ppmlw1 .= circshift(ppmlw1, (0, nStrides[d]))
-            butterfly!(ppm, minP)
-
-            # ppmmn .= propMats[2k-1] * ppmmn
-
-
-            # second step
-            # B Λ(z_d) B'
-            butterfly!(ppm, minP)
-            ppmlw2 .= circshift(ppmlw2, (0, nStrides[d]))
-            butterfly!(ppm, minP)
-
-            ppmmx .= propMats[2k] * ppmmx
-        end
-    end
-    ppm
+    rotdimsfcns = (fill(identity, ndims(nsolt))...,)
+    return MDCDL.extendAtoms(nsolt, pxe, nStrides, rotdimsfcns, border=:circular_oneway)
 end
 
 kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))
@@ -351,6 +193,9 @@ function shiftforward!(::Val{:circular}, mtx::AbstractMatrix, nShift::Integer)
     mtx .= circshift(mtx, (0, nShift))
 end
 shiftbackward!(tp::Val{:circular}, mtx, nShift) = shiftforward!(tp, mtx, -nShift)
+
+shiftforward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
+shiftbackward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
 
 function shiftforward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
     mtx[:,1+nShift:end] .= @view mtx[:,1:end-nShift]

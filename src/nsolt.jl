@@ -78,7 +78,7 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
             [ signU * Matrix{T}(I, nchs[2], nchs[2]) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
-        new{T,D}(df, nStages, nchs, W0, U0, Wdks, Udks)
+        new{T,D}(df, nStages, nchs, CJ, W0, U0, Wdks, Udks)
     end
 end
 
