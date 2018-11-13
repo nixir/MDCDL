@@ -85,7 +85,7 @@ Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer; kwargs...) where {D
 Cnsolt(df::Integer, ppo::Integer, nChs::Integer; kwargs...) = Cnsolt(Float64, df, ppo, nChs; kwargs...)
 
 function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims=1, kwargs...) where {T}
-    Cnsolt(T, (fill(df, dims)...,), (fill(ppo, dims)...,); kwargs...)
+    Cnsolt(T, (fill(df, dims)...,), (fill(ppo, dims)...,), nChs; kwargs...)
 end
 
 function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer; kwargs...) where {T,D}
@@ -109,14 +109,14 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
     Udks::NTuple{D, Vector{AbstractMatrix{T}}}
     θdks::NTuple{D, Vector{AbstractVector{T}}}
 
-    Φ::Diagonal
+    # Φ::Diagonal
 
     function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
         FJ = cdftmtx(T, df...)
 
         V0 = Matrix{T}(I, nChs, nChs)
 
-        fP = fld(P,2)
+        fP = fld(nChs, 2)
         Wdks = ([
             [ Matrix{T}(I, fP, fP) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
@@ -127,11 +127,11 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
 
         θdks = ([
             [ zeros(T, fld(nChs, 4)) for k in 1:ppo[d] ]
-        for k in 1:D ]...,)
+        for d in 1:D ]...,)
 
-        Φ = Diagonal{T}(cis.(zeros(nChs)))
+        # Φ = Diagonal{T}(cis.(zeros(nChs)))
 
-        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θdks, Φ)
+        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θdks)
     end
 end
 
@@ -151,39 +151,42 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
     Ûdks::NTuple{D, Vector{AbstractMatrix{T}}}
     θ2dks::NTuple{D, Vector{AbstractVector{T}}}
 
+    # Φ::Diagonal
+
     function CnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
+        nStages = fld.(ppo, 2)
         FJ = cdftmtx(T, df...)
 
         V0 = Matrix{T}(I, nChs, nChs)
 
-        fP, cP = fld(P,2), cld(P,2)
+        fP, cP = fld(nChs,2), cld(nChs,2)
         Wdks = ([
-            [ Matrix{T}(I, fP, fP) for k in 1:ppo[d] ]
+            [ Matrix{T}(I, fP, fP) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         Udks = ([
-            [ Matrix{T}(I, fP, fP) for k in 1:ppo[d] ]
-        for d in 1:D ])
+            [ Matrix{T}(I, fP, fP) for k in 1:nStages[d] ]
+        for d in 1:D ]...,)
 
         θ1dks = ([
-            [ zeros(T, fld(nChs, 4)) for k in 1:ppo[d] ]
-        for k in 1:D ]...,)
+            [ zeros(T, fld(nChs, 4)) for k in 1:nStages[d] ]
+        for d in 1:D ]...,)
 
         Ŵdks = ([
-            [ Matrix{T}(I, cP, cP) for k in 1:ppo[d] ]
+            [ Matrix{T}(I, cP, cP) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         Ûdks = ([
-            [ Matrix{T}(I, cP, cP) for k in 1:ppo[d] ]
-        for d in 1:D ])
+            [ Matrix{T}(I, cP, cP) for k in 1:nStages[d] ]
+        for d in 1:D ]...,)
 
         θ2dks = ([
-            [ zeros(T, fld(nChs, 4)) for k in 1:ppo[d] ]
-        for k in 1:D ]...,)
+            [ zeros(T, fld(nChs, 4)) for k in 1:nStages[d] ]
+        for d in 1:D ]...,)
 
-        Φ = Diagonal{T}(cis.(zeros(nChs)))
+        # Φ = Diagonal{T}(cis.(zeros(nChs)))
 
-        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
+        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks)
     end
 end
 

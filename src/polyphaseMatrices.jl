@@ -1,55 +1,55 @@
 using TiledIteration: TileIterator
 using FFTW: fft, dct
 
-Base.@pure function get_rnsolt_default_matrices(::TypeI, ::Type{T}, ppo::NTuple{D}, nChs::Tuple{Int,Int}) where {T,D}
-    initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
-    propMts = Vector{Matrix{T}}[
-        [
-            (iseven(n) ? 1 : -1) .* Matrix(I, nChs[1], nChs[1])
-        for n in 1:ppo[pd] ]
-    for pd in 1:D ]
-
-    (initMts, propMts)
-end
-
-Base.@pure function get_rnsolt_default_matrices(::TypeII, ::Type{T}, ppo::NTuple{D}, nChs::Tuple{Int,Int}) where {T,D}
-    initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
-    chx, chn = maximum(nChs), minimum(nChs)
-    propMts = Vector{Matrix{T}}[
-        vcat(
-            fill([ -Matrix(I, chn, chn), Matrix(I, chx, chx) ], fld(ppo[pd],2))...
-        )
-    for pd in 1:D ]
-
-    (initMts, propMts)
-end
-
-Base.@pure function get_cnsolt_default_matrices(::TypeI, ::Type{T}, ppo::NTuple{D}, nChs::Integer) where {T,D}
-    initMts = Matrix{T}[ Matrix(I,nChs,nChs) ]
-    propMts = Vector{Matrix{T}}[
-        [
-            (iseven(n) ? -1 : 1) * Matrix(I,fld(nChs,2),fld(nChs,2))
-        for n in 1:2*ppo[pd] ]
-    for pd in 1:D ]
-
-    (initMts, propMts)
-end
-
-Base.@pure function get_cnsolt_default_matrices(::TypeII, ::Type{T}, ppo::NTuple{D}, nChs::Integer) where {T,D}
-    if any(isodd.(ppo))
-        throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
-    end
-    cch = cld(nChs, 2)
-    fch = fld(nChs, 2)
-    initMts = Matrix{T}[ Matrix(I, nChs, nChs) ]
-    propMts = Vector{Matrix{T}}[
-        vcat(fill([
-            Matrix(I,fch,fch), -Matrix(I,fch,fch), Matrix(I,cch,cch), Matrix(Diagonal(vcat(fill(-1, fld(nChs,2))..., 1)))
-        ], fld(ppo[pd],2))...)
-    for pd in 1:D]
-
-    (initMts, propMts)
-end
+# Base.@pure function get_rnsolt_default_matrices(::TypeI, ::Type{T}, ppo::NTuple{D}, nChs::Tuple{Int,Int}) where {T,D}
+#     initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
+#     propMts = Vector{Matrix{T}}[
+#         [
+#             (iseven(n) ? 1 : -1) .* Matrix(I, nChs[1], nChs[1])
+#         for n in 1:ppo[pd] ]
+#     for pd in 1:D ]
+#
+#     (initMts, propMts)
+# end
+#
+# Base.@pure function get_rnsolt_default_matrices(::TypeII, ::Type{T}, ppo::NTuple{D}, nChs::Tuple{Int,Int}) where {T,D}
+#     initMts = Matrix{T}[ Matrix(I, p, p) for p in nChs ]
+#     chx, chn = maximum(nChs), minimum(nChs)
+#     propMts = Vector{Matrix{T}}[
+#         vcat(
+#             fill([ -Matrix(I, chn, chn), Matrix(I, chx, chx) ], fld(ppo[pd],2))...
+#         )
+#     for pd in 1:D ]
+#
+#     (initMts, propMts)
+# end
+#
+# Base.@pure function get_cnsolt_default_matrices(::TypeI, ::Type{T}, ppo::NTuple{D}, nChs::Integer) where {T,D}
+#     initMts = Matrix{T}[ Matrix(I,nChs,nChs) ]
+#     propMts = Vector{Matrix{T}}[
+#         [
+#             (iseven(n) ? -1 : 1) * Matrix(I,fld(nChs,2),fld(nChs,2))
+#         for n in 1:2*ppo[pd] ]
+#     for pd in 1:D ]
+#
+#     (initMts, propMts)
+# end
+#
+# Base.@pure function get_cnsolt_default_matrices(::TypeII, ::Type{T}, ppo::NTuple{D}, nChs::Integer) where {T,D}
+#     if any(isodd.(ppo))
+#         throw(ArgumentError("Sorry, odd-order Type-II CNSOLT hasn't implemented yet."))
+#     end
+#     cch = cld(nChs, 2)
+#     fch = fld(nChs, 2)
+#     initMts = Matrix{T}[ Matrix(I, nChs, nChs) ]
+#     propMts = Vector{Matrix{T}}[
+#         vcat(fill([
+#             Matrix(I,fch,fch), -Matrix(I,fch,fch), Matrix(I,cch,cch), Matrix(Diagonal(vcat(fill(-1, fld(nChs,2))..., 1)))
+#         ], fld(ppo[pd],2))...)
+#     for pd in 1:D]
+#
+#     (initMts, propMts)
+# end
 
 # upsampler
 function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
@@ -138,7 +138,7 @@ end
 
 analysisbank(cc::AbstractNsolt) = analysisbank(Val(istype1(cc)), cc)
 
-function analysisbank(::TypeI, cc::Cnsolt{T,D}) where {D,T}
+function analysisbank(cc::CnsoltTypeI{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -172,7 +172,7 @@ function analysisbank(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     cc.symmetry * ppm
 end
 
-function analysisbank(::TypeII, cc::Cnsolt{T,D}) where {D,T}
+function analysisbank(cc::CnsoltTypeII{T,D}) where {D,T}
     df = cc.decimationFactor
     P = cc.nChannels
     M = prod(df)
@@ -223,7 +223,7 @@ function analysisbank(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     cc.symmetry * ppm
 end
 
-function analysisbank(::TypeI, rc::Rnsolt{T,D}) where {D,T}
+function analysisbank(rc::RnsoltTypeI{T,D}) where {D,T}
     df = rc.decimationFactor
     nch = rc.nChannels
     P = sum(nch)
@@ -259,7 +259,7 @@ function analysisbank(::TypeI, rc::Rnsolt{T,D}) where {D,T}
     ppm
 end
 
-function analysisbank(::TypeII, rc::Rnsolt{T,D}) where {D,T}
+function analysisbank(rc::RnsoltTypeII{T,D}) where {D,T}
     df = rc.decimationFactor
     M = prod(df)
     ord = rc.polyphaseOrder
@@ -422,39 +422,39 @@ shiftforward(tp::Val, mtx::AbstractMatrix, nShift) = shiftforward!(tp, deepcopy(
 
 shiftbackward(tp::Val, mtx::AbstractMatrix, nShift) = shiftbackward!(tp, deepcopy(mtx), nShift)
 
-function lifting(::TypeI, nsolt::Rnsolt{T,D}) where {T,D}
-    Pw = nsolt.nChannels[1]
-    Pu = nsolt.nChannels[2]
-    P = Pw + Pu
-    M = prod(nsolt.decimationFactor)
-    cM, fM = cld(M,2), fld(M,2)
-
-    initmtx = begin
-        perms = [ collect(1:cM)...,
-                  collect((1:Pw-cM) .+ M)...,
-                  collect((1:fM) .+ cM)...,
-                  collect((1:Pu-fM) .+ (Pw+fM))... ]
-
-        pmtx = foldl(1:length(perms), init=zeros(T,P,P)) do mtx, idx
-            setindex!(mtx, 1, idx, perms[idx])
-        end
-
-        V0 = cat(nsolt.initMatrices[1], nsolt.initMatrices[2], dims=[1,2])
-
-        [ V0 * pmtx ]
-    end
-
-    propMatrices = map(nsolt.propMatrices) do ppmold
-        ppmnew = [ [ Matrix{T}(I, Pw, Pw), copy(mtx) ] for mtx in ppmold ]
-
-        reduce( (lhs, rhs)->[lhs..., rhs...] , ppmnew)
-    end
-
-    paramAngs = Vector{Vector{T}}[ [ zeros(fld(nchannels(nsolt),4)) for n in 1:nsolt.polyphaseOrder[pd] ] for pd in 1:D ]
-
-    symmetry = [ ones(nsolt.nChannels[1]); -1im * ones(nsolt.nChannels[2]) ];
-
-    matrixF = diagm(0=>[ ones(cM); 1im * ones(fM) ]) * nsolt.matrixC
-
-    Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt), initmtx, propMatrices, paramAngs; symmetry=symmetry, matrixF=matrixF)
-end
+# function lifting(nsolt::RnsoltTypeI{T,D}) where {T,D}
+#     Pw = nsolt.nChannels[1]
+#     Pu = nsolt.nChannels[2]
+#     P = Pw + Pu
+#     M = prod(nsolt.decimationFactor)
+#     cM, fM = cld(M,2), fld(M,2)
+#
+#     initmtx = begin
+#         perms = [ collect(1:cM)...,
+#                   collect((1:Pw-cM) .+ M)...,
+#                   collect((1:fM) .+ cM)...,
+#                   collect((1:Pu-fM) .+ (Pw+fM))... ]
+#
+#         pmtx = foldl(1:length(perms), init=zeros(T,P,P)) do mtx, idx
+#             setindex!(mtx, 1, idx, perms[idx])
+#         end
+#
+#         V0 = cat(nsolt.initMatrices[1], nsolt.initMatrices[2], dims=[1,2])
+#
+#         [ V0 * pmtx ]
+#     end
+#
+#     propMatrices = map(nsolt.propMatrices) do ppmold
+#         ppmnew = [ [ Matrix{T}(I, Pw, Pw), copy(mtx) ] for mtx in ppmold ]
+#
+#         reduce( (lhs, rhs)->[lhs..., rhs...] , ppmnew)
+#     end
+#
+#     paramAngs = Vector{Vector{T}}[ [ zeros(fld(nchannels(nsolt),4)) for n in 1:nsolt.polyphaseOrder[pd] ] for pd in 1:D ]
+#
+#     symmetry = [ ones(nsolt.nChannels[1]); -1im * ones(nsolt.nChannels[2]) ];
+#
+#     matrixF = diagm(0=>[ ones(cM); 1im * ones(fM) ]) * nsolt.matrixC
+#
+#     Cnsolt(decimations(nsolt), orders(nsolt), nchannels(nsolt), initmtx, propMatrices, paramAngs; symmetry=symmetry, matrixF=matrixF)
+# end

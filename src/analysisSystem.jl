@@ -9,7 +9,7 @@ end
 
 analyze(fb::PolyphaseFB{TF,D}, pvx::PolyphaseVector{TX,D}; kwargs...) where {TF,TX,D} = PolyphaseVector(analyze(fb, pvx.data, pvx.nBlocks; kwargs...), pvx.nBlocks)
 
-analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {D}
+function analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {D}
     ty = initialStep(nsolt, px; kwargs...)
     extendAtoms(nsolt, ty, nBlocks; kwargs...)
 end
@@ -34,25 +34,22 @@ function initialStep(nsolt::RnsoltTypeII, px::AbstractMatrix; kwargs...)
 
     return [
         nsolt.W0 * Matrix(I, nsolt.nChannels[1], cM) * CJup * px;
-        nsolt.V0 * Matrix(I, nsolt.nChannels[2], fM) * CJlw * px
+        nsolt.U0 * Matrix(I, nsolt.nChannels[2], fM) * CJlw * px
     ]
 end
 
-function initialStep(nsolt::Cnsolt, px::AbstractMatrix; kwargs...)
-    Ipm = Matrix(I, nsolt.nChannels, prod(nsolt.decimationFactor))
-    return nsolt.V0 * Ipm * nsolt.FJ * px
-end
-
-function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple{D}, dims::Integer; kwargs...) where {D}
-    for nblk, nshift, nstage, Uks in nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Udks
+function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
+    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Udks)
+    foreach(params...) do nblk, nshift, nstage, Uks
         px = shiftdimspv(px, nblk)
-        xu = @view pvx[1:nsolt.nChannels[1], :]
-        xl = @view pvx[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
+        xu = @view px[1:nsolt.nChannels[1], :]
+        xl = @view px[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
 
-        for k, U in 1:nstage, Uks
+        # for k, U in 1:nstage, Uks
+        foreach(1:nstage, Uks) do k, U
             unnormalized_butterfly!(xu, xl)
             if isodd(k)
-                shifforward!(Val(border), xl, nshift)
+                shiftforward!(Val(border), xl, nshift)
             else
                 shiftbackward!(Val(border), xl, nshift)
             end
@@ -64,15 +61,18 @@ function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple{D},
     return px
 end
 
-function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nBlocks::NTuple{D}, dims::Integer; kwargs...) where {D}
-    nShifts = fld.(size(px, 2), nBlocks)
-    for nblk, nshift, nstage, Wks, Uks in nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Wdks, nsolt.Udks
+function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
+    mnP, mxP = minmax(nsolt.nChannels...)
+    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Wdks, nsolt.Udks)
+    foreach(params...) do nblk, nshift, nstage, Wks, Uks
         px = shiftdimspv(px, nblk)
-        xu = @view pvx[1:nsolt.nChannels[1], :]
-        xl = @view pvx[end-nChannels[2]+1:end, :]
-        xml = @view pvx[end-nsolt.nChannels[1]+1:end, :]
 
-        for k, W, U in 1:nstages, Wks, Uks
+        xu = @view px[1:mnP, :]
+        xl = @view px[end-mnP+1:end, :]
+        xum = @view px[1:mxP, :]
+        xml = @view px[end-mxP+1:end, :]
+
+        foreach(1:nstage, Wks, Uks) do k, W, U
             unnormalized_butterfly!(xu, xl)
             shiftforward!(Val(border), xml, nshift)
             half_butterfly!(xu, xl)
@@ -81,16 +81,75 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nBlocks::NTuple{D}
             else
                 xl .= U * xl
             end
-            
-            unnormalized_buttefly!(xu, xl)
+
+            unnormalized_butterfly!(xu, xl)
             shiftbackward!(Val(border), xl, nshift)
             half_butterfly!(xu, xl)
-
             if nsolt.nChannels[1] < nsolt.nChannels[2]
-                xl .= U * xl
+                xml .= U * xml
             else
-                xu .= W * xu
+                xum .= W * xum
             end
+        end
+    end
+    return px
+end
+
+
+function initialStep(nsolt::Cnsolt, px::AbstractMatrix; kwargs...)
+    Ipm = Matrix(I, nsolt.nChannels, prod(nsolt.decimationFactor))
+    return nsolt.V0 * Ipm * nsolt.FJ * px
+end
+
+function extendAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
+    hP = fld(nsolt.nChannels, 2)
+    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θdks)
+    foreach(params...) do nblk, nshift, nstage, Wks, Uks, θks
+        px = shiftdimspv(px, nblk)
+        xu = @view px[1:hP, :]
+        xl = @view px[(1:hP) .+ hP, :]
+
+        foreach(1:nstage, Wks, Uks, θks) do k, W, U, θ
+            B = getMatrixB(nsolt.nChannels, θ)
+            px .= B' * px
+            if isodd(k)
+                shiftforward!(Val(border), xl, nshift)
+            else
+                shiftbackward!(Val(border), xl, nshift)
+            end
+            px .= B * px
+            xl .= U * xl
+        end
+    end
+    return px
+end
+
+function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nBlocks::NTuple; border=:circular)
+    fP, cP = fld(nsolt.nChannels, 2), cld(nsolt.nChannels, 2)
+    params = (nBlocks, fld.(size(px, 2), nBlocks), nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
+    foreach(params...) do nblk, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
+        px = shiftdimspv(px, nblk)
+
+        xu1 = @view px[1:fP, :]
+        xl1 = @view px[(1:fP) .+ fP, :]
+        xu2 = @view px[1:cP, :]
+        xl2 = @view px[(1:cP) .+ fP, :]
+        xe  = @view px[1:end-1m, :]
+
+        foreach(1:nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks) do k, W, U, θ1, Ŵ, Û, θ2
+            B1 = getMatrixB(nsolt.nChannels, θ1)
+            xe .= B1' * xe
+            shiftforward!(Val(border), xl1, nshift)
+            xe .= B1 * xe
+            xl1 .= U * xl1
+            xu1 .= W * xu1
+
+            B2 = getMatrixB(nsolt.nChannels, θ2)
+            xe .= B2' * xe
+            shiftforward!(Val(border), xl2, nshift)
+            xe .= B2 * xe
+            xl2 .= Û * xl2
+            xu2 .= Ŵ * xu2
         end
     end
     return px

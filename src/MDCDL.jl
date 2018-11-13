@@ -159,10 +159,11 @@ function createTransform(ms::MS, shape::S=Shapes.Separated()) where {MS<:Multisc
     JoinedTransformSystems(MS(opsarr...), shape)
 end
 
+include("nsolt.jl")
+
 include("orthonormalMatrixSystem.jl")
 include("polyphaseMatrices.jl")
 
-include("nsolt.jl")
 
 include("analysisSystem.jl")
 include("synthesisSystem.jl")

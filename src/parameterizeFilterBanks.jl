@@ -1,11 +1,11 @@
-getrotations(cc::AbstractNsolt) = getrotations(Val(istype1(cc)), cc)
+# getrotations(cc::AbstractNsolt) = getrotations(Val(istype1(cc)), cc)
 
 setrotations!(cc::AbstractNsolt, (θ, μ)) = setrotations(cc, θ, μ)
-setrotations!(cc::AbstractNsolt, θ, μ) = setrotations!(Val(istype1(cc)), cc, θ, μ)
+# setrotations!(cc::AbstractNsolt, θ, μ) = setrotations!(Val(istype1(cc)), cc, θ, μ)
 
 setrotations(cc::AbstractNsolt, args...) = setrotations!(similar(cc), args...)
 
-function getrotations(::TypeI, cc::Cnsolt{T,D}) where {D,T}
+function getrotations(cc::CnsoltTypeI{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -41,7 +41,7 @@ function getrotations(::TypeI, cc::Cnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(cc::CnsoltTypeI{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -85,7 +85,7 @@ function setrotations!(::TypeI, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     return cc
 end
 
-function getrotations(::TypeII, cc::Cnsolt{T,D}) where {D,T}
+function getrotations(cc::CnsoltTypeII{T,D}) where {D,T}
     P = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -125,7 +125,7 @@ function getrotations(::TypeII, cc::Cnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(cc::CnsoltTypeII{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     P = cc.nChannels
     df = cc.decimationFactor
@@ -182,7 +182,7 @@ function setrotations!(::TypeII, cc::Cnsolt{T,D}, angs::AbstractArray{T}, mus) w
     return cc
 end
 
-function getrotations(::TypeI, cc::Rnsolt{T,D}) where {D,T}
+function getrotations(cc::RnsoltTypeI{T,D}) where {D,T}
     nch = cc.nChannels
     P = sum(cc.nChannels)
     df = cc.decimationFactor
@@ -221,7 +221,7 @@ function getrotations(::TypeI, cc::Rnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(cc::RnsoltTypeI{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     nch = cc.nChannels
     P = sum(cc.nChannels)
@@ -259,7 +259,7 @@ function setrotations!(::TypeI, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) wh
     return cc
 end
 
-function getrotations(::TypeII, cc::Rnsolt{T,D}) where {D,T}
+function getrotations(cc::RnsoltTypeII{T,D}) where {D,T}
     nch = cc.nChannels
     df = cc.decimationFactor
     ord = cc.polyphaseOrder
@@ -299,7 +299,7 @@ function getrotations(::TypeII, cc::Rnsolt{T,D}) where {D,T}
     (angs, mus)
 end
 
-function setrotations!(::TypeII, cc::Rnsolt{T,D}, angs::AbstractArray{T}, mus) where {D,T}
+function setrotations!(cc::RnsoltTypeII{T,D}, angs::AbstractArray{T}, mus) where {D,T}
     # Initialization
     nch = cc.nChannels
     df = cc.decimationFactor
