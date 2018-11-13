@@ -97,8 +97,8 @@ function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer;
 end
 
 struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
-    decimationFactor::Tuple{T,D}
-    nStages::Tuple{T,D}
+    decimationFactor::NTuple{D,Int}
+    nStages::NTuple{D,Int}
     nChannels::Integer
 
     FJ::AbstractMatrix
@@ -109,7 +109,7 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
     Udks::NTuple{D, Vector{AbstractMatrix{T}}}
     θdks::NTuple{D, Vector{AbstractVector{T}}}
 
-    # Φ::Diagonal
+    Φ::Diagonal
 
     function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
         FJ = cdftmtx(T, df...)
@@ -123,21 +123,21 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
 
         Udks = ([
             [ Matrix{T}(I, fP, fP) for k in 1:ppo[d] ]
-        for d in 1:D ])
+        for d in 1:D ]...,)
 
         θdks = ([
             [ zeros(T, fld(nChs, 4)) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
 
-        # Φ = Diagonal{T}(cis.(zeros(nChs)))
+        Φ = Diagonal{T}(cis.(zeros(nChs)))
 
-        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θdks)
+        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θdks, Φ)
     end
 end
 
 struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
-    decimationFactor::Tuple{T,D}
-    nStages::Tuple{T,D}
+    decimationFactor::NTuple{D,Int}
+    nStages::NTuple{D,Int}
     nChannels::Integer
 
     FJ::AbstractMatrix
@@ -151,7 +151,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
     Ûdks::NTuple{D, Vector{AbstractMatrix{T}}}
     θ2dks::NTuple{D, Vector{AbstractVector{T}}}
 
-    # Φ::Diagonal
+    Φ::Diagonal
 
     function CnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
         nStages = fld.(ppo, 2)
@@ -184,9 +184,9 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
             [ zeros(T, fld(nChs, 4)) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
-        # Φ = Diagonal{T}(cis.(zeros(nChs)))
+        Φ = Diagonal(cis.(zeros(nChs)))
 
-        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks)
+        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
     end
 end
 
