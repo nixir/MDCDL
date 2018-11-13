@@ -36,7 +36,7 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
 
         W0 = Matrix{T}(I, nch[1], nch[1])
         Udks = ([
-            [ Matrix{T}(I, nch[2], nch[2]) for k in 1:ppo[d] ]
+            [ (iseven(k) ? 1 : -1) * Matrix{T}(I, nch[2], nch[2]) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
 
         new{T,D}(df, ppo, nchs, CJ, W0, Udks)
@@ -67,12 +67,13 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
         @assert all(iseven.(ppo)) "polyphase order of each dimension must be odd"
         nStages = fld.(ppo, 2)
 
+        signW, signU = if nchs[1] < nchs[2]; (-1, 1) else (1, -1) end
         Wdks = ([
-            [ Matrix{T}(I, nchs[1], nchs[1]) for k in 1:nStages[d] ]
+            [ signW * Matrix{T}(I, nchs[1], nchs[1]) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         Udks = ([
-            [ Matrix{T}(I, nchs[2], nchs[2]) for k in 1:nStages[d] ]
+            [ signU * Matrix{T}(I, nchs[2], nchs[2]) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         new{T,D}(df, nStages, nchs, W0, U0, Wdks, Udks)
@@ -122,7 +123,7 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
         for d in 1:D ]...,)
 
         Udks = ([
-            [ Matrix{T}(I, fP, fP) for k in 1:ppo[d] ]
+            [ -Matrix{T}(I, fP, fP) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
 
         θdks = ([
@@ -165,7 +166,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
         for d in 1:D ]...,)
 
         Udks = ([
-            [ Matrix{T}(I, fP, fP) for k in 1:nStages[d] ]
+            [ -Matrix{T}(I, fP, fP) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         θ1dks = ([
@@ -176,8 +177,9 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
             [ Matrix{T}(I, cP, cP) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
+        signÛ = Diagonal([fill(-1,cP-1)..., 1])
         Ûdks = ([
-            [ Matrix{T}(I, cP, cP) for k in 1:nStages[d] ]
+            [ signÛ * Matrix{T}(I, cP, cP) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         θ2dks = ([
