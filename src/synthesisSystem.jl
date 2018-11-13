@@ -100,6 +100,73 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
     return px
 end
 
+function finalStep(nsolt::CnsoltTypeI, px::AbstractMatrix; kwargs...)
+    nsolt.FJ' * (nsolt.V0' * px)[1:prod(nsolt.decimationFactor), :]
+end
+
+function finalStep(nsolt::CnsoltTypeII, px::AbstractMatrix; kwargs...)
+    nsolt.FJ' * (nsolt.V0' * px)[1:prod(nsolt.decimationFactor), :]
+end
+
+function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::NTuple; border=:circular)
+    px = Array(px)
+    hP = fld(nsolt.nChannels, 2)
+    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θdks)
+    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θks
+        xu = @view px[1:hP, :]
+        xl = @view px[(1:hP) .+ hP, :]
+
+        params_d = (1:nstage, Wks, Uks, θks)
+        foreach(reverse.(params_d)...) do k, W, U, θ
+            xl .= U' * xl
+
+            B = getMatrixB(nsolt.nChannels, θ)
+            px .= B' * px
+            if isodd(k)
+                shiftbackward!(Val(border), xl, nshift)
+            else
+                shiftforward!(Val(border), xl, nshift)
+            end
+            px .= B * px
+        end
+        px = rdfcn(px)
+    end
+    return px
+end
+
+function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
+    px = Array(px)
+    fP, cP = fld(nsolt.nChannels, 2), cld(nsolt.nChannels, 2)
+    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
+    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
+        xu1 = @view px[1:fP, :]
+        xl1 = @view px[(1:fP) .+ fP, :]
+        xu2 = @view px[1:cP, :]
+        xl2 = @view px[(1:cP) .+ fP, :]
+        xe  = @view px[1:end-1, :]
+
+        params_d = (1:nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks)
+        foreach(reverse.(params_d)...) do k, W, U, θ1, Ŵ, Û, θ2
+            xu2 .= Ŵ' * xu2
+            xl2 .= Û' * xl2
+            B2 = getMatrixB(nsolt.nChannels, θ2)
+            xe .= B2' * xe
+            shiftforward!(Val(border), xl2, nshift)
+            xe .= B2 * xe
+
+            xu1 .= W' * xu1
+            xl1 .= U' * xl1
+            B1 = getMatrixB(nsolt.nChannels, θ1)
+            xe .= B1' * xe
+            shiftbackward!(Val(border), xl1, nshift)
+            xe .= B1 * xe
+        end
+        px = rdfcn(px)
+    end
+    return px
+end
+
+
 # function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix{TP}, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TN,TP,TM<:AbstractMatrix,NS<:Cnsolt{TN}}
 #     pvy = TM(Matrix(I,sum(P),sum(P))) * pvy
 #     # pvy = convert(Array{promote_type(TN),TP)}, pvy)

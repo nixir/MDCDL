@@ -97,8 +97,12 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
     return px
 end
 
+function initialStep(nsolt::CnsoltTypeI, px::AbstractMatrix; kwargs...)
+    Ipm = Matrix(I, nsolt.nChannels, prod(nsolt.decimationFactor))
+    return nsolt.V0 * Ipm * nsolt.FJ * px
+end
 
-function initialStep(nsolt::Cnsolt, px::AbstractMatrix; kwargs...)
+function initialStep(nsolt::CnsoltTypeII, px::AbstractMatrix; kwargs...)
     Ipm = Matrix(I, nsolt.nChannels, prod(nsolt.decimationFactor))
     return nsolt.V0 * Ipm * nsolt.FJ * px
 end
@@ -148,7 +152,7 @@ function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
 
             B2 = getMatrixB(nsolt.nChannels, θ2)
             xe .= B2' * xe
-            shiftforward!(Val(border), xl2, nshift)
+            shiftbackward!(Val(border), xl2, nshift)
             xe .= B2 * xe
             xl2 .= Û * xl2
             xu2 .= Ŵ * xu2
