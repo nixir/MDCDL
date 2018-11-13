@@ -3,57 +3,92 @@ using Random
 # import Random.rand
 # import Random.rand!
 
+function rand_orthomtx!(mtx::AbstractMatrix{T}) where T
+    mtx .= qr(rand(T, size(mtx)...)).Q
+end
+
 rand(nsolt::AbstractNsolt, args...; kwargs...) = rand!(similar(nsolt), args...; kwargs...)
 
-function rand!(cnsolt::Cnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T}
-    P = sum(cnsolt.nChannels)
-
+function rand!(nsolt::CnsoltTypeI{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {T,D}
     if isSymmetry
-        cnsolt.symmetry .= Diagonal(exp.(1im*rand(P)))
-    end
-    if isInitMat
-        # cnsolt.initMatrices[1] = T.(qr(rand(P,P)).Q)
-        for mtx in cnsolt.initMatrices
-            mtx .= qr(rand(T,size(mtx)...)).Q
-        end
+        nsolt.Φ .= Diagonal(cis.(rand(nsolt.nChannels)))
     end
 
-    foreach(cnsolt.propMatrices, cnsolt.paramAngles) do pms, pas
+    if isInitMat
+        rand_orthomtx!(nsolt.V0)
+    end
+
+    for d = 1:D
         if isPropMat
-            for mtx in pms
-                mtx .= qr(rand(T,size(mtx)...)).Q
+            foreach(nsolt.Wdks[d], nsolt.Udks[d]) do W, U
+                rand_orthomtx!(W)
+                rand_orthomtx!(U)
             end
         end
-
         if isPropAng
-            for angs in pas
-                angs .= rand(T,size(angs)...)
+            foreach(nsolt.θdks[d]) do θ
+                θ .= 2pi*(rand(size(θ)...) .- 0.5)
             end
         end
     end
-    cnsolt
 end
 
-function rand!(rnsolt::Rnsolt{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {D,T} # "isPropAng" and "isSymmetry" are not used.
+function rand!(nsolt::CnsoltTypeII{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {T,D}
+    if isSymmetry
+        nsolt.Φ .= Diagonal(cis.(rand(nsolt.nChannels)))
+    end
+
     if isInitMat
-        for mtx in rnsolt.initMatrices
-            mtx .= qr(rand(T,size(mtx)...)).Q
-        end
+        rand_orthomtx!(nsolt.V0)
     end
 
-    for pms in rnsolt.propMatrices
+    for d = 1:D
         if isPropMat
-            for mtx in pms
-                mtx .= qr(rand(T,size(mtx)...)).Q
+            foreach(nsolt.Wdks[d], nsolt.Udks[d], nsolt.Ŵdks[d], nsolt.Ûdks[d]) do W, U, Ŵ, Û
+                rand_orthomtx!(W)
+                rand_orthomtx!(U)
+                rand_orthomtx!(Ŵ)
+                rand_orthomtx!(Û)
+            end
+        end
+        if isPropAng
+            foreach(nsolt.θ1dks[d], nsolt.θ2dks[d]) do θ1, θ2
+                θ1 .= 2pi*(rand(size(θ1)...) .- 0.5)
+                θ2 .= 2pi*(rand(size(θ2)...) .- 0.5)
             end
         end
     end
-    rnsolt
 end
 
-function intervals(lns::AbstractVector, offset::Integer=0)
-    map(lns, cumsum(lns)) do st, ed
-        UnitRange(ed - st + 1 + offset, ed + offset)
+function rand!(nsolt::RnsoltTypeI{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {T,D}
+    if isInitMat
+        rand_orthomtx!(nsolt.W0)
+        rand_orthomtx!(nsolt.U0)
+    end
+
+    for d = 1:D
+        if isPropMat
+            foreach(nsolt.Udks[d]) do U
+                rand_orthomtx!(U)
+            end
+        end
+    end
+end
+
+function rand!(nsolt::RnsoltTypeII{T,D}; isInitMat=true, isPropMat=true, isPropAng=true, isSymmetry=true) where {T,D}
+
+    if isInitMat
+        rand_orthomtx!(nsolt.W0)
+        rand_orthomtx!(nsolt.U0)
+    end
+
+    for d = 1:D
+        if isPropMat
+            foreach(nsolt.Wdks[d], nsolt.Udks[d]) do W, U
+                rand_orthomtx!(W)
+                rand_orthomtx!(U)
+            end
+        end
     end
 end
 

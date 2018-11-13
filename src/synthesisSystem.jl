@@ -9,22 +9,60 @@ end
 
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
-synthesize(cc::NS, py::AbstractMatrix, nBlocks::NTuple{D}; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}} = synthesize(NS, Val(istype1(cc)), py, nBlocks, cc.matrixF, cc.initMatrices, cc.propMatrices, cc.paramAngles, cc.symmetry, cc.decimationFactor, cc.polyphaseOrder, cc.nChannels)
+function synthesize(nsolt::AbstractNsolt, py::AbstractMatrix, nBlocks::NTuple; kwargs...) where {TF,TX,D}
+    nShifts = fld.(size(px, 2), nBlocks)
+    irotatedimsfcns = ([ t->shiftdimspv(t, blk) for blk in nBlocks ]...,)
+    tx = concatenateAtoms(nsolt, py, nShifts, irotatedimsfcns; kwargs...)
 
-function synthesize(::Type{NS}, tp::Val, y::AbstractMatrix, nBlocks::NTuple, matrixF::AbstractMatrix, initMts::AbstractArray, propMts::AbstractArray, paramAngs::AbstractArray, sym::AbstractMatrix, df::NTuple, ord::NTuple, nch::Integer; kwargs...) where {NS<:Cnsolt}
-    y = concatenateAtoms(NS, tp, sym' * y, nBlocks, propMts, paramAngs, ord, nch; kwargs...)
-    finalStep(NS, tp, y, matrixF, initMts, df, nch; kwargs...)
+    finalStep(nsolt, tx; kwargs...)
 end
 
-function finalStep(::Type{NS}, ::Val, y::AbstractMatrix, matrixF::AbstractMatrix, initMts::AbstractArray{TM}, df::NTuple, nch::Integer; kwargs...) where {TM<:AbstractMatrix, NS<:Cnsolt}
-    # output = (V0 * F * J)' * uy == J * F' * V0' * uy
-    (initMts[1] * Matrix(I, nch, prod(df)) * reverse(matrixF, dims=2))' * y
+function finalStep(nsolt::RnsoltTypeI, py::AbstractMatrix; kwargs...)
+    M = prod(nsolt.decimationFactor)
+    fM, cM = fld(M, 2), cld(M, 2)
+
+    tyup = nsolt.W0' * py[1:nsolt.nChannels[1], :]
+    tylw = nsolt.U0' * py[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
+
+    return nsolt.CJ' * [ tyup[1:cM, :]; tylw[1:fM, :] ]
 end
 
-function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}}
-    foldr(1:D; init=pvy) do d, ty
-        concatenateAtomsPerDims(NS, tp, ty, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
+function finalStep(nsolt::RnsoltTypeII, py::AbstractMatrix; kwargs...)
+    M = prod(nsolt.decimationFactor)
+    fM, cM = fld(M, 2), cld(M, 2)
+
+    tyup = nsolt.W0' * py[1:nsolt.nChannels[1], :]
+    tylw = nsolt.U0' * py[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
+
+    return nsolt.CJ' * [ tyup[1:cM, :]; tylw[1:fM, :] ]
+end
+
+# function concatenateAtoms(::Type{NS}, tp::Val, pvy::AbstractMatrix, nBlocks::NTuple{D}, propMts::AbstractArray, paramAngs::AbstractArray, ord::NTuple{D}, P::Integer; kwargs...) where {TF,D,NS<:Cnsolt{TF,D}}
+#     foldr(1:D; init=pvy) do d, ty
+#         concatenateAtomsPerDims(NS, tp, ty, nBlocks[d], propMts[d], paramAngs[d], ord[d], P; kwargs...)
+#     end
+# end
+
+function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns::NTuple; border=:circular)
+    params = (irotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
+    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Uks
+        px = rdfcn(px)
+        xu = @view px[1:nsolt.nChannels[1], :]
+        xl = @view px[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
+
+        params_d = (1:nstage, Uks)
+        foreach(reverse.(params_d)...) do k, U
+            xl .= U' * xl
+            unnormalized_butterfly!(xu, xl)
+            if isodd(k)
+                shiftbackward!(Val(border), xl, nshift)
+            else
+                shiftforward!(Val(border), xl, nshift)
+            end
+            half_butterfly!(xu, xl)
+        end
     end
+    return px
 end
 
 # function concatenateAtomsPerDims(::Type{NS}, ::TypeI, pvy::AbstractMatrix{TP}, nBlock::Integer, propMtsd::AbstractArray{TM}, paramAngsd::AbstractArray, ordd::Integer, P::Integer; border=:circular) where {TN,TP,TM<:AbstractMatrix,NS<:Cnsolt{TN}}

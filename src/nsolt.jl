@@ -132,7 +132,7 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
             [ zeros(T, fld(nChs, 4)) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
 
-        Φ = Diagonal{T}(cis.(zeros(nChs)))
+        Φ = Diagonal(cis.(zeros(nChs))) |> complex
 
         new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θdks, Φ)
     end
@@ -188,7 +188,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
             [ zeros(T, fld(nChs, 4)) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
-        Φ = Diagonal(cis.(zeros(nChs)))
+        Φ = Diagonal(cis.(zeros(nChs))) |> complex
 
         new{T,D}(df, nStages, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
     end

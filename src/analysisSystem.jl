@@ -48,7 +48,6 @@ function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, ro
         xu = @view px[1:nsolt.nChannels[1], :]
         xl = @view px[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
 
-        # for k, U in 1:nstage, Uks
         foreach(1:nstage, Uks) do k, U
             unnormalized_butterfly!(xu, xl)
             if isodd(k)
