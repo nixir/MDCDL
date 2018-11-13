@@ -3,9 +3,9 @@ using ColorTypes, ColorSchemes
 using TiledIteration
 
 @recipe function atmimshow(cc::Cnsolt{T,2}; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10, coordinate=:cartesian) where {T}
-    nch = cc.nChannels
-    ord = cc.polyphaseOrder
-    df =  cc.decimationFactor
+    nch = nchannels(cc)
+    ord = orders(cc)
+    df =  decimations(cc)
 
     layout :=  (2,nch)
     size -->  100 .* df .* (ord .+ 1) .* (nch, 2)
@@ -29,9 +29,9 @@ using TiledIteration
 end
 
 @recipe function atmimshow(cc::Cnsolt{T,2}, p::Integer; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10, coordinate=:cartesian) where {T}
-    nch = cc.nChannels
-    ord = cc.polyphaseOrder
-    df =  cc.decimationFactor
+    nch = nchannels(cc)
+    ord = orders(cc)
+    df =  decimations(cc)
 
     layout :=  (2,1)
     size -->  100 .* df .* (ord .+ 1) .* (1,2)
@@ -58,9 +58,9 @@ end
 
 @recipe function atmimshow(cc::Rnsolt{T,2}; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10) where {T}
     mxP = maximum(cc.nChannels)
-    ord = cc.polyphaseOrder
-    df =  cc.decimationFactor
     nch = cc.nChannels
+    ord = orders(cc)
+    df =  decimations(cc)
     difch = nch[2]-nch[1]
 
     layout     :=  (2,mxP)
@@ -97,8 +97,8 @@ end
 end
 
 @recipe function atmimshow(cc::Rnsolt{T,2}, p::Integer; cscheme=ColorSchemes.gray, rangescale=(-0.5,0.5), atomscale=10) where {T}
-    ord = cc.polyphaseOrder
-    df =  cc.decimationFactor
+    ord = orders(cc)
+    df =  decimations(cc)
 
     axis    := false
     grid    := false
