@@ -96,6 +96,12 @@ function rand!(nsolt::RnsoltTypeII{T,D}; isInitMat=true, isPropMat=true, isPropA
     return nsolt
 end
 
+function intervals(lns::AbstractVector, offset::Integer=0)
+    map(lns, cumsum(lns)) do st, ed
+        UnitRange(ed - st + 1 + offset, ed + offset)
+    end
+end
+
 intervals(lns::Tuple, args...) = (intervals(collect(lns), args...)...,)
 
 vm1constraint!(ns::AbstractNsolt) = vm1constraint!(Val(istype1(ns)), ns)
