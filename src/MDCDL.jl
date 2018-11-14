@@ -19,7 +19,7 @@ export analyze, synthesize, adjoint_synthesize
 export upsample, downsample
 export serialize, deserialize
 export analysisbank
-export decimations, orders, nchannels
+export decimations, orders, nchannels, nstages
 export kernels, analysiskernels, synthesiskernels, kernelsize
 export getrotations, setrotations!
 export mdarray2polyphase, polyphase2mdarray

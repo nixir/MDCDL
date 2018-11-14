@@ -203,6 +203,8 @@ orders(fb::CnsoltTypeI) = fb.nStages
 orders(fb::RnsoltTypeII) = 2 .* fb.nStages
 orders(fb::CnsoltTypeII) = 2 .* fb.nStages
 
+nstages(fb::AbstractNsolt) = fb.nStages
+
 istype1(::Type{RnsoltTypeI}) = true
 istype1(::Type{CnsoltTypeI}) = true
 istype1(::Type{RnsoltTypeII}) = false
