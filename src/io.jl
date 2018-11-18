@@ -1,14 +1,6 @@
 using JSON
 using InteractiveUtils: subtypes
 
-function setparams_dk!(dst, src)
-    foreach(dst, src) do dstk, srck
-        foreach(dstk, srck) do dstkd, srckd
-            dstkd .= srckd
-        end
-    end
-end
-
 function savefb(filename::AbstractString, nsolt::AbstractNsolt, mode::AbstractString="w")
     if match(r".*\.json$", filename) === nothing
         filename = string(filename, ".json")
@@ -128,6 +120,14 @@ function set_nsolt_params_by_dict!(NS::Type, dict::Dict, initpm::Array, proppm::
     foreach(proppm) do pm
         a = get_nsolt_config(NS, dict, pm.second)
         setparams_dk!(pm.first, a)
+    end
+end
+
+function setparams_dk!(dst, src)
+    foreach(dst, src) do dstk, srck
+        foreach(dstk, srck) do dstkd, srckd
+            dstkd .= srckd
+        end
     end
 end
 
