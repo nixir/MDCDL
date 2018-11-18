@@ -41,16 +41,16 @@ function setrotations!(nsolt::AbstractNsolt{T,D}, θ::AbstractArray, μ::Abstrac
     nppsθ, nppsμ = nparamsperstage(nsolt)
     dlmθ = intervals([ sum(npiθ), (sum(nppsθ) .* nstages(nsolt))... ])
     dlmμ = intervals([ sum(npiμ), (sum(nppsμ) .* nstages(nsolt))... ])
-    θinit, μinit = θ[dlmθ[1]], μ[dlmμ[1]]
-    θprop, μprop = map(t->θ[t], dlmθ[2:end]), map(t->μ[t], dlmμ[2:end])
+    θinit, μinit = @view(θ[dlmθ[1]]), @view(μ[dlmμ[1]])
+    θprop, μprop = map(t->@view(θ[t]), dlmθ[2:end]), map(t->@view(μ[t]), dlmμ[2:end])
 
     setrotations_init!(nsolt, θinit, μinit)
 
     foreach(1:D, nstages(nsolt), θprop, μprop) do d, nstg, θd, μd
         dlmθk = intervals(fill(sum(nppsθ), nstg))
         dlmμk = intervals(fill(sum(nppsμ), nstg))
-        θdk = map(k->θd[k], dlmθk)
-        μdk = map(k->μd[k], dlmμk)
+        θdk = map(k->@view(θd[k]), dlmθk)
+        μdk = map(k->@view(μd[k]), dlmμk)
         foreach(1:nstg, θdk, μdk) do k, θ, μ
             setrotations_prop!(nsolt, d, k, θ, μ)
         end
