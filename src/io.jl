@@ -1,6 +1,14 @@
 using JSON
 using InteractiveUtils: subtypes
 
+function setparams_dk!(dst, src)
+    foreach(dst, src) do dstk, srck
+        foreach(dstk, srck) do dstkd, srckd
+            dstkd .= srckd
+        end
+    end
+end
+
 function savefb(filename::AbstractString, nsolt::AbstractNsolt, mode::AbstractString="w")
     if match(r".*\.json$", filename) === nothing
         filename = string(filename, ".json")
@@ -10,15 +18,40 @@ end
 
 savefb(io::IOStream, nsolt::AbstractNsolt) = print(io, serialize(nsolt))
 
-function serialize(cc::AbstractNsolt{T,D}; format::AbstractString="JSON") where {T,D,S}
-    configs = JSON.json(cc)
-    fbname = if isa(cc, Cnsolt)
-        "CNSOLT"
-    elseif isa(cc, Rnsolt)
-        "RNSOLT"
+function serialize(nsolt::NS) where {NS<:AbstractNsolt}
+    # convert to Dict
+    dict_nsolt = nsolt |> JSON.json |> JSON.parse
+
+    nsolt_configs, nsolt_params = separate_nsolt_configs_params(NS, dict_nsolt)
+
+    delete!(nsolt_configs, "nStages")
+    push!(nsolt_configs, "polyphaseOrder" => collect(orders(nsolt)))
+
+    if NS <: Cnsolt
+        nsolt_params["Φ"] = map(diag(nsolt.Φ)) do p
+            Dict( "re" => real(p), "im" => imag(p))
+        end
     end
 
-    string("{\"Name\":\"", fbname ,"\",\"DataType\":\"", string(T), "\",\"Dimensions\":", D, ",\"Configurations\":", configs ,"}")
+    outdict = Dict(
+        "NsoltType" => string(nameof(NS)),
+        "ElementType" => string(eltype(NS)),
+        "Configs" => nsolt_configs,
+        "Params" => nsolt_params,
+    )
+    JSON.json(outdict)
+end
+
+function separate_nsolt_configs_params(::Type{NS}, dict::Dict) where {NS<:AbstractNsolt}
+    keynames = [ "decimationFactor", "polyphaseOrder", "nChannels" ]
+    configs = filter(dict) do d
+        any(d.first .== keynames)
+    end
+    params = filter(dict) do d
+        !any(d.first .== keynames)
+    end
+
+    (configs, params)
 end
 
 loadfb(filename::AbstractString) = open(io->MDCDL.loadfb(io), filename)
@@ -29,95 +62,179 @@ function loadfb(io::IOStream)
     deserialize(dic)
 end
 
-deserialize(dic::Dict; format::AbstractString="JSON") = deserialize(Val(Symbol(dic["Name"])), dic)
+function deserialize(dict::Dict;
+        nsolttypeset=[ subtypes(Rnsolt)..., subtypes(Cnsolt)... ],
+        eltypeset=subtypes(AbstractFloat)
+    )
 
-function deserialize(::Val{:CNSOLT}, dic::Dict)
-    dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
+    strNS = dict["NsoltType"]
+    strT = dict["ElementType"]
+    dic_nsolt_configs = dict["Configs"]
+    dic_nsolt_params = dict["Params"]
 
-    T = dtSet[dic["DataType"]]
-    D = dic["Dimensions"]
-    cfgs = dic["Configurations"]
+    NS = Dict( string.(nsolttypeset) .=> nsolttypeset )[strNS]
+    T = Dict( string.(eltypeset) .=> eltypeset )[strT]
 
-    dfa = Vector{Int}(undef, D)
-    nch = Int
-    ppoa = Vector{Int}(undef, D)
-    foreach(keys(cfgs)) do key
-        if key == "decimationFactor"
-            dfa = cfgs[key]
-        elseif key == "nChannels"
-            nch = cfgs[key]
-        elseif key == "polyphaseOrder"
-            ppoa = cfgs[key]
-        end
-    end
-    df = tuple(dfa...)
-    ppo = tuple(ppoa...)
+    nsolt = create_nsolt_by_dict(NS, T, dic_nsolt_configs)
 
-    nsolt = Cnsolt(T, df, ppo, nch)
-
-    foreach(keys(cfgs)) do key
-        if key == "initMatrices"
-            for idx = 1:1
-                nsolt.initMatrices[idx] .= Matrix{T}(hcat(cfgs[key][idx]...))
-            end
-        elseif key == "propMatrices"
-            for d = 1:D, od = 1:2*ppo[d]
-                nsolt.propMatrices[d][od] .= Matrix{T}(hcat(cfgs[key][d][od]...))
-            end
-        elseif key == "paramAngles"
-            for d = 1:D, od = 1:ppo[d]
-                nsolt.paramAngles[d][od] .= vcat(cfgs[key][d][od]...)
-            end
-        elseif key == "symmetry"
-            cplxVal = map((u)-> map((x)-> x["re"]+1im*x["im"], u), cfgs[key])
-            nsolt.symmetry .= Diagonal(hcat(cplxVal...))
-        elseif key == "matrixF"
-            cplxVal = map((u)-> map((x)-> x["re"]+1im*x["im"], u), cfgs[key])
-            nsolt.matrixF .= Matrix{Complex{T}}(hcat(cplxVal...))
-        end
-    end
-
-    nsolt
+    return set_nsolt_params_by_dict!(nsolt, dic_nsolt_params)
 end
 
-function deserialize(::Val{:RNSOLT}, dic::Dict)
-    dtSet = Dict([ string(slf) => slf for slf in subtypes(AbstractFloat) ])
+function create_nsolt_by_dict(::Type{NS}, T::Type, dict::Dict) where {NS<:AbstractNsolt}
+    df = get_nsolt_config(NS, dict, "decimationFactor")
+    ord = get_nsolt_config(NS, dict, "polyphaseOrder")
+    nch = get_nsolt_config(NS, dict, "nChannels")
 
-    T = dtSet[dic["DataType"]]
-    D = dic["Dimensions"]
-    cfgs = dic["Configurations"]
+    NS(T, df, ord, nch)
+end
 
-    dfa = Vector{Int}(undef, D)
-    ncha = Vector{Int}(undef, 2)
-    ppoa = Vector{Int}(undef, D)
-    foreach(keys(cfgs)) do key
-        if key == "decimationFactor"
-            dfa = cfgs[key]
-        elseif key == "nChannels"
-            ncha = cfgs[key]
-        elseif key == "polyphaseOrder"
-            ppoa = cfgs[key]
+function set_nsolt_params_by_dict!(nsolt::NS, dict::Dict) where {NS<:RnsoltTypeI}
+    initpm = [ nsolt.W0 => "W0", nsolt.U0 => "U0", nsolt.CJ => "CJ"]
+    proppm = [ nsolt.Udks => "Udks" ]
+    set_nsolt_params_by_dict!(NS, dict, initpm, proppm)
+
+    return nsolt
+end
+
+function set_nsolt_params_by_dict!(nsolt::NS, dict::Dict) where {NS<:RnsoltTypeII}
+    initpm = [ nsolt.W0 => "W0", nsolt.U0 => "U0", nsolt.CJ => "CJ"]
+    proppm = [ nsolt.Wdks => "Wdks", nsolt.Udks => "Udks" ]
+    set_nsolt_params_by_dict!(NS, dict, initpm, proppm)
+
+    return nsolt
+end
+
+function set_nsolt_params_by_dict!(nsolt::NS, dict::Dict) where {NS<:CnsoltTypeI}
+    initpm = [ nsolt.V0 => "V0", nsolt.FJ => "FJ"]
+    proppm = [ nsolt.Wdks => "Wdks", nsolt.Udks => "Udks", nsolt.θdks => "θdks" ]
+    set_nsolt_params_by_dict!(NS, dict, initpm, proppm)
+
+    return nsolt
+end
+
+function set_nsolt_params_by_dict!(nsolt::NS, dict::Dict) where {NS<:CnsoltTypeII}
+    initpm = [ nsolt.V0 => "V0", nsolt.FJ => "FJ"]
+    proppm = [ nsolt.Wdks => "Wdks", nsolt.Udks => "Udks", nsolt.θ1dks => "θ1dks", nsolt.Ŵdks => "Ŵdks", nsolt.Ûdks => "Ûdks", nsolt.θ2dks => "θ2dks" ]
+    set_nsolt_params_by_dict!(NS, dict, initpm, proppm)
+
+    return nsolt
+end
+
+function set_nsolt_params_by_dict!(NS::Type, dict::Dict, initpm::Array, proppm::Array)
+    foreach(initpm) do pm
+        pm.first .= get_nsolt_config(NS, dict, pm.second)
+    end
+
+    foreach(proppm) do pm
+        a = get_nsolt_config(NS, dict, pm.second)
+        setparams_dk!(pm.first, a)
+    end
+end
+
+get_nsolt_config(::Type{NS}, dict::Dict, akey::AbstractString) where {NS} = get_nsolt_config(NS, Val(Symbol(akey)), dict[akey])
+
+function get_nsolt_config(::Type{NS}, ::Val{:decimationFactor}, data) where {NS<:AbstractNsolt}
+    (Int.(data)...,)
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:polyphaseOrder}, data) where {NS<:AbstractNsolt}
+    (Int.(data)...,)
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:nChannels}, data) where {NS<:Rnsolt}
+    (Int.(data)...,)
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:nChannels}, data) where {NS<:Cnsolt}
+    Int(sum(data))
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:CJ}, data) where {T,NS<:Rnsolt{T}}
+    T.(hcat(data...))
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:FJ}, data) where {T,NS<:Cnsolt{T}}
+    map(hcat(data...)) do FJpm
+        Complex{T}(FJpm["re"] + FJpm["im"]*im)
+    end
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:W0}, data) where {T,NS<:Rnsolt{T}}
+    T.(hcat(data...))
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:U0}, data) where {T,NS<:Rnsolt{T}}
+    T.(hcat(data...))
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:V0}, data) where {T,NS<:Cnsolt{T}}
+    T.(hcat(data...))
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:Udks}, data) where {T,NS<:AbstractNsolt{T}}
+    map(data) do Ud
+        map(Ud) do Udk
+            T.(hcat(Udk...))
         end
     end
-    df = tuple(dfa...)
-    nch = tuple(ncha...)
-    ppo = tuple(ppoa...)
+end
 
-    nsolt = Rnsolt(T, df, ppo, nch)
-
-    foreach(keys(cfgs)) do key
-        if key == "initMatrices"
-            for idx = 1:2
-                nsolt.initMatrices[idx] .= Matrix{T}(hcat(cfgs[key][idx]...))
-            end
-        elseif key == "propMatrices"
-            for d = 1:D, od = 1:ppo[d]
-                nsolt.propMatrices[d][od] .= Matrix{T}(hcat(cfgs[key][d][od]...))
-            end
-        elseif key == "matrixC"
-            nsolt.matrixC .= Matrix{T}(hcat(cfgs[key]...))
+function get_nsolt_config(::Type{NS}, ::Val{:Wdks}, data) where {T,NS<:RnsoltTypeII{T}}
+    map(data) do Wd
+        map(Wd) do Wdk
+            T.(hcat(Wdk...))
         end
     end
+end
 
-    nsolt
+function get_nsolt_config(::Type{NS}, ::Val{:Wdks}, data) where {T,NS<:Cnsolt{T}}
+    map(data) do Wd
+        map(Wd) do Wdk
+            T.(hcat(Wdk...))
+        end
+    end
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:θdks}, data) where {T,NS<:CnsoltTypeI{T}}
+    map(data) do θd
+        map(θd) do θdk
+            T.(θdk)
+        end
+    end
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:θ1dks}, data) where {T,NS<:CnsoltTypeII{T}}
+    map(data) do θd
+        map(θd) do θdk
+            T.(θdk)
+        end
+    end
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:Ŵdks}, data) where {T,NS<:CnsoltTypeII{T}}
+    map(data) do Wd
+        map(Wd) do Wdk
+            T.(hcat(Wdk...))
+        end
+    end
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:Ûdks}, data) where {T,NS<:CnsoltTypeII{T}}
+    map(data) do Wd
+        map(Wd) do Wdk
+            T.(hcat(Wdk...))
+        end
+    end
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:θ2dks}, data) where {T,NS<:CnsoltTypeII{T}}
+    map(data) do θd
+        map(θd) do θdk
+            T.(θdk)
+        end
+    end
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:Φ}, data) where {T,NS<:Cnsolt{T}}
+    Diagonal(map(p->Complex{T}(p["re"] + p["im"]*im), data))
 end
