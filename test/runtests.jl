@@ -8,7 +8,7 @@ end
 # write your own tests here
 # include("parallelFB.jl")
 # include("convolutionalOperator.jl")
-include("cnsolt.jl")
+# include("cnsolt.jl")
 include("rnsolt.jl")
 
 # include("multiscale.jl")

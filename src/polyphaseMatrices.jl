@@ -91,6 +91,7 @@ function analysisbank(nsolt::AbstractNsolt)
     ord = orders(nsolt)
 
     krncenter = initialStep(nsolt, Matrix(I, M, M))
+    # krncenter = initialStep(nsolt, reverse(Matrix(I, M, M), dims=1) )
 
     nStrides = ([1, cumprod(collect(ord[1:end-1] .+ 1))... ]...,) .* M
     pxe = [ krncenter zeros(size(krncenter, 1), M .* (prod(ord .+ 1)-1)) ]

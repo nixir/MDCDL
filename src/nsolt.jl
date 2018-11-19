@@ -33,7 +33,7 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
 
     function RnsoltTypeI(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
         @assert (nchs[1] == nchs[2]) "channel size mismatch!"
-        @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
+        @assert (cld(prod(df),2) <= nchs[1] <= sum(nchs) - fld(prod(df),2)) && (fld(prod(df),2) <= nchs[2] <= sum(nchs) - cld(prod(df),2)) "invalid number of channels"
         CJ = permdctmtx(T, df...)
 
         W0 = Matrix{T}(I, nchs[1], nchs[1])
@@ -62,7 +62,7 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
     Udks::NTuple{D, Vector{AbstractMatrix{T}}} # parameter matrices of propagation matrices
 
     function RnsoltTypeII(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
-        @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
+        @assert (cld(prod(df),2) <= nchs[1] <= sum(nchs) - fld(prod(df),2)) && (fld(prod(df),2) <= nchs[2] <= sum(nchs) - cld(prod(df),2)) "invalid number of channels"
         CJ = permdctmtx(T, df...)
 
         W0 = Matrix{T}(I, nchs[1], nchs[1])

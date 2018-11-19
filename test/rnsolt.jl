@@ -28,27 +28,22 @@ using LinearAlgebra
 
             for (df, ord, nch) in cfgset
                 if prod(df) > sum(nch)
-                    @test_throws ArgumentError Rnsolt(df, ord, nch)
+                    @test_throws AssertionError Rnsolt(df, ord, nch)
                     continue
                 end
 
                 if !(cld(prod(df),2) <= nch[1] <= sum(nch) - fld(prod(df),2)) || !(fld(prod(df),2) <= nch[2] <= sum(nch) - cld(prod(df),2))
-                    @test_throws ArgumentError Rnsolt(df, ord, nch)
+                    @test_throws AssertionError Rnsolt(df, ord, nch)
                     continue
                 end
 
                 if nch[1] != nch[2] && any(isodd.(ord))
-                    @test_throws ArgumentError Rnsolt(df, ord, nch)
+                    @test_throws AssertionError Rnsolt(df, ord, nch)
                     continue
                 end
 
                 nsolt = Rnsolt(df, ord, nch)
 
-                # if nch[1] == nch[2]
-                #     @test isa(nsolt, Rnsolt{defaultType,d,:TypeI})
-                # else
-                #     @test isa(nsolt, Rnsolt{defaultType,d,:TypeII})
-                # end
                 if nch[1] == nch[2]
                     @test istype1(nsolt) == true && istype2(nsolt) == false
                 else
@@ -164,9 +159,16 @@ using LinearAlgebra
             (angs, mus) = getrotations(src)
             setrotations!(dst, angs, mus)
 
-            @test all(src.initMatrices .≈ dst.initMatrices)
-            foreach(src.propMatrices, dst.propMatrices) do propSrc, propDst
-                @test all(propSrc .≈ propDst)
+            @test src.W0 ≈ dst.W0 && src.U0 ≈ dst.U0
+            
+            foreach(src.Udks, dst.Udks) do srcUs, dstUs
+                @test all(srcUs .≈ dstUs)
+            end
+
+            if istype2(src)
+                foreach(src.Wdks, dst.Wdks) do srcWs, dstWs
+                    @test all(srcWs .≈ dstWs)
+                end
             end
         end
     end
