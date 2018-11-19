@@ -200,7 +200,7 @@ end
 adjshiftcoefs!(v::Val{:circular}, k, mtxup, mtxlw, nShift::Integer) = shiftcoefs!(v, k, mtxup, mtxlw, -nShift)
 
 function shiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
-    if iseven(k)
+    if isodd(k)
         mtxlw[:, 1+nShift:end] .= @view mtxlw[:, 1:end-nShift]
         mtxlw[:, 1:nShift] .= 0
     else
@@ -211,7 +211,7 @@ function shiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::Abs
 end
 
 function adjshiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
-    if iseven(k)
+    if isodd(k)
         mtxlw[:, 1:end-nShift] .= @view mtxlw[:, 1+nShift:end]
         mtxlw[:, end-nShift+1:end] .= 0
     else

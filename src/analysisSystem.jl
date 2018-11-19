@@ -75,7 +75,6 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
 
         foreach(1:nstage, Wks, Uks) do k, W, U
             unnormalized_butterfly!(xu, xl)
-            # shiftforward!(Val(border), xml, nshift)
             shiftcoefs!(Val(border), 2k-1, xum, xml, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
@@ -85,7 +84,6 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
             end
 
             unnormalized_butterfly!(xu, xl)
-            # shiftbackward!(Val(border), xl, nshift)
             shiftcoefs!(Val(border), 2k, xu, xl, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
@@ -137,29 +135,27 @@ function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
     foreach(params...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
         px = rdfcn(px)
 
-        xu1 = @view px[1:fP, :]
-        xl1 = @view px[(1:fP) .+ fP, :]
-        hoge1 = @view px[(fP+1):end, :]
-        xu2 = @view px[1:cP, :]
-        xl2 = @view px[(1:cP) .+ fP, :]
+        xW = @view px[1:fP, :]
+        xU = @view px[(1:fP) .+ fP, :]
+        xb = @view px[(fP+1):end, :]
+        xŴ = @view px[1:cP, :]
+        xÛ = @view px[(1:cP) .+ fP, :]
         xe  = @view px[1:end-1, :]
 
         foreach(1:nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks) do k, W, U, θ1, Ŵ, Û, θ2
             B1 = getMatrixB(nsolt.nChannels, θ1)
             xe .= B1' * xe
-            # shiftforward!(Val(border), xl1, nshift)
-            shiftcoefs!(Val(border), 2k-1, xu1, hoge1, nshift)
+            shiftcoefs!(Val(border), 2k-1, xW, xU, nshift)
             xe .= B1 * xe
-            xl1 .= U * xl1
-            xu1 .= W * xu1
+            xU .= U * xU
+            xW .= W * xW
 
             B2 = getMatrixB(nsolt.nChannels, θ2)
             xe .= B2' * xe
-            # shiftbackward!(Val(border), xl2, nshift)
-            shiftcoefs!(Val(border), 2k, xu1, xl1, nshift)
+            shiftcoefs!(Val(border), 2k, xW, xb, nshift)
             xe .= B2 * xe
-            xl2 .= Û * xl2
-            xu2 .= Ŵ * xu2
+            xÛ .= Û * xÛ
+            xŴ .= Ŵ * xŴ
         end
     end
     return px

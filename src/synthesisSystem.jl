@@ -81,7 +81,6 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xum .= W' * xum
             end
             unnormalized_butterfly!(xu, xl)
-            # shiftforward!(Val(border), xl, nshift)
             adjshiftcoefs!(Val(border), 2k, xu, xl, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
@@ -90,7 +89,6 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xl .= U' * xl
             end
             unnormalized_butterfly!(xu, xl)
-            # shiftbackward!(Val(border), xml, nshift)
             adjshiftcoefs!(Val(border), 2k-1, xum, xml, nshift)
             half_butterfly!(xu, xl)
         end
@@ -124,11 +122,6 @@ function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
 
             B = getMatrixB(nsolt.nChannels, θ)
             px .= B' * px
-            # if isodd(k)
-            #     shiftbackward!(Val(border), xl, nshift)
-            # else
-            #     shiftforward!(Val(border), xu, nshift)
-            # end
             adjshiftcoefs!(Val(border), k, xu, xl, nshift)
             px .= B * px
         end
@@ -142,29 +135,27 @@ function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTup
     fP, cP = fld(nsolt.nChannels, 2), cld(nsolt.nChannels, 2)
     params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
     foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
-        xu1 = @view px[1:fP, :]
-        xl1 = @view px[(1:fP) .+ fP, :]
-        hoge1 = @view px[(fP+1):end, :]
-        xu2 = @view px[1:cP, :]
-        xl2 = @view px[(1:cP) .+ fP, :]
+        xW = @view px[1:fP, :]
+        xU = @view px[(1:fP) .+ fP, :]
+        xb = @view px[(fP+1):end, :]
+        xŴ = @view px[1:cP, :]
+        xÛ = @view px[(1:cP) .+ fP, :]
         xe  = @view px[1:end-1, :]
 
         params_d = (1:nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks)
         foreach(reverse.(params_d)...) do k, W, U, θ1, Ŵ, Û, θ2
-            xu2 .= Ŵ' * xu2
-            xl2 .= Û' * xl2
+            xŴ .= Ŵ' * xŴ
+            xÛ .= Û' * xÛ
             B2 = getMatrixB(nsolt.nChannels, θ2)
             xe .= B2' * xe
-            # shiftforward!(Val(border), xl2, nshift)
-            adjshiftcoefs!(Val(border), 2k, xu1, xl1, nshift)
+            adjshiftcoefs!(Val(border), 2k, xW, xb, nshift)
             xe .= B2 * xe
 
-            xu1 .= W' * xu1
-            xl1 .= U' * xl1
+            xW .= W' * xW
+            xU .= U' * xU
             B1 = getMatrixB(nsolt.nChannels, θ1)
             xe .= B1' * xe
-            # shiftbackward!(Val(border), xl1, nshift)
-            adjshiftcoefs!(Val(border), 2k-1, xu1, hoge1, nshift)
+            adjshiftcoefs!(Val(border), 2k-1, xW, xU, nshift)
             xe .= B1 * xe
         end
         px = rdfcn(px)
