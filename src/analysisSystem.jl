@@ -51,11 +51,12 @@ function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, ro
 
         foreach(1:nstage, Uks) do k, U
             unnormalized_butterfly!(xu, xl)
-            if isodd(k)
-                shiftforward!(Val(border), xl, nshift)
-            else
-                shiftbackward!(Val(border), xl, nshift)
-            end
+            # if isodd(k)
+            #     shiftforward!(Val(border), xl, nshift)
+            # else
+            #     shiftbackward!(Val(border), xu, nshift)
+            # end
+            shiftcoefs!(Val(border), k, xu, xl, nshift)
             half_butterfly!(xu, xl)
 
             xl .= U * xl
@@ -64,6 +65,7 @@ function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, ro
     return px
 end
 
+# TODO:
 function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
     mnP, mxP = minmax(nsolt.nChannels...)
     params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
@@ -72,12 +74,14 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
 
         xu = @view px[1:mnP, :]
         xl = @view px[end-mnP+1:end, :]
+
         xum = @view px[1:mxP, :]
         xml = @view px[end-mxP+1:end, :]
 
         foreach(1:nstage, Wks, Uks) do k, W, U
             unnormalized_butterfly!(xu, xl)
-            shiftforward!(Val(border), xml, nshift)
+            # shiftforward!(Val(border), xml, nshift)
+            shiftcoefs!(Val(border), 2k-1, xum, xml, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xu .= W * xu
@@ -86,7 +90,8 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
             end
 
             unnormalized_butterfly!(xu, xl)
-            shiftbackward!(Val(border), xl, nshift)
+            # shiftbackward!(Val(border), xl, nshift)
+            shiftcoefs!(Val(border), 2k, xu, xl, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xml .= U * xml
@@ -121,11 +126,7 @@ function extendAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, ro
         foreach(1:nstage, Wks, Uks, θks) do k, W, U, θ
             B = getMatrixB(nsolt.nChannels, θ)
             px .= B' * px
-            if isodd(k)
-                shiftforward!(Val(border), xl, nshift)
-            else
-                shiftbackward!(Val(border), xl, nshift)
-            end
+            shiftcoefs!(Val(border), k, xu, xl, nshift)
             px .= B * px
 
             xl .= U * xl
@@ -143,6 +144,7 @@ function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
 
         xu1 = @view px[1:fP, :]
         xl1 = @view px[(1:fP) .+ fP, :]
+        hoge1 = @view px[(fP+1):end, :]
         xu2 = @view px[1:cP, :]
         xl2 = @view px[(1:cP) .+ fP, :]
         xe  = @view px[1:end-1, :]
@@ -150,14 +152,16 @@ function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
         foreach(1:nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks) do k, W, U, θ1, Ŵ, Û, θ2
             B1 = getMatrixB(nsolt.nChannels, θ1)
             xe .= B1' * xe
-            shiftforward!(Val(border), xl1, nshift)
+            # shiftforward!(Val(border), xl1, nshift)
+            shiftcoefs!(Val(border), 2k-1, xu1, hoge1, nshift)
             xe .= B1 * xe
             xl1 .= U * xl1
             xu1 .= W * xu1
 
             B2 = getMatrixB(nsolt.nChannels, θ2)
             xe .= B2' * xe
-            shiftbackward!(Val(border), xl2, nshift)
+            # shiftbackward!(Val(border), xl2, nshift)
+            shiftcoefs!(Val(border), 2k, xu1, xl1, nshift)
             xe .= B2 * xe
             xl2 .= Û * xl2
             xu2 .= Ŵ * xu2

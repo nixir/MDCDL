@@ -143,24 +143,43 @@ using Random
         end
     end
 
-    # @testset "Factorization" begin
-    #     for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
-    #         src = Cnsolt(df, ord, nch)
-    #         dst = Cnsolt(df, ord, nch)
-    #         rand!(src)
-    #
-    #         (angs, mus) = getrotations(src)
-    #         setrotations!(dst, angs, mus)
-    #
-    #         @test all(src.initMatrices .≈ dst.initMatrices)
-    #         foreach(src.propMatrices, dst.propMatrices) do propSrc, propDst
-    #             @test all(propSrc .≈ propDst)
-    #         end
-    #         foreach(src.paramAngles, dst.paramAngles) do angsSrc, angsDst
-    #             @test all(angsSrc .≈ angsDst)
-    #         end
-    #     end
-    # end
+    @testset "Factorization" begin
+        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
+            src = Cnsolt(df, ord, nch)
+            dst = Cnsolt(df, ord, nch)
+            rand!(src)
+
+            (angs, mus) = getrotations(src)
+            setrotations!(dst, angs, mus)
+
+            @test src.V0 ≈ dst.V0
+            foreach(src.Wdks, dst.Wdks) do srcWs, dstWs
+                @test all(srcWs .≈ dstWs)
+            end
+            foreach(src.Udks, dst.Udks) do srcUs, dstUs
+                @test all(srcUs .≈ dstUs)
+            end
+
+            if istype1(src)
+                foreach(src.θdks, dst.θdks) do srcθs, dstθs
+                    @test all(srcθs .≈ dstθs)
+                end
+            else
+                foreach(src.θ1dks, dst.θ1dks) do srcθ1s, dstθ1s
+                    @test all(srcθ1s .≈ dstθ1s)
+                end
+                foreach(src.Ŵdks, dst.Ŵdks) do srcŴs, dstŴs
+                    @test all(srcŴs .≈ dstŴs)
+                end
+                foreach(src.Ûdks, dst.Ûdks) do srcÛs, dstÛs
+                    @test all(srcÛs .≈ dstÛs)
+                end
+                foreach(src.θ2dks, dst.θ2dks) do srcθ2s, dstθ2s
+                    @test all(srcθ2s .≈ dstθ2s)
+                end
+            end
+        end
+    end
 end
 
 nothing

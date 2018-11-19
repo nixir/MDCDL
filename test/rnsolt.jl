@@ -160,7 +160,7 @@ using LinearAlgebra
             setrotations!(dst, angs, mus)
 
             @test src.W0 ≈ dst.W0 && src.U0 ≈ dst.U0
-            
+
             foreach(src.Udks, dst.Udks) do srcUs, dstUs
                 @test all(srcUs .≈ dstUs)
             end

@@ -90,14 +90,15 @@ function analysisbank(nsolt::AbstractNsolt)
     M = prod(decimations(nsolt))
     ord = orders(nsolt)
 
-    krncenter = initialStep(nsolt, Matrix(I, M, M))
-    # krncenter = initialStep(nsolt, reverse(Matrix(I, M, M), dims=1) )
+    # krncenter = initialStep(nsolt, Matrix(I, M, M))
+    mtx0 = reverse(Matrix(I, M, M .* prod(ord .+ 1) ), dims=1)
+    krncenter = initialStep(nsolt, mtx0 )
 
     nStrides = ([1, cumprod(collect(ord[1:end-1] .+ 1))... ]...,) .* M
-    pxe = [ krncenter zeros(size(krncenter, 1), M .* (prod(ord .+ 1)-1)) ]
+    # pxe = [ krncenter zeros(size(krncenter, 1), M .* (prod(ord .+ 1)-1)) ]
 
     rotdimsfcns = (fill(identity, ndims(nsolt))...,)
-    krnsym = extendAtoms(nsolt, pxe, nStrides, rotdimsfcns, border=:circular_oneway)
+    krnsym = extendAtoms(nsolt, krncenter, nStrides, rotdimsfcns, border=:circular_traditional)
     return shiftFilterSymmetry(nsolt, krnsym)
 end
 
@@ -189,29 +190,68 @@ end
     nothing
 end
 
-function shiftforward!(::Val{:circular}, mtx::AbstractMatrix, nShift::Integer)
-    mtx .= circshift(mtx, (0, nShift))
-end
-shiftbackward!(tp::Val{:circular}, mtx, nShift) = shiftforward!(tp, mtx, -nShift)
-
-shiftforward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
-shiftbackward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
-
-function shiftforward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
-    mtx[:,1+nShift:end] .= @view mtx[:,1:end-nShift]
-    mtx[:,1:nShift] .= 0
-    mtx
+function shiftcoefs!(::Val{:circular}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
+    if iseven(k)
+        mtxlw .= circshift(mtxlw, (0,  nShift))
+    else
+        mtxup .= circshift(mtxup, (0, -nShift))
+    end
+    nothing
 end
 
-function shiftbackward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
-    mtx[:,1:end-nShift] .= @view mtx[:,1+nShift:end]
-    mtx[:,end-nShift+1:end] .= 0
-    mtx
+adjshiftcoefs!(v::Val{:circular}, k, mtxup, mtxlw, nShift::Integer) = shiftcoefs!(v, k, mtxup, mtxlw, -nShift)
+
+function shiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
+    if iseven(k)
+        mtxlw[:, 1+nShift:end] .= @view mtxlw[:, 1:end-nShift]
+        mtxlw[:, 1:nShift] .= 0
+    else
+        mtxup[:, 1:end-nShift] .= @view mtxup[:, 1+nShift:end]
+        mtxup[:, end-nShift+1:end] .= 0
+    end
+    nothing
 end
 
-shiftforward(tp::Val, mtx::AbstractMatrix, nShift) = shiftforward!(tp, deepcopy(mtx), nShift)
+function adjshiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
+    if iseven(k)
+        mtxlw[:, 1:end-nShift] .= @view mtxlw[:, 1+nShift:end]
+        mtxlw[:, end-nShift+1:end] .= 0
+    else
+        mtxup[:, 1+nShift:end] .= @view mtxup[:, 1:end-nShift]
+        mtxup[:, 1:nShift] .= 0
+    end
+    nothing
+end
 
-shiftbackward(tp::Val, mtx::AbstractMatrix, nShift) = shiftbackward!(tp, deepcopy(mtx), nShift)
+function shiftcoefs!(::Val{:circular_traditional}, ::Integer, ::Any, mtxlw::AbstractMatrix, nShift::Integer)
+    mtxlw .= circshift(mtxlw, (0, nShift))
+end
+
+adjshiftcoefs!(v::Val{:circular_traditional}, k, mtxup, mtxlw, nShift::Integer) = shiftcoefs!(v, k, mtxup, mtxlw, -nShift)
+
+# function shiftforward!(::Val{:circular}, mtx::AbstractMatrix, nShift::Integer)
+#     mtx .= circshift(mtx, (0, nShift))
+# end
+# shiftbackward!(tp::Val{:circular}, mtx, nShift) = shiftforward!(tp, mtx, -nShift)
+
+# shiftforward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
+# shiftbackward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
+
+# function shiftforward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
+#     mtx[:,1+nShift:end] .= @view mtx[:,1:end-nShift]
+#     mtx[:,1:nShift] .= 0
+#     mtx
+# end
+#
+# function shiftbackward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
+#     mtx[:,1:end-nShift] .= @view mtx[:,1+nShift:end]
+#     mtx[:,end-nShift+1:end] .= 0
+#     mtx
+# end
+
+# shiftforward(tp::Val, mtx::AbstractMatrix, nShift) = shiftforward!(tp, deepcopy(mtx), nShift)
+#
+# shiftbackward(tp::Val, mtx::AbstractMatrix, nShift) = shiftbackward!(tp, deepcopy(mtx), nShift)
 
 # function lifting(nsolt::RnsoltTypeI{T,D}) where {T,D}
 #     Pw = nsolt.nChannels[1]

@@ -50,11 +50,12 @@ function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
         foreach(reverse.(params_d)...) do k, U
             xl .= U' * xl
             unnormalized_butterfly!(xu, xl)
-            if isodd(k)
-                shiftbackward!(Val(border), xl, nshift)
-            else
-                shiftforward!(Val(border), xl, nshift)
-            end
+            # if isodd(k)
+            #     shiftbackward!(Val(border), xl, nshift)
+            # else
+            #     shiftforward!(Val(border), xu, nshift)
+            # end
+            adjshiftcoefs!(Val(border), k, xu, xl, nshift)
             half_butterfly!(xu, xl)
         end
         px = rdfcn(px)
@@ -80,7 +81,8 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xum .= W' * xum
             end
             unnormalized_butterfly!(xu, xl)
-            shiftforward!(Val(border), xl, nshift)
+            # shiftforward!(Val(border), xl, nshift)
+            adjshiftcoefs!(Val(border), 2k, xu, xl, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xu .= W' * xu
@@ -88,7 +90,8 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xl .= U' * xl
             end
             unnormalized_butterfly!(xu, xl)
-            shiftbackward!(Val(border), xml, nshift)
+            # shiftbackward!(Val(border), xml, nshift)
+            adjshiftcoefs!(Val(border), 2k-1, xum, xml, nshift)
             half_butterfly!(xu, xl)
         end
         px = rdfcn(px)
@@ -121,11 +124,12 @@ function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
 
             B = getMatrixB(nsolt.nChannels, θ)
             px .= B' * px
-            if isodd(k)
-                shiftbackward!(Val(border), xl, nshift)
-            else
-                shiftforward!(Val(border), xl, nshift)
-            end
+            # if isodd(k)
+            #     shiftbackward!(Val(border), xl, nshift)
+            # else
+            #     shiftforward!(Val(border), xu, nshift)
+            # end
+            adjshiftcoefs!(Val(border), k, xu, xl, nshift)
             px .= B * px
         end
         px = rdfcn(px)
@@ -140,6 +144,7 @@ function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTup
     foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
         xu1 = @view px[1:fP, :]
         xl1 = @view px[(1:fP) .+ fP, :]
+        hoge1 = @view px[(fP+1):end, :]
         xu2 = @view px[1:cP, :]
         xl2 = @view px[(1:cP) .+ fP, :]
         xe  = @view px[1:end-1, :]
@@ -150,14 +155,16 @@ function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTup
             xl2 .= Û' * xl2
             B2 = getMatrixB(nsolt.nChannels, θ2)
             xe .= B2' * xe
-            shiftforward!(Val(border), xl2, nshift)
+            # shiftforward!(Val(border), xl2, nshift)
+            adjshiftcoefs!(Val(border), 2k, xu1, xl1, nshift)
             xe .= B2 * xe
 
             xu1 .= W' * xu1
             xl1 .= U' * xl1
             B1 = getMatrixB(nsolt.nChannels, θ1)
             xe .= B1' * xe
-            shiftbackward!(Val(border), xl1, nshift)
+            # shiftbackward!(Val(border), xl1, nshift)
+            adjshiftcoefs!(Val(border), 2k-1, xu1, hoge1, nshift)
             xe .= B1 * xe
         end
         px = rdfcn(px)
