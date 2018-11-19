@@ -112,6 +112,7 @@ function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
 
         params_d = (1:nstage, Wks, Uks, θks)
         foreach(reverse.(params_d)...) do k, W, U, θ
+            xu .= W' * xu
             xl .= U' * xl
 
             B = getMatrixB(nsolt.nChannels, θ)
