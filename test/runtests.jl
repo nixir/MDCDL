@@ -9,6 +9,6 @@ end
 # include("parallelFB.jl")
 # include("convolutionalOperator.jl")
 include("cnsolt.jl")
-# include("rnsolt.jl")
+include("rnsolt.jl")
 
 # include("multiscale.jl")

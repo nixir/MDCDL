@@ -93,7 +93,7 @@ function analysisbank(nsolt::AbstractNsolt)
     mtx0 = reverse(Matrix(I, M, M .* prod(ord .+ 1) ), dims=1)
     krncenter = initialStep(nsolt, mtx0 )
 
-    nStrides = ([1, cumprod(collect(ord[1:end-1] .+ 1))... ]...,) .* M
+    nStrides = (cumprod([ M, (ord[1:end-1] .+ 1)... ])...,)
 
     rotdimsfcns = (fill(identity, ndims(nsolt))...,)
     krnsym = extendAtoms(nsolt, krncenter, nStrides, rotdimsfcns, border=:circular_traditional)
@@ -226,30 +226,6 @@ function shiftcoefs!(::Val{:circular_traditional}, ::Integer, ::Any, mtxlw::Abst
 end
 
 adjshiftcoefs!(v::Val{:circular_traditional}, k, mtxup, mtxlw, nShift::Integer) = shiftcoefs!(v, k, mtxup, mtxlw, -nShift)
-
-# function shiftforward!(::Val{:circular}, mtx::AbstractMatrix, nShift::Integer)
-#     mtx .= circshift(mtx, (0, nShift))
-# end
-# shiftbackward!(tp::Val{:circular}, mtx, nShift) = shiftforward!(tp, mtx, -nShift)
-
-# shiftforward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
-# shiftbackward!(::Val{:circular_oneway}, args...) = shiftforward!(Val(:circular), args...)
-
-# function shiftforward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
-#     mtx[:,1+nShift:end] .= @view mtx[:,1:end-nShift]
-#     mtx[:,1:nShift] .= 0
-#     mtx
-# end
-#
-# function shiftbackward!(::Val{:zero}, mtx::AbstractMatrix, nShift::Integer)
-#     mtx[:,1:end-nShift] .= @view mtx[:,1+nShift:end]
-#     mtx[:,end-nShift+1:end] .= 0
-#     mtx
-# end
-
-# shiftforward(tp::Val, mtx::AbstractMatrix, nShift) = shiftforward!(tp, deepcopy(mtx), nShift)
-#
-# shiftbackward(tp::Val, mtx::AbstractMatrix, nShift) = shiftbackward!(tp, deepcopy(mtx), nShift)
 
 # function lifting(nsolt::RnsoltTypeI{T,D}) where {T,D}
 #     Pw = nsolt.nChannels[1]

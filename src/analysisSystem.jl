@@ -75,7 +75,7 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
 
         foreach(1:nstage, Wks, Uks) do k, W, U
             unnormalized_butterfly!(xu, xl)
-            shiftcoefs!(Val(border), 2k-1, xum, xml, nshift)
+            shiftcoefs!(Val(border), 2k-1, xu, xml, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xu .= W * xu
@@ -84,7 +84,7 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
             end
 
             unnormalized_butterfly!(xu, xl)
-            shiftcoefs!(Val(border), 2k, xu, xl, nshift)
+            shiftcoefs!(Val(border), 2k, xum, xl, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xml .= U * xml

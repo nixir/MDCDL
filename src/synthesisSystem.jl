@@ -50,11 +50,6 @@ function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
         foreach(reverse.(params_d)...) do k, U
             xl .= U' * xl
             unnormalized_butterfly!(xu, xl)
-            # if isodd(k)
-            #     shiftbackward!(Val(border), xl, nshift)
-            # else
-            #     shiftforward!(Val(border), xu, nshift)
-            # end
             adjshiftcoefs!(Val(border), k, xu, xl, nshift)
             half_butterfly!(xu, xl)
         end
@@ -81,7 +76,7 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xum .= W' * xum
             end
             unnormalized_butterfly!(xu, xl)
-            adjshiftcoefs!(Val(border), 2k, xu, xl, nshift)
+            adjshiftcoefs!(Val(border), 2k, xum, xl, nshift)
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xu .= W' * xu
@@ -89,7 +84,7 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xl .= U' * xl
             end
             unnormalized_butterfly!(xu, xl)
-            adjshiftcoefs!(Val(border), 2k-1, xum, xml, nshift)
+            adjshiftcoefs!(Val(border), 2k-1, xu, xml, nshift)
             half_butterfly!(xu, xl)
         end
         px = rdfcn(px)
