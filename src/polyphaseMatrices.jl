@@ -90,12 +90,10 @@ function analysisbank(nsolt::AbstractNsolt)
     M = prod(decimations(nsolt))
     ord = orders(nsolt)
 
-    # krncenter = initialStep(nsolt, Matrix(I, M, M))
     mtx0 = reverse(Matrix(I, M, M .* prod(ord .+ 1) ), dims=1)
     krncenter = initialStep(nsolt, mtx0 )
 
     nStrides = ([1, cumprod(collect(ord[1:end-1] .+ 1))... ]...,) .* M
-    # pxe = [ krncenter zeros(size(krncenter, 1), M .* (prod(ord .+ 1)-1)) ]
 
     rotdimsfcns = (fill(identity, ndims(nsolt))...,)
     krnsym = extendAtoms(nsolt, krncenter, nStrides, rotdimsfcns, border=:circular_traditional)
@@ -191,7 +189,7 @@ end
 end
 
 function shiftcoefs!(::Val{:circular}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
-    if iseven(k)
+    if isodd(k)
         mtxlw .= circshift(mtxlw, (0,  nShift))
     else
         mtxup .= circshift(mtxup, (0, -nShift))

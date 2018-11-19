@@ -34,7 +34,7 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
     function RnsoltTypeI(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
         @assert (nchs[1] == nchs[2]) "channel size mismatch!"
         @assert (cld(prod(df),2) <= nchs[1] <= sum(nchs) - fld(prod(df),2)) && (fld(prod(df),2) <= nchs[2] <= sum(nchs) - cld(prod(df),2)) "invalid number of channels"
-        CJ = permdctmtx(T, df...)
+        CJ = reverse(permdctmtx(T, df...), dims=2) |> Matrix
 
         W0 = Matrix{T}(I, nchs[1], nchs[1])
         U0 = Matrix{T}(I, nchs[2], nchs[2])
@@ -63,7 +63,7 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
 
     function RnsoltTypeII(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
         @assert (cld(prod(df),2) <= nchs[1] <= sum(nchs) - fld(prod(df),2)) && (fld(prod(df),2) <= nchs[2] <= sum(nchs) - cld(prod(df),2)) "invalid number of channels"
-        CJ = permdctmtx(T, df...)
+        CJ = reverse(permdctmtx(T, df...), dims=2) |> Matrix
 
         W0 = Matrix{T}(I, nchs[1], nchs[1])
         U0 = Matrix{T}(I, nchs[2], nchs[2])
@@ -118,7 +118,7 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
 
     function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer) where {T,D}
         @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
-        FJ = cdftmtx(T, df...)
+        FJ = reverse(cdftmtx(T, df...), dims=2) |> Matrix
 
         V0 = Matrix{T}(I, nchs, nchs)
 
@@ -163,7 +163,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
         @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
         @assert all(iseven.(ppo)) "polyphase order of each dimension must be odd"
         nStages = fld.(ppo, 2)
-        FJ = cdftmtx(T, df...)
+        FJ = reverse(cdftmtx(T, df...), dims=2) |> Matrix
 
         V0 = Matrix{T}(I, nchs, nchs)
 

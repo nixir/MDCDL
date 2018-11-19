@@ -51,11 +51,6 @@ function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, ro
 
         foreach(1:nstage, Uks) do k, U
             unnormalized_butterfly!(xu, xl)
-            # if isodd(k)
-            #     shiftforward!(Val(border), xl, nshift)
-            # else
-            #     shiftbackward!(Val(border), xu, nshift)
-            # end
             shiftcoefs!(Val(border), k, xu, xl, nshift)
             half_butterfly!(xu, xl)
 
