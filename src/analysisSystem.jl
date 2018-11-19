@@ -14,7 +14,8 @@ function analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple; kwar
 
     nShifts = fld.(size(px, 2), nBlocks)
     rotatedimsfcns = ([ t->shiftdimspv(t, blk) for blk in nBlocks ]...,)
-    extendAtoms(nsolt, ty, nShifts, rotatedimsfcns; kwargs...)
+    exty = extendAtoms(nsolt, ty, nShifts, rotatedimsfcns; kwargs...)
+    return shiftFilterSymmetry(nsolt, exty)
 end
 
 function initialStep(nsolt::RnsoltTypeI, px::AbstractMatrix; kwargs...)
@@ -97,6 +98,8 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
     return px
 end
 
+shiftFilterSymmetry(::Rnsolt, y::AbstractMatrix) = y
+
 function initialStep(nsolt::CnsoltTypeI, px::AbstractMatrix; kwargs...)
     Ipm = Matrix(I, nsolt.nChannels, prod(nsolt.decimationFactor))
     return nsolt.V0 * Ipm * nsolt.FJ * px
@@ -162,6 +165,8 @@ function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
     end
     return px
 end
+
+shiftFilterSymmetry(nsolt::Cnsolt, y::AbstractMatrix) = nsolt.Φ * y
 
 function analyze(jts::JoinedTransformSystems{MS}, x::AbstractArray{TX,D}) where {MS<:Multiscale,TX,D}
     subanalyze(jts.shape, x, jts.transforms...)

@@ -96,7 +96,8 @@ function analysisbank(nsolt::AbstractNsolt)
     pxe = [ krncenter zeros(size(krncenter, 1), M .* (prod(ord .+ 1)-1)) ]
 
     rotdimsfcns = (fill(identity, ndims(nsolt))...,)
-    return extendAtoms(nsolt, pxe, nStrides, rotdimsfcns, border=:circular_oneway)
+    krnsym = extendAtoms(nsolt, pxe, nStrides, rotdimsfcns, border=:circular_oneway)
+    return shiftFilterSymmetry(nsolt, krnsym)
 end
 
 kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))

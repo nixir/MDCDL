@@ -10,9 +10,11 @@ end
 synthesize(fb::PolyphaseFB{TF,D}, pvy::PolyphaseVector{TY,D}; kwargs...) where {TF,TY,D} = PolyphaseVector(synthesize(fb, pvy.data, pvy.nBlocks; kwargs...), pvy.nBlocks)
 
 function synthesize(nsolt::AbstractNsolt, py::AbstractMatrix, nBlocks::NTuple; kwargs...) where {TF,TX,D}
-    nShifts = fld.(size(py, 2), nBlocks)
+    sy = ishiftFilterSymmetry(nsolt, py)
+
+    nShifts = fld.(size(sy, 2), nBlocks)
     irotatedimsfcns = ([ t->ishiftdimspv(t, blk) for blk in nBlocks ]...,)
-    ty = concatenateAtoms(nsolt, py, nShifts, irotatedimsfcns; kwargs...)
+    ty = concatenateAtoms(nsolt, sy, nShifts, irotatedimsfcns; kwargs...)
 
     finalStep(nsolt, ty; kwargs...)
 end
@@ -94,6 +96,8 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
     return px
 end
 
+ishiftFilterSymmetry(::Rnsolt, x::AbstractMatrix) = x
+
 function finalStep(nsolt::CnsoltTypeI, px::AbstractMatrix; kwargs...)
     nsolt.FJ' * (nsolt.V0' * px)[1:prod(nsolt.decimationFactor), :]
 end
@@ -160,6 +164,8 @@ function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTup
     end
     return px
 end
+
+ishiftFilterSymmetry(nsolt::Cnsolt, x::AbstractMatrix) = nsolt.Φ' * x
 
 function synthesize(jts::JoinedTransformSystems{MS}, y::AbstractArray) where {MS<:Multiscale}
     subsynthesize(jts.shape, y, jts.transforms...)

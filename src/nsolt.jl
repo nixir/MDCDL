@@ -1,21 +1,21 @@
 abstract type AbstractNsolt{T,D} <: PolyphaseFB{T,D} end
 abstract type Rnsolt{T,D} <: AbstractNsolt{T,D} end
 
-Rnsolt(df::Integer, ppo::Integer, nChs; kwargs...) = Rnsolt(Float64, df, ppo, nChs; kwargs...)
-Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; kwargs...) where {T} = Rnsolt(T, df, ppo, (cld(nChs,2),fld(nChs,2)); kwargs...)
-function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Tuple{Int,Int}; dims::Integer=1, kwargs...) where {T}
-    Rnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nChs; kwargs...)
+Rnsolt(df::Integer, ppo::Integer, nchs; kwargs...) = Rnsolt(Float64, df, ppo, nchs; kwargs...)
+Rnsolt(::Type{T}, df::Integer, ppo::Integer, nchs::Integer; kwargs...) where {T} = Rnsolt(T, df, ppo, (cld(nchs,2),fld(nchs,2)); kwargs...)
+function Rnsolt(::Type{T}, df::Integer, ppo::Integer, nchs::Tuple{Int,Int}; dims::Integer=1, kwargs...) where {T}
+    Rnsolt(T, (fill(df,dims)...,), (fill(ppo,dims)...,), nchs; kwargs...)
 end
 
-Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nChs; kwargs...)
+Rnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Union{Tuple{Int,Int}, Integer}; kwargs...) where {D} = Rnsolt(Float64, df, ppo, nchs; kwargs...)
 
-Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer; kwargs...) where {D,T} = Rnsolt(T, df, ppo, (cld(nChs,2), fld(nChs,2)); kwargs...)
+Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; kwargs...) where {D,T} = Rnsolt(T, df, ppo, (cld(nchs,2), fld(nchs,2)); kwargs...)
 
-function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Tuple{Int,Int}; kwargs...) where {T,D}
-    return if nChs[1] == nChs[2]
-        RnsoltTypeI(T, df, ppo, nChs; kwargs...)
+function Rnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Tuple{Int,Int}; kwargs...) where {T,D}
+    return if nchs[1] == nchs[2]
+        RnsoltTypeI(T, df, ppo, nchs; kwargs...)
     else
-        RnsoltTypeII(T, df, ppo, nChs; kwargs...)
+        RnsoltTypeII(T, df, ppo, nchs; kwargs...)
     end
 end
 
@@ -33,6 +33,7 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
 
     function RnsoltTypeI(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
         @assert (nchs[1] == nchs[2]) "channel size mismatch!"
+        @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
         CJ = permdctmtx(T, df...)
 
         W0 = Matrix{T}(I, nchs[1], nchs[1])
@@ -61,6 +62,7 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
     Udks::NTuple{D, Vector{AbstractMatrix{T}}} # parameter matrices of propagation matrices
 
     function RnsoltTypeII(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
+        @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
         CJ = permdctmtx(T, df...)
 
         W0 = Matrix{T}(I, nchs[1], nchs[1])
@@ -84,18 +86,18 @@ end
 
 abstract type Cnsolt{T,D} <: AbstractNsolt{T,D} end
 
-Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nChs; kwargs...)
-Cnsolt(df::Integer, ppo::Integer, nChs::Integer; kwargs...) = Cnsolt(Float64, df, ppo, nChs; kwargs...)
+Cnsolt(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; kwargs...) where {D} = Cnsolt(Float64, df, ppo, nchs; kwargs...)
+Cnsolt(df::Integer, ppo::Integer, nchs::Integer; kwargs...) = Cnsolt(Float64, df, ppo, nchs; kwargs...)
 
-function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nChs::Integer; dims=1, kwargs...) where {T}
-    Cnsolt(T, (fill(df, dims)...,), (fill(ppo, dims)...,), nChs; kwargs...)
+function Cnsolt(::Type{T}, df::Integer, ppo::Integer, nchs::Integer; dims=1, kwargs...) where {T}
+    Cnsolt(T, (fill(df, dims)...,), (fill(ppo, dims)...,), nchs; kwargs...)
 end
 
-function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer; kwargs...) where {T,D}
-    return if iseven(nChs)
-        CnsoltTypeI(T, df, ppo, nChs; kwargs...)
+function Cnsolt(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; kwargs...) where {T,D}
+    return if iseven(nchs)
+        CnsoltTypeI(T, df, ppo, nchs; kwargs...)
     else
-        CnsoltTypeII(T, df, ppo, nChs; kwargs...)
+        CnsoltTypeII(T, df, ppo, nchs; kwargs...)
     end
 end
 
@@ -114,12 +116,13 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
 
     Φ::Diagonal
 
-    function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
+    function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer) where {T,D}
+        @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
         FJ = cdftmtx(T, df...)
 
-        V0 = Matrix{T}(I, nChs, nChs)
+        V0 = Matrix{T}(I, nchs, nchs)
 
-        fP = fld(nChs, 2)
+        fP = fld(nchs, 2)
         Wdks = ([
             [ Matrix{T}(I, fP, fP) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
@@ -129,12 +132,12 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
         for d in 1:D ]...,)
 
         θdks = ([
-            [ zeros(T, fld(nChs, 4)) for k in 1:ppo[d] ]
+            [ zeros(T, fld(nchs, 4)) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
 
-        Φ = Diagonal(cis.(zeros(nChs))) |> complex
+        Φ = Diagonal(cis.(zeros(nchs))) |> complex
 
-        new{T,D}(df, ppo, nChs, FJ, V0, Wdks, Udks, θdks, Φ)
+        new{T,D}(df, ppo, nchs, FJ, V0, Wdks, Udks, θdks, Φ)
     end
 end
 
@@ -156,13 +159,15 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
 
     Φ::Diagonal
 
-    function CnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nChs::Integer) where {T,D}
+    function CnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer) where {T,D}
+        @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
+        @assert all(iseven.(ppo)) "polyphase order of each dimension must be odd"
         nStages = fld.(ppo, 2)
         FJ = cdftmtx(T, df...)
 
-        V0 = Matrix{T}(I, nChs, nChs)
+        V0 = Matrix{T}(I, nchs, nchs)
 
-        fP, cP = fld(nChs,2), cld(nChs,2)
+        fP, cP = fld(nchs,2), cld(nchs,2)
         Wdks = ([
             [ Matrix{T}(I, fP, fP) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
@@ -172,7 +177,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
         for d in 1:D ]...,)
 
         θ1dks = ([
-            [ zeros(T, fld(nChs, 4)) for k in 1:nStages[d] ]
+            [ zeros(T, fld(nchs, 4)) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
         Ŵdks = ([
@@ -185,12 +190,12 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
         for d in 1:D ]...,)
 
         θ2dks = ([
-            [ zeros(T, fld(nChs, 4)) for k in 1:nStages[d] ]
+            [ zeros(T, fld(nchs, 4)) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
-        Φ = Diagonal(cis.(zeros(nChs))) |> complex
+        Φ = Diagonal(cis.(zeros(nchs))) |> complex
 
-        new{T,D}(df, nStages, nChs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
+        new{T,D}(df, nStages, nchs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
     end
 end
 
@@ -205,10 +210,10 @@ orders(fb::CnsoltTypeII) = 2 .* fb.nStages
 
 nstages(fb::AbstractNsolt) = fb.nStages
 
-istype1(::Type{RnsoltTypeI}) = true
-istype1(::Type{CnsoltTypeI}) = true
-istype1(::Type{RnsoltTypeII}) = false
-istype1(::Type{CnsoltTypeII}) = false
+istype1(::Type{NS}) where {NS<:RnsoltTypeI} = true
+istype1(::Type{NS}) where {NS<:CnsoltTypeI} = true
+istype1(::Type{NS}) where {NS<:RnsoltTypeII} = false
+istype1(::Type{NS}) where {NS<:CnsoltTypeII} = false
 
 istype1(::T) where {T<:AbstractNsolt} = istype1(T)
 

@@ -14,20 +14,6 @@ using Random
 
     Random.seed!(392875929)
 
-    # @testset "TypeSystem" begin
-    #     dataTypeSet = [Float16, Float32, Float64]
-    #     dimSet = collect(1:10)
-    #
-    #     for D in dimSet
-    #         # @test Cnsolt{D,1,Float16} <: Cnsolt{D,1,Float32}
-    #
-    #         for T in dataTypeSet
-    #             @test Cnsolt{D,1,T} <: PolyphaseFB{Complex{T},D}
-    #             @test Cnsolt{D,2,T} <: PolyphaseFB{Complex{T},D}
-    #         end
-    #     end
-    # end
-
     @testset "Constructor" begin
 
         maxDims = 3
@@ -41,12 +27,12 @@ using Random
 
             for (df, ord, nch) in cfgset
                 if prod(df) > sum(nch)
-                    @test_throws ArgumentError Cnsolt(df, ord, nch)
+                    @test_throws AssertionError Cnsolt(df, ord, nch)
                     continue
                 end
 
                 if isodd(sum(nch)) && any(isodd.(ord))
-                    @test_throws ArgumentError Cnsolt(df, ord, nch)
+                    @test_throws AssertionError Cnsolt(df, ord, nch)
                     continue
                 end
 
@@ -74,8 +60,8 @@ using Random
             nsolt = Cnsolt(df, ord, nch)
             rand!(nsolt)
 
-            afb = MDCDL.analysisbank(nsolt)
-            hsafb = nsolt.symmetry' * afb
+            afb = analysisbank(nsolt)
+            hsafb = nsolt.Φ' * afb
 
             @test hsafb ≈ conj(reverse(hsafb; dims=2))
         end
@@ -157,24 +143,24 @@ using Random
         end
     end
 
-    @testset "Factorization" begin
-        for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
-            src = Cnsolt(df, ord, nch)
-            dst = Cnsolt(df, ord, nch)
-            rand!(src)
-
-            (angs, mus) = getrotations(src)
-            setrotations!(dst, angs, mus)
-
-            @test all(src.initMatrices .≈ dst.initMatrices)
-            foreach(src.propMatrices, dst.propMatrices) do propSrc, propDst
-                @test all(propSrc .≈ propDst)
-            end
-            foreach(src.paramAngles, dst.paramAngles) do angsSrc, angsDst
-                @test all(angsSrc .≈ angsDst)
-            end
-        end
-    end
+    # @testset "Factorization" begin
+    #     for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
+    #         src = Cnsolt(df, ord, nch)
+    #         dst = Cnsolt(df, ord, nch)
+    #         rand!(src)
+    #
+    #         (angs, mus) = getrotations(src)
+    #         setrotations!(dst, angs, mus)
+    #
+    #         @test all(src.initMatrices .≈ dst.initMatrices)
+    #         foreach(src.propMatrices, dst.propMatrices) do propSrc, propDst
+    #             @test all(propSrc .≈ propDst)
+    #         end
+    #         foreach(src.paramAngles, dst.paramAngles) do angsSrc, angsDst
+    #             @test all(angsSrc .≈ angsDst)
+    #         end
+    #     end
+    # end
 end
 
 nothing
