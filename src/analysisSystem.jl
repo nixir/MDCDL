@@ -124,7 +124,9 @@ function extendAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, ro
                 shiftbackward!(Val(border), xl, nshift)
             end
             px .= B * px
+
             xl .= U * xl
+            xu .= W * xu
         end
     end
     return px

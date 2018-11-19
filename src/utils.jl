@@ -104,23 +104,22 @@ end
 
 intervals(lns::Tuple, args...) = (intervals(collect(lns), args...)...,)
 
-vm1constraint!(ns::AbstractNsolt) = vm1constraint!(Val(istype1(ns)), ns)
-
 function vm1constraint!(ns::RnsoltTypeI)
-    θ, μ = mat2rotations(ns.initMatrices[1])
+    θ, μ = mat2rotations(ns.W0)
     θ[1:ns.nChannels[1]-1] .= 0
-    ns.initMatrices[1] .= rotations2mat(θ, μ)
+    ns.W0 .= rotations2mat(θ, μ)
 
     ns
 end
 
 function vm1constraint!(ns::CnsoltTypeI)
-    ws = foldl(ns.propMatrices,init=I) do wtmp, mts
-        prod(reverse(mts[1:2:end])) * wtmp
+    hP = fld(ns.nChannels, 2)
+    ws = foldl(ns.Wdks, init = Matrix(I, hP, hP)) do wtmp, mts
+        prod([ reverse(mts)..., wtmp ])
     end
-    θ, μ = mat2rotations(ns.initMatrices[1])
+    θ, μ = mat2rotations(ns.V0)
     θ[1:ns.nChannels-1] .= 0
-    ns.initMatrices[1] .= cat(ws', Matrix(I, size(ws)...), dims=[1,2]) * rotations2mat(θ, μ)
+    ns.V0 .= cat(ws', Matrix(I, size(ws)...), dims=[1,2]) * rotations2mat(θ, μ)
 
     ns
 end
