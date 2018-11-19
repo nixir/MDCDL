@@ -219,3 +219,51 @@ istype1(::T) where {T<:AbstractNsolt} = istype1(T)
 
 istype2(::Type{T}) where {T<:AbstractNsolt} = !istype1(T)
 istype2(::T) where {T<:AbstractNsolt} = !istype1(T)
+
+Cnsolt(rn::RnsoltTypeI) = CnsoltTypeI(rn)
+
+function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}
+    Pw = rn.nChannels[1]
+    Pu = rn.nChannels[2]
+    M = prod(rn.decimationFactor)
+    cM, fM = cld(M,2), fld(M,2)
+
+    cn = CnsoltTypeI(T, decimations(rn), orders(rn), nchannels(rn))
+
+    cn.FJ .= diagm(0=>[ ones(cM); 1im * ones(fM) ]) * rn.CJ
+
+    cn.V0 .= begin
+        perms = [ collect(1:cM)...,
+                  collect((1:Pw-cM) .+ M)...,
+                  collect((1:fM) .+ cM)...,
+                  collect((1:Pu-fM) .+ (Pw+fM))... ]
+
+        pmtx = foldl(enumerate(perms), init=zero(cn.V0)) do mtx, (idx, pmi)
+            setindex!(mtx, 1, idx, pmi)
+        end
+
+        cat(rn.W0, rn.U0, dims=[1,2]) * pmtx
+    end
+
+    foreach(cn.Wdks) do cWs
+        foreach(cWs) do cW
+            cW .= Matrix{T}(I, size(cW)...)
+        end
+    end
+
+    foreach(cn.Udks, rn.Udks) do cUs, rUs
+        foreach(cUs, rUs) do cU, rU
+            cU .= rU
+        end
+    end
+
+    foreach(cn.θdks) do cθs
+        foreach(cθs) do cθ
+            cθ .= zeros(T, size(cθ)...)
+        end
+    end
+
+    cn.Φ .= Diagonal([ ones(Pw); -1im * ones(Pu) ])
+
+    return cn
+end
