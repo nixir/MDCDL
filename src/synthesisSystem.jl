@@ -40,7 +40,7 @@ function finalStep(nsolt::RnsoltTypeII, py::AbstractMatrix; kwargs...)
 end
 
 function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns::NTuple; border=:circular)
-    px = Array(px)
+    px = Matrix{eltype(nsolt)}(I, fill(nchannels(nsolt),2)...) * px
     params = (irotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
     foreach(reverse.(params)...) do rdfcn, nshift, nstage, Uks
         xu = @view px[1:nsolt.nChannels[1], :]
@@ -59,7 +59,7 @@ function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
 end
 
 function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
-    px = Array(px)
+    px = Matrix{eltype(nsolt)}(I, fill(nchannels(nsolt),2)...) * px
     mnP, mxP = minmax(nsolt.nChannels...)
     params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
     foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks
@@ -103,7 +103,7 @@ function finalStep(nsolt::CnsoltTypeII, px::AbstractMatrix; kwargs...)
 end
 
 function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::NTuple; border=:circular)
-    px = Array(px)
+    px = Matrix{eltype(nsolt)}(I, fill(nchannels(nsolt),2)...) * px
     hP = fld(nsolt.nChannels, 2)
     params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θdks)
     foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θks
@@ -126,7 +126,7 @@ function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTupl
 end
 
 function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
-    px = Array(px)
+    px = Matrix{eltype(nsolt)}(I, fill(nchannels(nsolt),2)...) * px
     fP, cP = fld(nsolt.nChannels, 2), cld(nsolt.nChannels, 2)
     params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
     foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks

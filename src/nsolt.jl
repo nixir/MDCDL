@@ -46,6 +46,9 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
     end
 end
 
+RnsoltTypeI(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs; kwargs...) where {D} = RnsoltTypeI(Float64, df, ppo, nchs; kwargs...)
+RnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; kwargs...) where {T,D} = RnsoltTypeI(T, df, ppo, (cld(nchs,2), fld(nchs,2)); kwargs...)
+
 struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
     decimationFactor::NTuple{D, Int}
     nStages::NTuple{D, Int}
@@ -83,6 +86,9 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
         new{T,D}(df, nStages, nchs, CJ, W0, U0, Wdks, Udks)
     end
 end
+
+RnsoltTypeII(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs; kwargs...) where {D} = RnsoltTypeII(Float64, df, ppo, nchs; kwargs...)
+RnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; kwargs...) where {T,D} = RnsoltTypeII(T, df, ppo, (cld(nchs,2), fld(nchs,2)); kwargs...)
 
 abstract type Cnsolt{T,D} <: AbstractNsolt{T,D} end
 
@@ -140,6 +146,8 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
         new{T,D}(df, ppo, nchs, FJ, V0, Wdks, Udks, θdks, Φ)
     end
 end
+
+CnsoltTypeI(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; kwargs...) where {D} = CnsoltTypeI(Float64, df, ppo, nchs; kwargs...)
 
 struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
     decimationFactor::NTuple{D,Int}
@@ -199,9 +207,22 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
     end
 end
 
-# promote_rule(::Type{Cnsolt{TA,D}}, ::Type{Cnsolt{TB,D}}) where {D,TA,TB} = Cnsolt{promote_type(TA,TB),D}
+CnsoltTypeII(df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; kwargs...) where {D} = CnsoltTypeII(Float64, df, ppo, nchs; kwargs...)
 
-similar(nsolt::Cnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=decimations(nsolt), ord::NTuple{DD}=orders(nsolt), nch::Integer=nchannels(nsolt)) where {T,DS,DD} = Cnsolt(element_type, df, ord, nch)
+promote_rule(::Type{RnsoltTypeI{TA,D}}, ::Type{RnsoltTypeI{TB,D}}) where {D,TA,TB} = RnsoltTypeI{promote_rule(TA,TB),D}
+
+promote_rule(::Type{RnsoltTypeII{TA,D}}, ::Type{RnsoltTypeII{TB,D}}) where {D,TA,TB} = RnsoltTypeII{promote_rule(TA,TB),D}
+
+promote_rule(::Type{CnsoltTypeI{TA,D}}, ::Type{CnsoltTypeI{TB,D}}) where {D,TA,TB} = CnsoltTypeI{promote_rule(TA,TB),D}
+
+promote_rule(::Type{CnsoltTypeII{TA,D}}, ::Type{CnsoltTypeII{TB,D}}) where {D,TA,TB} = CnsoltTypeII{promote_type(TA,TB),D}
+
+similar(nsolt::Rnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=decimations(nsolt), ord::NTuple{DD}=orders(nsolt), nch=nchannels_sa(nsolt)) where {T,DS,DD} = Rnsolt(element_type, df, ord, nch)
+
+similar(nsolt::Cnsolt{T,DS}, element_type::Type=T, df::NTuple{DD}=decimations(nsolt), ord::NTuple{DD}=orders(nsolt), nch=nchannels(nsolt)) where {T,DS,DD} = Cnsolt(element_type, df, ord, nch)
+
+nchannels_sa(nsolt::AbstractNsolt) = nchannels(nsolt)
+nchannels_sa(nsolt::Rnsolt) = nsolt.nChannels
 
 orders(fb::RnsoltTypeI) = fb.nStages
 orders(fb::CnsoltTypeI) = fb.nStages
