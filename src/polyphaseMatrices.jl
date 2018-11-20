@@ -2,16 +2,18 @@ using TiledIteration: TileIterator
 using FFTW: fft, dct
 
 function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
+    @assert all(0 .<= offset .< factor) "offset is out of range"
     szout = size(x) .* factor
     setindex!(zeros(T, szout), x, StepRange.(offset .+ 1, factor, szout)...)
 end
 
 function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D}=(fill(0,D)...,)) where {T,D}
+    @assert all(0 .<= offset .< factor) "offset is out of range"
     x[StepRange.(offset .+ 1, factor, size(x))...]
 end
 
 representationmatrix(f, sz::NTuple) = representationmatrix(f, sz...)
-function representationmatrix(f::Function, sz::Integer...)
+function representationmatrix(f, sz::Integer...)
     hcat([ setindex!(zeros(sz), 1, idx) |> f |> vec for idx in 1:prod(sz) ]...)
 end
 
