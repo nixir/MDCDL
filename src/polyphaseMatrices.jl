@@ -2,19 +2,14 @@ using TiledIteration: TileIterator
 using FFTW: fft, dct
 
 # upsampler
+
 function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
-    szx = size(x)
-    mtx = zeros(T, szx .* factor)
-    for ci in CartesianIndices(szx)
-        mtx[((ci.I .- 1) .* factor .+ 1 .+ offset)...] = x[ci]
-    end
-    mtx
+    szout = size(x) .* factor
+    setindex!(zeros(T, szout), x, StepRange.(offset .+ 1, factor, szout)...)
 end
 
 function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D}=(fill(0,D)...,)) where {T,D}
-    map(CartesianIndices(fld.(size(x), factor))) do ci
-        x[((ci.I .- 1) .* factor .+ 1 .+ offset)...]
-    end
+    x[StepRange.(offset .+ 1, factor, size(x))...]
 end
 
 representationmatrix(f, sz::NTuple) = representationmatrix(f, sz...)
