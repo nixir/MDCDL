@@ -159,14 +159,6 @@ end
 
 ishiftdimspv(x::AbstractMatrix, nBlocks::Integer) = shiftdimspv(x, fld(size(x, 2), nBlocks))
 
-function butterfly!(x::AbstractMatrix, p::Integer)
-    xu = x[1:p,:]
-    xl = x[end-(p-1):end,:]
-
-    x[1:p,:]           .= (xu + xl) / sqrt(2)
-    x[end-(p-1):end,:] .= (xu - xl) / sqrt(2)
-end
-
 @inline function unnormalized_butterfly!(xu::T, xl::T) where {T<:AbstractMatrix}
     tu, tl = (xu + xl, xu - xl)
     xu .= tu
