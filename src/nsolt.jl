@@ -1,3 +1,5 @@
+import Base: summary, show
+
 abstract type AbstractNsolt{T,D} <: PolyphaseFB{T,D} end
 abstract type Rnsolt{T,D} <: AbstractNsolt{T,D} end
 
@@ -251,7 +253,7 @@ function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}
 
     cn = CnsoltTypeI(T, decimations(rn), orders(rn), nchannels(rn))
 
-    cn.FJ .= diagm(0=>[ ones(cM); 1im * ones(fM) ]) * rn.CJ
+    cn.FJ .= diagm( 0 => [ ones(cM); 1im * ones(fM) ] ) * rn.CJ
 
     cn.V0 .= begin
         perms = [ collect(1:cM)...,
@@ -287,4 +289,12 @@ function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}
     cn.Φ .= Diagonal([ ones(Pw); -1im * ones(Pu) ])
 
     return cn
+end
+
+function show(io::IO, ::MIME"text/plain", nsolt::Rnsolt)
+    print(io, "$(nsolt.nChannels)-channels $(typeof(nsolt)) with Decimation factor=$(nsolt.decimationFactor), Polyphase order=$(orders(nsolt))")
+end
+
+function show(io::IO, ::MIME"text/plain", nsolt::Cnsolt)
+    print(io, "$(nsolt.nChannels)-channels $(typeof(nsolt)) with Decimation factor=$(nsolt.decimationFactor), Polyphase order=$(orders(nsolt))")
 end
