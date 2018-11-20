@@ -1,8 +1,6 @@
 using TiledIteration: TileIterator
 using FFTW: fft, dct
 
-# upsampler
-
 function upsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D} = (fill(0,D)...,)) where {T,D}
     szout = size(x) .* factor
     setindex!(zeros(T, szout), x, StepRange.(offset .+ 1, factor, szout)...)
@@ -89,9 +87,9 @@ function analysisbank(nsolt::AbstractNsolt)
     krncenter = initialStep(nsolt, mtx0 )
 
     nStrides = (cumprod([ M, (ord[1:end-1] .+ 1)... ])...,)
-
     rotdimsfcns = (fill(identity, ndims(nsolt))...,)
     krnsym = extendAtoms(nsolt, krncenter, nStrides, rotdimsfcns, border=:circular_traditional)
+
     return shiftFilterSymmetry(nsolt, krnsym)
 end
 
@@ -105,12 +103,26 @@ function analysiskernels(pfb::PolyphaseFB)
         out = similar(vf, kernelsize(pfb)...)
         tilesout = collect(TileIterator(axes(out), df))
 
-        foldl(1:length(tilesout), init=out) do mtx, idx
+        foldl(enumerate(tilesout), init=out) do mtx, (idx, tile)
             sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
-            setindex!(mtx, reshape(@view(vf[sub]), df...), tilesout[idx]...)
+            setindex!(mtx, reshape(@view(vf[sub]), df...), tile...)
         end
     end
 end
+
+# function analysiskernels(pfb::PolyphaseFB)
+#     df = decimations(pfb)
+#
+#     return mapslices(analysisbank(pfb), dims=2) do vf
+#         out = similar(vf, kernelsize(pfb)...)
+#         tilesout = collect(TileIterator(axes(out), df))
+#
+#         foldl(1:length(tilesout), init=out) do mtx, idx
+#             sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
+#             setindex!(mtx, reshape(@view(vf[sub]), df...), tilesout[idx]...)
+#         end
+#     end
+# end
 
 function synthesiskernels(cc::AbstractNsolt)
     map(analysiskernels(cc)) do af
@@ -120,10 +132,10 @@ end
 
 function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
     nBlocks = fld.(size(x), szBlock)
-    if any(size(x) .% szBlock .!= 0)
-        error("size error. input data: $(size(x)), block size: $(szBlock).")
-    end
 
+    @assert all(size(x) .% szBlock .== 0) "size error. input data: $(size(x)), block size: $(szBlock)."
+
+    # outdata = hcat([ vec(@view x[tile...]) for tile in TileIterator(axes(x), szBlocks)]...)
     outdata = similar(x, prod(szBlock), prod(nBlocks))
     tiles = collect(TileIterator(axes(x), szBlock))
     for idx in 1:length(tiles)
