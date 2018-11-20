@@ -83,6 +83,7 @@ function analysisbank(nsolt::AbstractNsolt)
     M = prod(decimations(nsolt))
     ord = orders(nsolt)
 
+    # create inpulse signal matrix
     mtx0 = reverse(Matrix(I, M, M .* prod(ord .+ 1) ), dims=1)
     krncenter = initialStep(nsolt, mtx0 )
 
@@ -97,32 +98,18 @@ kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))
 
 function analysiskernels(pfb::PolyphaseFB)
     df = decimations(pfb)
-
     afb = analysisbank(pfb)
+
     return map([ @view(afb[p,:]) for p in 1:size(afb, 1) ]) do vf
+        rspvf = reshape(vf, prod(df), :)
         out = similar(vf, kernelsize(pfb)...)
-        tilesout = collect(TileIterator(axes(out), df))
+        tilesout = TileIterator(axes(out), df)
 
         foldl(enumerate(tilesout), init=out) do mtx, (idx, tile)
-            sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
-            setindex!(mtx, reshape(@view(vf[sub]), df...), tile...)
+            setindex!(mtx, reshape(@view(rspvf[:, idx]), df...), tile...)
         end
     end
 end
-
-# function analysiskernels(pfb::PolyphaseFB)
-#     df = decimations(pfb)
-#
-#     return mapslices(analysisbank(pfb), dims=2) do vf
-#         out = similar(vf, kernelsize(pfb)...)
-#         tilesout = collect(TileIterator(axes(out), df))
-#
-#         foldl(1:length(tilesout), init=out) do mtx, idx
-#             sub = (1:prod(df)) .+ ((idx - 1) * prod(df))
-#             setindex!(mtx, reshape(@view(vf[sub]), df...), tilesout[idx]...)
-#         end
-#     end
-# end
 
 function synthesiskernels(cc::AbstractNsolt)
     map(analysiskernels(cc)) do af
@@ -151,19 +138,16 @@ function mdarray2polyphase(x::AbstractArray{T,D}) where {T,D}
 end
 
 function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
-    if size(x.data,1) != prod(szBlock)
-        throw(ArgumentError("size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."))
-    end
+    @assert (size(x.data, 1) == prod(szBlock)) "size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."
 
     out = similar(x.data, (x.nBlocks .* szBlock)...)
-    tiles = collect(TileIterator(axes(out), szBlock))
-    for idx in 1:length(tiles)
-        out[tiles[idx]...] = reshape(@view(x.data[:,idx]), szBlock...)
+    for (idx, tile) in enumerate(TileIterator(axes(out), szBlock))
+        out[tile...] = reshape(@view(x.data[:,idx]), szBlock...)
     end
     out
 end
 
-function polyphase2mdarray(x::PolyphaseVector{T,D}) where {T,D}
+function polyphase2mdarray(x::PolyphaseVector)
     reshape(transpose(x.data), x.nBlocks..., size(x.data, 1))
 end
 
