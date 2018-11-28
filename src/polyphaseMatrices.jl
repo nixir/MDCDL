@@ -102,14 +102,12 @@ function analysiskernels(pfb::PolyphaseFB)
     df = decimations(pfb)
     afb = analysisbank(pfb)
 
-    return map([ @view(afb[p,:]) for p in 1:size(afb, 1) ]) do vf
-        rspvf = reshape(vf, prod(df), :)
+    @views map([ reshape(afb[p,:], prod(df), :) for p in 1:size(afb, 1)]) do vf
         out = similar(vf, kernelsize(pfb)...)
-        tilesout = TileIterator(axes(out), df)
-
-        foldl(enumerate(tilesout), init=out) do mtx, (idx, tile)
-            setindex!(mtx, reshape(@view(rspvf[:, idx]), df...), tile...)
+        for (idx, tile) in enumerate(TileIterator(axes(out), df))
+            out[tile...] = reshape(vf[:, idx], df...)
         end
+        out
     end
 end
 
@@ -124,11 +122,10 @@ function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where 
 
     @assert all(size(x) .% szBlock .== 0) "size error. input data: $(size(x)), block size: $(szBlock)."
 
-    # outdata = hcat([ vec(@view x[tile...]) for tile in TileIterator(axes(x), szBlocks)]...)
+    # outdata = hcat([ vec(@view x[tile...]) for tile in TileIterator(axes(x), szBlock)]...)
     outdata = similar(x, prod(szBlock), prod(nBlocks))
-    tiles = collect(TileIterator(axes(x), szBlock))
-    for idx in 1:length(tiles)
-        outdata[:,idx] = vec(@view x[tiles[idx]...])
+    @views for (idx, tile) in enumerate(TileIterator(axes(x), szBlock))
+        outdata[:,idx] = vec(x[tile...])
     end
     PolyphaseVector(outdata, nBlocks)
 end
