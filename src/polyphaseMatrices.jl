@@ -19,7 +19,7 @@ end
 
 Base.@pure function haarbasis(d::Integer)
     w = walsh(d)
-    [ reshape(@view(w[p,:]), fill(2,d)...) |> Array for p in 1:size(w, 1)]
+    @views [ reshape(w[p,:], fill(2,d)...) |> Array for p in 1:size(w, 1)]
 end
 
 Base.@pure function walsh(n::Integer)
@@ -62,7 +62,7 @@ Base.@pure function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     isevenids = map(ci->iseven(sum(ci.I .- 1)), CartesianIndices(sz)) |> vec
     permids = sortperm(isevenids; rev=true, alg=Base.DEFAULT_STABLE)
 
-    vcat([ transpose(@view mtx[pi,:]) for pi in permids ]...)
+    @views vcat([ transpose(mtx[pi,:]) for pi in permids ]...)
 end
 
 function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
