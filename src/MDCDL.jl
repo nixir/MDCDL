@@ -55,12 +55,12 @@ end
 
 length(ms::Multiscale) = length(ms.filterbanks)
 
-include("orthonormalMatrixSystem.jl")
-include("polyphaseMatrices.jl")
-
 include("filterbanks/nsolt.jl")
 include("filterbanks/parameterization.jl")
 include("filterbanks/parallelFilters.jl")
+
+include("orthonormalMatrixSystem.jl")
+include("polyphaseMatrices.jl")
 
 include("shapes.jl")
 include("transformSystem.jl")

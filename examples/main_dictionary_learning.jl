@@ -8,7 +8,7 @@ using Dates
 
 ########## Configurations #########
 # choose NSOLT type: (Rnsolt | Cnsolt)>
-Nsolt = Rnsolt
+Nsolt = Cnsolt
 # TP := eltype(Nsolt) (<:AbstractFloat)
 TP = Float64
 # decimation factor: (<:NTuple{D,Int} where D is #dims)
