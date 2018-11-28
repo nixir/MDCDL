@@ -13,7 +13,7 @@ function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D}=
 end
 
 representationmatrix(f, sz::NTuple) = representationmatrix(f, sz...)
-function representationmatrix(f, sz::Integer...)
+function representationmatrix(f::Function, sz::Integer...)
     hcat([ setindex!(zeros(sz), 1, idx) |> f |> vec for idx in 1:prod(sz) ]...)
 end
 
