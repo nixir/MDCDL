@@ -1,3 +1,26 @@
+module Shapes
+    abstract type AbstractShape end
+
+    struct Separated <: AbstractShape
+        Separated(sz...) = new()
+    end
+    struct Vectorized <: AbstractShape
+        insize::Tuple
+        Vectorized(sz::Integer...) = new(sz)
+        Vectorized(sz::AbstractVector) = Vectorized(sz...)
+        Vectorized(sz::Tuple) = Vectorized(sz...)
+    end
+    struct Combined <: AbstractShape
+        Combined(sz...) = new()
+    end
+
+    Vec = Vectorized
+end
+
+isfixedsize(::A) where {A<:Shapes.AbstractShape} = isfixedsize(A)
+isfixedsize(::Type{S}) where {S<:Shapes.AbstractShape}= false
+isfixedsize(::Type{Shapes.Vec}) = true
+
 function reshape_polyvec(::Shapes.Separated, ::AbstractNsolt, pvy::PolyphaseVector)
     [ reshape(@view(pvy.data[p,:]), pvy.nBlocks) for p in 1:size(pvy.data,1) ]
 end
