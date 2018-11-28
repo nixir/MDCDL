@@ -18,6 +18,16 @@ function analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple; kwar
     return shiftFilterSymmetry(nsolt, exty)
 end
 
+# function analyze_compatible(nsolt::AbstractNsolt{T,2}, px::AbstractMatrix, nBlocks::NTuple; kwargs...) where {T}
+#     ty = initialStep(nsolt, px; kwargs...)
+#
+#     nShifts = fld.(size(px, 2), nBlocks)
+#     rotatedimsfcns = (t->copy(t), [ t->shiftdimspv(t, blk) for blk in nBlocks[1:end-1] ]...,)
+#     exty = extendAtoms(nsolt, ty, nShifts, rotatedimsfcns; kwargs...)
+#     exty = shiftdimspv(exty, nBlocks[end])
+#     return shiftFilterSymmetry(nsolt, exty)
+# end
+
 function initialStep(nsolt::RnsoltTypeI, px::AbstractMatrix; kwargs...)
     M = prod(nsolt.decimationFactor)
     fM, cM = fld(M, 2), cld(M, 2)
@@ -42,7 +52,7 @@ function initialStep(nsolt::RnsoltTypeII, px::AbstractMatrix; kwargs...)
     ]
 end
 
-function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::NTuple; border=:circular)
+function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::Tuple; border=:circular)
     params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
     foreach(params...) do rdfcn, nshift, nstage, Uks
         px = rdfcn(px)

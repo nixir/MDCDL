@@ -100,6 +100,24 @@ function analysisbank(nsolt::AbstractNsolt)
     return shiftFilterSymmetry(nsolt, krnsym)
 end
 
+# compatible mode for SaivDr
+# function analysisbank_compatible(nsolt::AbstractNsolt)
+# #function analysisbank(nsolt::AbstractNsolt)
+#     M = prod(decimations(nsolt))
+#     ord = orders(nsolt)
+#
+#     # create inpulse signal matrix
+#     mtx0 = reverse(Matrix(I, M, M .* prod(ord .+ 1) ), dims=1)
+#     # mtx0 = circshift(mtx0, (0, -M))
+#     krncenter = initialStep(nsolt, mtx0 )
+#
+#     nStrides = (cumprod([ M, (ord[1:end-1] .+ 1)... ])...,)
+#     rotdimsfcns = (fill(identity, ndims(nsolt))...,)
+#     krnsym = extendAtoms(nsolt, krncenter, nStrides, rotdimsfcns, border=:circular_traditional)
+#
+#     return shiftFilterSymmetry(nsolt, krnsym)
+# end
+
 kernels(pfb::PolyphaseFB) = (analysiskernels(pfb), synthesiskernels(pfb))
 
 function analysiskernels(pfb::PolyphaseFB)
