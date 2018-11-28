@@ -66,13 +66,17 @@ Base.@pure function permdctmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
 end
 
 function getMatrixB(P::Integer, angs::AbstractVector{T}) where T
+    @assert (length(angs) == fld(P,4)) "mismatch number of channels"
     hP = fld(P,2)
     psangs = (2 .* angs .+ pi) ./ 4
-    cs = cos.(psangs)
-    ss = sin.(psangs)
+    ss, cs = sin.(psangs), cos.(psangs)
 
-    LC = [[ (-1im*cs[n]) (-1im*ss[n]); (cs[n]) (-ss[n]) ] for n in 1:fld(hP,2) ]
-    LS = [[ (ss[n]) (cs[n]); (1im*ss[n]) (-1im*cs[n]) ] for n in 1:fld(hP,2) ]
+    LC = map(ss, cs) do s, c
+        [ (-1im*c) (-1im*s); c (-s) ]
+    end
+    LS = map(ss, cs) do s, c
+        [ s c; (1im*s) (-1im*c) ]
+    end
 
     pbm = ones(fill(hP % 2,2)...)
     C = cat(LC..., pbm; dims=[1,2])
