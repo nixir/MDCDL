@@ -3,7 +3,7 @@ function reshape_polyvec(::Shapes.Separated, ::AbstractNsolt, pvy::PolyphaseVect
 end
 
 function reshape_polyvec(::Shapes.Combined, ::AbstractNsolt, pvy::PolyphaseVector)
-    polyphase2mdarray(pvy)
+    reshape(transpose(pvy.data), pvy.nBlocks..., size(pvy.data, 1))
 end
 
 function reshape_polyvec(::Shapes.Vec, ::AbstractNsolt, pvy::PolyphaseVector)
@@ -27,8 +27,10 @@ function reshape_coefs(::Shapes.Separated, ::AbstractNsolt, y::AbstractArray)
     PolyphaseVector(hcat(vec.(y)...) |> transpose |> Matrix, size(y[1]))
 end
 
-function reshape_coefs(::Shapes.Combined, ::AbstractNsolt, y::AbstractArray)
-    mdarray2polyphase(y)
+function reshape_coefs(::Shapes.Combined, ::AbstractNsolt, y::AbstractArray{T,D}) where {T,D}
+    nBlocks = size(y)[1:D-1]
+    outdata = transpose(reshape(y, prod(nBlocks), size(y,D)))
+    PolyphaseVector(outdata, nBlocks)
 end
 
 function reshape_coefs(sv::Shapes.Vec, nsop::AbstractNsolt, y::AbstractArray)

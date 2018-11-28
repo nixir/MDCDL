@@ -133,12 +133,6 @@ function mdarray2polyphase(x::AbstractArray{TX,D}, szBlock::NTuple{D,TS}) where 
     PolyphaseVector(outdata, nBlocks)
 end
 
-function mdarray2polyphase(x::AbstractArray{T,D}) where {T,D}
-    nBlocks = size(x)[1:D-1]
-    outdata = transpose(reshape(x, prod(nBlocks), size(x,D)))
-    PolyphaseVector(outdata, nBlocks)
-end
-
 function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) where {TX,D,TS<:Integer}
     @assert (size(x.data, 1) == prod(szBlock)) "size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."
 
@@ -147,10 +141,6 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
         out[tile...] = reshape(@view(x.data[:,idx]), szBlock...)
     end
     out
-end
-
-function polyphase2mdarray(x::PolyphaseVector)
-    reshape(transpose(x.data), x.nBlocks..., size(x.data, 1))
 end
 
 function shiftdimspv(x::AbstractMatrix, nBlocks::Integer)
