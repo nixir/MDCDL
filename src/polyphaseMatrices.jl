@@ -134,14 +134,14 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
     @assert (size(x.data, 1) == prod(szBlock)) "size mismatch! 'prod(szBlock)' must be equal to $(size(x.data,1))."
 
     out = similar(x.data, (x.nBlocks .* szBlock)...)
-    for (idx, tile) in enumerate(TileIterator(axes(out), szBlock))
-        out[tile...] = reshape(@view(x.data[:,idx]), szBlock...)
+    @views for (idx, tile) in enumerate(TileIterator(axes(out), szBlock))
+        out[tile...] = reshape(x.data[:,idx], szBlock...)
     end
     out
 end
 
 function shiftdimspv(x::AbstractMatrix, nBlocks::Integer)
-    hcat([ @view x[:, (1:nBlocks:end) .+ idx] for idx = 0:nBlocks-1 ]...)
+    @views hcat([ x[:, (1:nBlocks:end) .+ idx] for idx = 0:nBlocks-1 ]...)
 end
 
 ishiftdimspv(x::AbstractMatrix, nBlocks::Integer) = shiftdimspv(x, fld(size(x, 2), nBlocks))
@@ -160,38 +160,44 @@ end
     nothing
 end
 
-function shiftcoefs!(::Val{:circular}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
+function shiftcoefs!(V::Val{:circular}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
     if isodd(k)
-        mtxlw .= circshift(mtxlw, (0,  nShift))
+        shiftcoefs_odd!(V, mtxlw, nShift)
     else
-        mtxup .= circshift(mtxup, (0, -nShift))
+        shiftcoefs_even!(V, mtxup, nShift)
     end
     nothing
 end
+
+function shiftcoefs_odd!(::Val{:circular}, mtx::AbstractMatrix, nShift::Integer)
+    mtx .= circshift(mtx, (0, nShift))
+end
+
+shiftcoefs_even!(V::Val{:circular}, mtx, nShift) = shiftcoefs_odd!(V, mtx, -nShift)
 
 adjshiftcoefs!(v::Val{:circular}, k, mtxup, mtxlw, nShift::Integer) = shiftcoefs!(v, k, mtxup, mtxlw, -nShift)
 
-function shiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
-    if isodd(k)
-        mtxlw[:, 1+nShift:end] .= @view mtxlw[:, 1:end-nShift]
-        mtxlw[:, 1:nShift] .= 0
-    else
-        mtxup[:, 1:end-nShift] .= @view mtxup[:, 1+nShift:end]
-        mtxup[:, end-nShift+1:end] .= 0
-    end
-    nothing
-end
-
-function adjshiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
-    if isodd(k)
-        mtxlw[:, 1:end-nShift] .= @view mtxlw[:, 1+nShift:end]
-        mtxlw[:, end-nShift+1:end] .= 0
-    else
-        mtxup[:, 1+nShift:end] .= @view mtxup[:, 1:end-nShift]
-        mtxup[:, 1:nShift] .= 0
-    end
-    nothing
-end
+# function shiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
+#     if isodd(k)
+#         mtxlw[:, 1+nShift:end] .= @view mtxlw[:, 1:end-nShift]
+#         mtxlw[:, 1:nShift] .= 0
+#     else
+#         mtxup[:, 1:end-nShift] .= @view mtxup[:, 1+nShift:end]
+#         mtxup[:, end-nShift+1:end] .= 0
+#     end
+#     nothing
+# end
+#
+# function adjshiftcoefs!(::Val{:zero}, k::Integer, mtxup::AbstractMatrix, mtxlw::AbstractMatrix, nShift::Integer)
+#     if isodd(k)
+#         mtxlw[:, 1:end-nShift] .= @view mtxlw[:, 1+nShift:end]
+#         mtxlw[:, end-nShift+1:end] .= 0
+#     else
+#         mtxup[:, 1+nShift:end] .= @view mtxup[:, 1:end-nShift]
+#         mtxup[:, 1:nShift] .= 0
+#     end
+#     nothing
+# end
 
 function shiftcoefs!(::Val{:circular_traditional}, ::Integer, ::Any, mtxlw::AbstractMatrix, nShift::Integer)
     mtxlw .= circshift(mtxlw, (0, nShift))

@@ -32,8 +32,8 @@ function mat2rotations_lowmemory(mtx::AbstractMatrix{T}) where {T<:Real}
     res = similar(mtx, length(ids))
 
     mtx = Array(mtx)
-    for nr in 1:length(ids)
-        a = givens(mtx, ids[nr][1], ids[nr][2], ids[nr][1])
+    for (nr, (idx1, idx2)) in enumerate(ids)
+        a = givens(mtx, idx1, idx2, idx1)
         g = a[1]
 
         res[nr] = atan(g.s, g.c)
@@ -74,10 +74,8 @@ end
 function rotations2mat_lowmemory(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
     mtx = Matrix{TA}(I,P,P)
 
-    ids = givensids(P)
-    for nr in 1:length(ids)
+    for (nr, (idx1, idx2)) in enumerate(givensids(P))
         s, c = sincos(θs[nr])
-        idx1, idx2 = ids[nr]
 
         col1 = mtx[:,idx1]
 
