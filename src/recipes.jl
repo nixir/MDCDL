@@ -149,12 +149,12 @@ end
 
 function resize_by_nn(x::AbstractArray{T,D}, scale::Integer) where {T,D}
     output = similar(x, T, size(x) .* scale)
-    tiles = collect(TileIterator(axes(output), (fill(scale,D)...,)))
 
-    for idx in 1:length(tiles)
-        output[tiles[idx]...] .= x[idx]
+    for (idx, tile) in enumerate(TileIterator(axes(output), (fill(scale,D)...,)))
+        output[tile...] .= x[idx]
     end
     output
 end
 
-wrapdeg(x::Real) = ifelse(x < 0, x+360, x)
+# wrapdeg(x::Real) = ifelse(x < 0, x+360, x)
+wrapdeg(x::Real) = mod(x, 360)
