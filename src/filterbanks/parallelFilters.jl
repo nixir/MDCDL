@@ -4,7 +4,6 @@ struct ParallelFilters{T,D} <: FilterBank{T,D}
     polyphaseOrder::NTuple{D,Int}
     nChannels::Integer
 
-    # kernels::Vector{AbstractArray{T,D}}
     kernelspair::NTuple{2}
 
     function ParallelFilters(ker::NTuple{2,Vector{A}}, df::NTuple{D,Int}, ord::NTuple{D,Int}, nch::Integer) where {T,D,A<:AbstractArray{T,D}}

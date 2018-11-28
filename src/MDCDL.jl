@@ -1,7 +1,6 @@
 module MDCDL # Multi-Dimensional Convolutional Dictionary Learning
 
 using LinearAlgebra
-# using ImageFiltering
 using ImageFiltering.Algorithm: Alg, FIR, FFT
 using ComputationalResources: AbstractResource, CPU1
 
