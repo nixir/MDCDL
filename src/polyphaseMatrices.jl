@@ -45,7 +45,7 @@ Base.@pure function cdftmtx(::Type{T}, sz::Integer...) where T<:AbstractFloat
     len = prod(sz)
 
     mtx = representationmatrix(x->fft(T.(x)), sz)
-    rm = Diagonal(Complex{T}[ exp(-1im*angle(mtx[n,end])/2) for n in 1:len ])
+    rm = Diagonal(Complex{T}[ cis(-angle(mtx[n,end])/2) for n in 1:len ])
 
     complex(T).(rm * mtx / sqrt(len))
 end
