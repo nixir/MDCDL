@@ -8,7 +8,7 @@ end
 # write your own tests here
 # include("parallelFB.jl")
 # include("convolutionalOperator.jl")
-include("multidimensional")
+include("multidimensionals.jl")
 include("permutations.jl")
 include("orthonormal.jl")
 include("cnsolt.jl")
