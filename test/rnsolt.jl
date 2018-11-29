@@ -45,21 +45,38 @@ using LinearAlgebra
                 nsolt = Rnsolt(df, ord, nch)
 
                 if nch[1] == nch[2]
+                    @test nsolt isa RnsoltTypeI
                     @test istype1(nsolt) == true && istype2(nsolt) == false
                 else
+                    @test nsolt isa RnsoltTypeII
                     @test istype1(nsolt) == false && istype2(nsolt) == true
                 end
             end
         end
     end
 
-    # @testset "DefaultValues"
-    #     for d in 1:length(rcsd), (df, nch, ord) in rcsd[d]
-    #         nsolt = Rnsolt(df, nch, ord)
-    #
-    #         df = 0
-    #     end
-    # end
+    @testset "DefaultValues" begin
+        @testset "maximally-sampled" begin
+            for d in 1:3
+                for n = 1:20
+                    df = (rand(1:4, d)...,)
+                    ord = (fill(0, d)...,)
+                    nch = prod(df)
+
+                    x = rand(df...)
+                    A = MDCDL.permdctmtx(df...)
+                    expctd = A*vec(x)
+
+                    nsolt = Rnsolt(df, ord, nch)
+                    pvx = reshape(x, prod(df), :)
+                    y = analyze(nsolt, pvx, (fill(1,d)...,))
+                    actual = reshape(y, prod(df))
+
+                    @test actual ≈ expctd
+                end
+            end
+        end
+    end
 
     @testset "FilterSymmetry" begin
         for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
@@ -109,7 +126,6 @@ using LinearAlgebra
             afs = analysiskernels(nsolt)
             myfilter(A, h) = begin
                 ha = zero(A)
-                # ha[colon.(1,size(h))...] = h
                 ha[UnitRange.(1, size(h))...] = h
                 real(ifft(fft(A).*fft(ha)))
             end

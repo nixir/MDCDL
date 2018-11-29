@@ -3,6 +3,7 @@ using MDCDL
 using FFTW
 using ImageFiltering
 using Random
+using LinearAlgebra
 
 @testset "Multidimensionals" begin
     Random.seed!(39273529)
@@ -47,6 +48,80 @@ using Random
                 end
             end
         end
+    end
+
+    @testset "permutated DCT" begin
+        @testset "unitarity" begin
+            for d = 1:5
+                for n = 1:10
+                    szx = rand(1:8, d)
+                    x = rand(szx...)
+
+                    A = MDCDL.permdctmtx(szx...)
+
+                    @test A' * A ≈ I
+                end
+            end
+        end
+        @testset "symmetry" begin
+            for d = 1:5
+                for n = 1:10
+                    szx = rand(1:8, d)
+                    x = rand(szx...)
+
+                    A = MDCDL.permdctmtx(szx...)
+
+                    nch = size(A, 1)
+                    Γ = diagm(0 => [ ones(cld(nch, 2)); -ones(fld(nch, 2)) ])
+                    @test Γ * reverse(A, dims=2) ≈ A
+                end
+            end
+        end
+        # for d = 1:5
+        #     for n = 1:10
+        #         szx = rand(1:8,d)
+        #         x = rand(szx...)
+        #
+        #         A = MDCDL.permdctmtx(szx...)
+        #         @test sort(A*vec(x)) ≈ sort(vec(dct(x)/sqrt(prod(szx))))
+        #     end
+        # end
+    end
+
+    @testset "centered DFT" begin
+        @testset "unitarity" begin
+            for d = 1:5
+                for n = 1:10
+                    szx = rand(1:8, d)
+                    x = rand(szx...)
+
+                    A = MDCDL.cdftmtx(szx...)
+
+                    @test A' * A ≈ I
+                end
+            end
+        end
+        @testset "symmetry" begin
+            for d = 1:5
+                for n = 1:10
+                    szx = rand(1:8, d)
+                    x = rand(szx...)
+
+                    A = MDCDL.cdftmtx(szx...)
+
+                    @test conj(reverse(A, dims=2)) ≈ A
+                end
+            end
+        end
+        # for d = 1:5
+        #     for n = 1:10
+        #         szx = rand(1:8,d)
+        #         x = rand(szx...)
+        #
+        #         A = MDCDL.permdctmtx(szx...)
+        #         @test sort(A*vec(x)) ≈ sort(vec(dct(x)/sqrt(prod(szx))))
+        #     end
+        # end
     end
 
 #     @testset "Constructor" begin

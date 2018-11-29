@@ -39,21 +39,59 @@ using Random
                 nsolt = Cnsolt(df, ord, nch)
 
                 if iseven(sum(nch))
+                    @test nsolt isa CnsoltTypeI
                     @test istype1(nsolt) == true && istype2(nsolt) == false
                 else
+                    @test nsolt isa CnsoltTypeII
                     @test istype1(nsolt) == false && istype2(nsolt) == true
                 end
             end
         end
     end
 
-    # @testset "DefaultValues"
-    #     for d in 1:length(ccsd), (df, nch, ord) in ccsd[d]
-    #         nsolt = Cnsolt(df, nch, ord)
-    #
-    #         df = 0
-    #     end
-    # end
+    @testset "DefaultValues" begin
+        @testset "maximally-sampled" begin
+            for d in 1:3
+                for n = 1:20
+                    df = (rand(1:4, d)...,)
+                    ord = (fill(0, d)...,)
+                    nch = prod(df)
+
+                    x = rand(df...)
+                    A = MDCDL.cdftmtx(df...)
+                    expctd = A*vec(x)
+
+                    nsolt = Cnsolt(df, ord, nch)
+                    pvx = reshape(x, prod(df), :)
+                    y = analyze(nsolt, pvx, (fill(1,d)...,))
+                    actual = reshape(y, prod(df))
+
+                    @test actual ≈ expctd
+                end
+            end
+        end
+
+        @testset "over-sampled" begin
+            for d in 1:3
+                for n = 1:20
+                    df = (rand(1:4, d)...,)
+                    ord = (fill(0, d)...,)
+                    nch = prod(df) + rand(0:6)
+
+                    x = rand(df...)
+                    A = MDCDL.cdftmtx(df...)
+                    expctd = A*vec(x)
+
+                    nsolt = Cnsolt(df, ord, nch)
+                    pvx = reshape(x, prod(df), :)
+                    y = analyze(nsolt, pvx, (fill(1,d)...,))
+                    actual = reshape(y[1:prod(df),:], prod(df))
+
+                    @test actual ≈ expctd
+                end
+            end
+        end
+    end
 
     @testset "FilterSymmetry" begin
         for d in 1:length(ccsd), (df, ord, nch) in ccsd[d]
