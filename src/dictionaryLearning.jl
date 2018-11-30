@@ -113,9 +113,9 @@ function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, traini
     txt_general = """
         Settings of $(namestring(nsolt)) Dictionary Learning:
         Element type := $T
-        Decimation factor := $(nsolt.decimationFactor)
-        Polyphase order := $(nsolt.polyphaseOrder)
-        Number of channels := $(nsolt.nChannels)
+        Decimation factor := $(decimations(nsolt))
+        Polyphase order := $(orders(nsolt))
+        Number of channels := $(nchannels(nsolt))
 
         Number of training data := $(length(trainingset))
         Epochs := $epochs
