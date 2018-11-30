@@ -56,11 +56,11 @@ do_save_trainingset = do_save_trainingset && logdir != nothing
 orgImg = TP.(testimage("cameraman"))
 
 # generate minibatches of orgImage
-trainingIds = map(1:nSubData) do nsd
+trainingSet = map(1:nSubData) do nsd
     pos = rand.(UnitRange.(0,size(orgImg) .- szx))
-    UnitRange.(1 .+ pos, szx .+ pos)
+    orgImg[UnitRange.(1 .+ pos, szx .+ pos)...]
 end
-trainingSet = map(idx -> orgImg[idx...], trainingIds)
+
 if do_save_trainingset
     datadir = joinpath(logdir, "data").
     !isdir(datadir) && mkpath(datadir)

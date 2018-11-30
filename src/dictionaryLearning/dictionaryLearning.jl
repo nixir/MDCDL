@@ -1,11 +1,9 @@
-using ForwardDiff
 using Base.Filesystem
 using Statistics
 using Dates
 using FileIO: load
 using ImageCore: channelview
 using ColorTypes
-using NLopt
 
 LearningTarget{N} = Union{CodeBook, NTuple{N, CodeBook}, Multiscale}
 
@@ -24,7 +22,7 @@ function train!(target::LearningTarget, trainingSet::AbstractArray;
         vlevel=vlevel,
         epochs=epochs)
 
-    initializeLogging()
+    log_configs = initializelogs(logdir, trainingSet)
 
     vlevel >= 1 && println("beginning dictionary training...")
 
@@ -54,9 +52,8 @@ function train!(target::LearningTarget, trainingSet::AbstractArray;
         end
         # plot_function(target)
 
-        savelogs(logdir, target, itr;
+        savelogs(logdir, target, itr, log_configs...;
             vlevel=vlevel,
-            time=string(now()),
             loss_sparse_coding=loss_sps,
             loss_dictionary_update=loss_dus)
     end
