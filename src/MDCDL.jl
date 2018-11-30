@@ -68,7 +68,10 @@ include("transformSystem.jl")
 include("analysisSystem.jl")
 include("synthesisSystem.jl")
 
-include("dictionaryLearning.jl")
+include("dictionaryLearning/dictionaryLearning.jl")
+include("dictionaryLearning/sparseCodingStage.jl")
+include("dictionaryLearning/dictionaryUpdateStage.jl")
+include("dictionaryLearning/logger.jl")
 
 include("recipes.jl")
 include("io.jl")
