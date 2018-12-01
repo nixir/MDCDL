@@ -245,6 +245,12 @@ istype1(::T) where {T<:AbstractNsolt} = istype1(T)
 istype2(::Type{T}) where {T<:AbstractNsolt} = !istype1(T)
 istype2(::T) where {T<:AbstractNsolt} = !istype1(T)
 
+function supertype_nsolt(::Type{NS}) where {NS<:AbstractNsolt}
+    RNS = typeintersect(promote_type(NS, Rnsolt), AbstractNsolt)
+    CNS = typeintersect(promote_type(NS, Cnsolt), AbstractNsolt)
+    typeintersect(RNS, CNS)
+end
+
 Cnsolt(rn::RnsoltTypeI) = CnsoltTypeI(rn)
 
 function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}
@@ -299,4 +305,52 @@ end
 
 function show(io::IO, ::MIME"text/plain", nsolt::Cnsolt)
     print(io, "$(nsolt.nChannels)-channels $(typeof(nsolt)) with Decimation factor=$(nsolt.decimationFactor), Polyphase order=$(orders(nsolt))")
+end
+
+permutedims_prop(n::AbstractNsolt, perm::AbstractVector) = permutedims_prop(n, (perm...,))
+
+function permutedims_prop(nsolt::NS, perm::NTuple{D,N}) where {T,D,NS<:AbstractNsolt{T,D},N<:Integer}
+    @assert (allunique(perm) && all(extrema(perm) .== (1, D))) "invalid permutation"
+
+    Nsolt = supertype_nsolt(NS)
+    fp(v) = ([ v[perm[idx]] for idx = 1:D ]...,)
+    out = Nsolt(T, fp(decimations(nsolt)), fp(orders(nsolt)), nchannels(nsolt))
+
+    return setPermutatedProps!(out, nsolt, perm)
+end
+
+function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeI}
+    for (idxdst, idxsrc) in enumerate(perm)
+        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+    end
+    dst
+end
+
+function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeII}
+    for (idxdst, idxsrc) in enumerate(perm)
+        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+        dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
+    end
+    dst
+end
+
+function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeI}
+    for (idxdst, idxsrc) in enumerate(perm)
+        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+        dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
+        dst.θdks[idxdst] .= copy(src.θdks[idxsrc])
+    end
+    dst
+end
+
+function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeII}
+    for (idxdst, idxsrc) in enumerate(perm)
+        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+        dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
+        dst.θ1dks[idxdst] .= copy(src.θ1dks[idxsrc])
+        dst.Ûdks[idxdst] .= copy(src.Ûdks[idxsrc])
+        dst.Ŵdks[idxdst] .= copy(src.Ŵdks[idxsrc])
+        dst.θ2dks[idxdst] .= copy(src.θ2dks[idxsrc])
+    end
+    dst
 end
