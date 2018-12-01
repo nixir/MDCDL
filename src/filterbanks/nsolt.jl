@@ -316,17 +316,23 @@ function permutedims_prop(nsolt::NS, perm::NTuple{D,N}) where {T,D,NS<:AbstractN
     fp(v) = ([ v[perm[idx]] for idx = 1:D ]...,)
     out = Nsolt(T, fp(decimations(nsolt)), fp(orders(nsolt)), nchannels(nsolt))
 
-    return setPermutatedProps!(out, nsolt, perm)
+    return setPermutatedParams!(out, nsolt, perm)
 end
 
-function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeI}
+function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeI}
+    dst.CJ .= copy(src.CJ)
+    dst.U0 .= copy(src.U0)
+    dst.W0 .= copy(src.W0)
     for (idxdst, idxsrc) in enumerate(perm)
         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
     end
     dst
 end
 
-function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeII}
+function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeII}
+    dst.CJ .= copy(src.CJ)
+    dst.U0 .= copy(src.U0)
+    dst.W0 .= copy(src.W0)
     for (idxdst, idxsrc) in enumerate(perm)
         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
         dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
@@ -334,16 +340,21 @@ function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeII}
     dst
 end
 
-function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeI}
+function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeI}
+    dst.FJ .= copy(src.FJ)
+    dst.V0 .= copy(src.V0)
     for (idxdst, idxsrc) in enumerate(perm)
         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
         dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
         dst.θdks[idxdst] .= copy(src.θdks[idxsrc])
     end
+    dst.Φ .= copy(src.Φ)
     dst
 end
 
-function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeII}
+function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeII}
+    dst.FJ .= copy(src.FJ)
+    dst.V0 .= copy(src.V0)
     for (idxdst, idxsrc) in enumerate(perm)
         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
         dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
@@ -352,5 +363,6 @@ function setPermutatedProps!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeII}
         dst.Ŵdks[idxdst] .= copy(src.Ŵdks[idxsrc])
         dst.θ2dks[idxdst] .= copy(src.θ2dks[idxsrc])
     end
+    dst.Φ .= copy(src.Φ)
     dst
 end
