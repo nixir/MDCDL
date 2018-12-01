@@ -310,7 +310,7 @@ end
 permutedims_prop(n::AbstractNsolt, perm::AbstractVector) = permutedims_prop(n, (perm...,))
 
 function permutedims_prop(nsolt::NS, perm::NTuple{D,N}) where {T,D,NS<:AbstractNsolt{T,D},N<:Integer}
-    @assert (allunique(perm) && all(extrema(perm) .== (1, D))) "invalid permutation"
+    @assert isperm(perm) "invalid permutation"
 
     Nsolt = supertype_nsolt(NS)
     fp(v) = ([ v[perm[idx]] for idx = 1:D ]...,)
