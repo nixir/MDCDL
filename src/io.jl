@@ -35,7 +35,7 @@ function serialize(nsolt::NS) where {NS<:AbstractNsolt}
 end
 
 function separate_nsolt_configs_params(::Type{NS}, dict::Dict) where {NS<:AbstractNsolt}
-    keynames = [ "decimationFactor", "polyphaseOrder", "nChannels" ]
+    keynames = [ "decimationFactor", "polyphaseOrder", "nChannels", "perm" ]
     configs = filter(dict) do d
         any(d.first .== keynames)
     end
@@ -76,8 +76,9 @@ function create_nsolt_by_dict(::Type{NS}, T::Type, dict::Dict) where {NS<:Abstra
     df = get_nsolt_config(NS, dict, "decimationFactor")
     ord = get_nsolt_config(NS, dict, "polyphaseOrder")
     nch = get_nsolt_config(NS, dict, "nChannels")
+    perm = get_nsolt_config(NS, dict, "perm")
 
-    NS(T, df, ord, nch)
+    NS(T, df, ord, nch, perm=perm)
 end
 
 function set_nsolt_params_by_dict!(nsolt::NS, dict::Dict) where {NS<:RnsoltTypeI}
@@ -142,6 +143,10 @@ function get_nsolt_config(::Type{NS}, ::Val{:polyphaseOrder}, data) where {NS<:A
 end
 
 function get_nsolt_config(::Type{NS}, ::Val{:nChannels}, data) where {NS<:Rnsolt}
+    (Int.(data)...,)
+end
+
+function get_nsolt_config(::Type{NS}, ::Val{:perm}, data) where {NS<:Rnsolt}
     (Int.(data)...,)
 end
 

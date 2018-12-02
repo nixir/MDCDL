@@ -33,7 +33,10 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
 
     Udks::NTuple{D, Vector{AbstractMatrix{T}}} # parameter matrices of propagation matrices
 
-    function RnsoltTypeI(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
+    perm::NTuple{D, Int} # permutation of dimensions
+
+    function RnsoltTypeI(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; perm = (collect(1:D)...,), kwargs...) where {D,T}
+        @assert isperm(perm) "invalid permutations"
         @assert (nchs[1] == nchs[2]) "channel size mismatch!"
         @assert (cld(prod(df),2) <= nchs[1] <= sum(nchs) - fld(prod(df),2)) && (fld(prod(df),2) <= nchs[2] <= sum(nchs) - cld(prod(df),2)) "invalid number of channels"
         # CJ = reverse(permdctmtx(T, df...), dims=2) |> Matrix
@@ -45,7 +48,7 @@ struct RnsoltTypeI{T,D} <: Rnsolt{T,D}
             [ (iseven(k) ? 1 : -1) * Matrix{T}(I, nchs[2], nchs[2]) for k in 1:ppo[d] ]
         for d in 1:D ]...,)
 
-        new{T,D}(df, ppo, nchs, CJ, W0, U0, Udks)
+        new{T,D}(df, ppo, nchs, CJ, W0, U0, Udks, perm)
     end
 end
 
@@ -67,7 +70,10 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
     Wdks::NTuple{D, Vector{AbstractMatrix{T}}} # parameter matrices of propagation matrices
     Udks::NTuple{D, Vector{AbstractMatrix{T}}} # parameter matrices of propagation matrices
 
-    function RnsoltTypeII(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; kwargs...) where {D,T}
+    perm::NTuple{D, Int}
+
+    function RnsoltTypeII(::Type{T}, df::NTuple{D, Int}, ppo::NTuple{D, Int}, nchs::Tuple{Int, Int}; perm = (collect(1:D)...,), kwargs...) where {D,T}
+        @assert isperm(perm) "invalid permutations"
         @assert (cld(prod(df),2) <= nchs[1] <= sum(nchs) - fld(prod(df),2)) && (fld(prod(df),2) <= nchs[2] <= sum(nchs) - cld(prod(df),2)) "invalid number of channels"
         # CJ = reverse(permdctmtx(T, df...), dims=2) |> Matrix
         CJ = permdctmtx(T, df...)
@@ -87,7 +93,7 @@ struct RnsoltTypeII{T,D} <: Rnsolt{T,D}
             [ signU * Matrix{T}(I, nchs[2], nchs[2]) for k in 1:nStages[d] ]
         for d in 1:D ]...,)
 
-        new{T,D}(df, nStages, nchs, CJ, W0, U0, Wdks, Udks)
+        new{T,D}(df, nStages, nchs, CJ, W0, U0, Wdks, Udks, perm)
     end
 end
 
@@ -126,7 +132,10 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
 
     Φ::Diagonal
 
-    function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer) where {T,D}
+    perm::NTuple{D, Int}
+
+    function CnsoltTypeI(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; perm = (collect(1:D)...,), kwargs...) where {T,D}
+        @assert isperm(perm) "invalid permutations"
         @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
         FJ = cdftmtx(T, df...)
 
@@ -147,7 +156,7 @@ struct CnsoltTypeI{T,D} <: Cnsolt{T,D}
 
         Φ = Diagonal(cis.(zeros(nchs))) |> complex
 
-        new{T,D}(df, ppo, nchs, FJ, V0, Wdks, Udks, θdks, Φ)
+        new{T,D}(df, ppo, nchs, FJ, V0, Wdks, Udks, θdks, Φ, perm)
     end
 end
 
@@ -171,7 +180,10 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
 
     Φ::Diagonal
 
-    function CnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer) where {T,D}
+    perm::NTuple{D, Int}
+
+    function CnsoltTypeII(::Type{T}, df::NTuple{D,Int}, ppo::NTuple{D,Int}, nchs::Integer; perm = (collect(1:D)...,), kwargs...) where {T,D}
+        @assert isperm(perm) "invalid permutations"
         @assert (prod(df) <= sum(nchs)) "number of channels must be greater or equal to decimation factor"
         @assert all(iseven.(ppo)) "polyphase order of each dimension must be odd"
         nStages = fld.(ppo, 2)
@@ -207,7 +219,7 @@ struct CnsoltTypeII{T,D} <: Cnsolt{T,D}
 
         Φ = Diagonal(cis.(zeros(nchs))) |> complex
 
-        new{T,D}(df, nStages, nchs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ)
+        new{T,D}(df, nStages, nchs, FJ, V0, Wdks, Udks, θ1dks, Ŵdks, Ûdks, θ2dks, Φ, perm)
     end
 end
 
@@ -264,12 +276,12 @@ function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}
     cn.FJ .= diagm( 0 => [ ones(cM); 1im * ones(fM) ] ) * rn.CJ
 
     cn.V0 .= begin
-        perms = [ collect(1:cM)...,
+        pms = [ collect(1:cM)...,
                   collect((1:Pw-cM) .+ M)...,
                   collect((1:fM) .+ cM)...,
                   collect((1:Pu-fM) .+ (Pw+fM))... ]
 
-        pmtx = foldl(enumerate(perms), init=zero(cn.V0)) do mtx, (idx, pmi)
+        pmtx = foldl(enumerate(pms), init=zero(cn.V0)) do mtx, (idx, pmi)
             setindex!(mtx, 1, idx, pmi)
         end
 
@@ -307,62 +319,62 @@ function show(io::IO, ::MIME"text/plain", nsolt::Cnsolt)
     print(io, "$(nsolt.nChannels)-channels $(typeof(nsolt)) with Decimation factor=$(nsolt.decimationFactor), Polyphase order=$(orders(nsolt))")
 end
 
-permutedims_prop(n::AbstractNsolt, perm::AbstractVector) = permutedims_prop(n, (perm...,))
-
-function permutedims_prop(nsolt::NS, perm::NTuple{D,N}) where {T,D,NS<:AbstractNsolt{T,D},N<:Integer}
-    @assert isperm(perm) "invalid permutation"
-
-    Nsolt = supertype_nsolt(NS)
-    fp(v) = ([ v[perm[idx]] for idx = 1:D ]...,)
-    out = Nsolt(T, fp(decimations(nsolt)), fp(orders(nsolt)), nchannels(nsolt))
-
-    return setPermutatedParams!(out, nsolt, perm)
-end
-
-function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeI}
-    dst.CJ .= copy(src.CJ)
-    dst.U0 .= copy(src.U0)
-    dst.W0 .= copy(src.W0)
-    for (idxdst, idxsrc) in enumerate(perm)
-        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
-    end
-    dst
-end
-
-function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeII}
-    dst.CJ .= copy(src.CJ)
-    dst.U0 .= copy(src.U0)
-    dst.W0 .= copy(src.W0)
-    for (idxdst, idxsrc) in enumerate(perm)
-        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
-        dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
-    end
-    dst
-end
-
-function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeI}
-    dst.FJ .= copy(src.FJ)
-    dst.V0 .= copy(src.V0)
-    for (idxdst, idxsrc) in enumerate(perm)
-        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
-        dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
-        dst.θdks[idxdst] .= copy(src.θdks[idxsrc])
-    end
-    dst.Φ .= copy(src.Φ)
-    dst
-end
-
-function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeII}
-    dst.FJ .= copy(src.FJ)
-    dst.V0 .= copy(src.V0)
-    for (idxdst, idxsrc) in enumerate(perm)
-        dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
-        dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
-        dst.θ1dks[idxdst] .= copy(src.θ1dks[idxsrc])
-        dst.Ûdks[idxdst] .= copy(src.Ûdks[idxsrc])
-        dst.Ŵdks[idxdst] .= copy(src.Ŵdks[idxsrc])
-        dst.θ2dks[idxdst] .= copy(src.θ2dks[idxsrc])
-    end
-    dst.Φ .= copy(src.Φ)
-    dst
-end
+# permutedims_prop(n::AbstractNsolt, perm::AbstractVector) = permutedims_prop(n, (perm...,))
+#
+# function permutedims_prop(nsolt::NS, perm::NTuple{D,N}) where {T,D,NS<:AbstractNsolt{T,D},N<:Integer}
+#     @assert isperm(perm) "invalid permutation"
+#
+#     Nsolt = supertype_nsolt(NS)
+#     fp(v) = ([ v[perm[idx]] for idx = 1:D ]...,)
+#     out = Nsolt(T, fp(decimations(nsolt)), fp(orders(nsolt)), nchannels(nsolt))
+#
+#     return setPermutatedParams!(out, nsolt, perm)
+# end
+#
+# function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeI}
+#     dst.CJ .= copy(src.CJ)
+#     dst.U0 .= copy(src.U0)
+#     dst.W0 .= copy(src.W0)
+#     for (idxdst, idxsrc) in enumerate(perm)
+#         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+#     end
+#     dst
+# end
+#
+# function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:RnsoltTypeII}
+#     dst.CJ .= copy(src.CJ)
+#     dst.U0 .= copy(src.U0)
+#     dst.W0 .= copy(src.W0)
+#     for (idxdst, idxsrc) in enumerate(perm)
+#         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+#         dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
+#     end
+#     dst
+# end
+#
+# function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeI}
+#     dst.FJ .= copy(src.FJ)
+#     dst.V0 .= copy(src.V0)
+#     for (idxdst, idxsrc) in enumerate(perm)
+#         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+#         dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
+#         dst.θdks[idxdst] .= copy(src.θdks[idxsrc])
+#     end
+#     dst.Φ .= copy(src.Φ)
+#     dst
+# end
+#
+# function setPermutatedParams!(dst::NS, src::NS, perm) where {NS<:CnsoltTypeII}
+#     dst.FJ .= copy(src.FJ)
+#     dst.V0 .= copy(src.V0)
+#     for (idxdst, idxsrc) in enumerate(perm)
+#         dst.Udks[idxdst] .= copy(src.Udks[idxsrc])
+#         dst.Wdks[idxdst] .= copy(src.Wdks[idxsrc])
+#         dst.θ1dks[idxdst] .= copy(src.θ1dks[idxsrc])
+#         dst.Ûdks[idxdst] .= copy(src.Ûdks[idxsrc])
+#         dst.Ŵdks[idxdst] .= copy(src.Ŵdks[idxsrc])
+#         dst.θ2dks[idxdst] .= copy(src.θ2dks[idxsrc])
+#     end
+#     dst.Φ .= copy(src.Φ)
+#     dst
+# end

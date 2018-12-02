@@ -53,15 +53,14 @@ function initialStep(nsolt::RnsoltTypeII, px::AbstractMatrix; kwargs...)
 end
 
 function extendAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::Tuple; border=:circular)
-    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
-    foreach(params...) do rdfcn, nshift, nstage, Uks
-        px = rdfcn(px)
+    for d in nsolt.perm
+        px = rotatedimsfcns[d](px)
         xu = @view px[1:nsolt.nChannels[1], :]
         xl = @view px[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
 
-        foreach(1:nstage, Uks) do k, U
+        foreach(1:nsolt.nStages[d], nsolt.Udks[d]) do k, U
             unnormalized_butterfly!(xu, xl)
-            shiftcoefs!(Val(border), k, xu, xl, nshift)
+            shiftcoefs!(Val(border), k, xu, xl, nShifts[d])
             half_butterfly!(xu, xl)
 
             xl .= U * xl
@@ -73,9 +72,10 @@ end
 # TODO:
 function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
     mnP, mxP = minmax(nsolt.nChannels...)
-    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
-    foreach(params...) do rdfcn, nshift, nstage, Wks, Uks
-        px = rdfcn(px)
+    # params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
+    # foreach(params...) do rdfcn, nShifts[d], nstage, Wks, Uks
+    for d in nsolt.perm
+        px = rotatedimsfcns[d](px)
 
         xu = @view px[1:mnP, :]
         xl = @view px[end-mnP+1:end, :]
@@ -83,9 +83,9 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
         xum = @view px[1:mxP, :]
         xml = @view px[end-mxP+1:end, :]
 
-        foreach(1:nstage, Wks, Uks) do k, W, U
+        foreach(1:nsolt.nStages[d], nsolt.Wdks[d], nsolt.Udks[d]) do k, W, U
             unnormalized_butterfly!(xu, xl)
-            shiftcoefs!(Val(border), 2k-1, xu, xml, nshift)
+            shiftcoefs!(Val(border), 2k-1, xu, xml, nShifts[d])
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xu .= W * xu
@@ -94,7 +94,7 @@ function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
             end
 
             unnormalized_butterfly!(xu, xl)
-            shiftcoefs!(Val(border), 2k, xum, xl, nshift)
+            shiftcoefs!(Val(border), 2k, xum, xl, nShifts[d])
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xml .= U * xml
@@ -120,16 +120,15 @@ end
 
 function extendAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::NTuple; border=:circular)
     hP = fld(nsolt.nChannels, 2)
-    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θdks)
-    foreach(params...) do rdfcn, nshift, nstage, Wks, Uks, θks
-        px = rdfcn(px)
+    for d in nsolt.perm
+        px = rotatedimsfcns[d](px)
         xu = @view px[1:hP, :]
         xl = @view px[(1:hP) .+ hP, :]
 
-        foreach(1:nstage, Wks, Uks, θks) do k, W, U, θ
+        foreach(1:nsolt.nStages[d], nsolt.Wdks[d], nsolt.Udks[d], nsolt.θdks[d]) do k, W, U, θ
             B = getMatrixB(nsolt.nChannels, θ)
             px .= B' * px
-            shiftcoefs!(Val(border), k, xu, xl, nshift)
+            shiftcoefs!(Val(border), k, xu, xl, nShifts[d])
             px .= B * px
 
             xl .= U * xl
@@ -141,9 +140,8 @@ end
 
 function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
     fP, cP = fld(nsolt.nChannels, 2), cld(nsolt.nChannels, 2)
-    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
-    foreach(params...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
-        px = rdfcn(px)
+    for d in nsolt.perm
+        px = rotatedimsfcns[d](px)
 
         xW = @view px[1:fP, :]
         xU = @view px[(1:fP) .+ fP, :]
@@ -152,17 +150,17 @@ function extendAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, r
         xÛ = @view px[(1:cP) .+ fP, :]
         xe  = @view px[1:end-1, :]
 
-        foreach(1:nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks) do k, W, U, θ1, Ŵ, Û, θ2
+        foreach(1:nsolt.nStages[d], nsolt.Wdks[d], nsolt.Udks[d], nsolt.θ1dks[d], nsolt.Ŵdks[d], nsolt.Ûdks[d], nsolt.θ2dks[d]) do k, W, U, θ1, Ŵ, Û, θ2
             B1 = getMatrixB(nsolt.nChannels, θ1)
             xe .= B1' * xe
-            shiftcoefs!(Val(border), 2k-1, xW, xU, nshift)
+            shiftcoefs!(Val(border), 2k-1, xW, xU, nShifts[d])
             xe .= B1 * xe
             xU .= U * xU
             xW .= W * xW
 
             B2 = getMatrixB(nsolt.nChannels, θ2)
             xe .= B2' * xe
-            shiftcoefs!(Val(border), 2k, xW, xb, nshift)
+            shiftcoefs!(Val(border), 2k, xW, xb, nShifts[d])
             xe .= B2 * xe
             xÛ .= Û * xÛ
             xŴ .= Ŵ * xŴ

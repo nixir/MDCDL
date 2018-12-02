@@ -41,34 +41,32 @@ end
 
 function concatenateAtoms(nsolt::RnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns::NTuple; border=:circular)
     px = UniformScaling{eltype(nsolt)}(1) * px
-    params = (irotatedimsfcns, nShifts, nsolt.nStages, nsolt.Udks)
-    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Uks
+    for d in reverse(nsolt.perm)
         xu = @view px[1:nsolt.nChannels[1], :]
         xl = @view px[(1:nsolt.nChannels[2]) .+ nsolt.nChannels[1], :]
 
-        params_d = (1:nstage, Uks)
+        params_d = (1:nsolt.nStages[d], nsolt.Udks[d])
         foreach(reverse.(params_d)...) do k, U
             xl .= U' * xl
             unnormalized_butterfly!(xu, xl)
-            adjshiftcoefs!(Val(border), k, xu, xl, nshift)
+            adjshiftcoefs!(Val(border), k, xu, xl, nShifts[d])
             half_butterfly!(xu, xl)
         end
-        px = rdfcn(px)
+        px = irotatedimsfcns[d](px)
     end
     return px
 end
 
-function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
+function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns; border=:circular)
     px = UniformScaling{eltype(nsolt)}(1) * px
     mnP, mxP = minmax(nsolt.nChannels...)
-    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
-    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks
+    for d in reverse(nsolt.perm)
         xu = @view px[1:mnP, :]
         xl = @view px[end-mnP+1:end, :]
         xum = @view px[1:mxP, :]
         xml = @view px[end-mxP+1:end, :]
 
-        params_d = (1:nstage, Wks, Uks)
+        params_d = (1:nsolt.nStages[d], nsolt.Wdks[d], nsolt.Udks[d])
         foreach(reverse.(params_d)...) do k, W, U
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xml .= U' * xml
@@ -76,7 +74,7 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xum .= W' * xum
             end
             unnormalized_butterfly!(xu, xl)
-            adjshiftcoefs!(Val(border), 2k, xum, xl, nshift)
+            adjshiftcoefs!(Val(border), 2k, xum, xl, nShifts[d])
             half_butterfly!(xu, xl)
             if nsolt.nChannels[1] < nsolt.nChannels[2]
                 xu .= W' * xu
@@ -84,10 +82,10 @@ function concatenateAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTup
                 xl .= U' * xl
             end
             unnormalized_butterfly!(xu, xl)
-            adjshiftcoefs!(Val(border), 2k-1, xu, xml, nshift)
+            adjshiftcoefs!(Val(border), 2k-1, xu, xml, nShifts[d])
             half_butterfly!(xu, xl)
         end
-        px = rdfcn(px)
+        px = irotatedimsfcns[d](px)
     end
     return px
 end
@@ -102,34 +100,32 @@ function finalStep(nsolt::CnsoltTypeII, px::AbstractMatrix; kwargs...)
     nsolt.FJ' * (nsolt.V0' * px)[1:prod(nsolt.decimationFactor), :]
 end
 
-function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns::NTuple; border=:circular)
+function concatenateAtoms(nsolt::CnsoltTypeI, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns::NTuple; border=:circular)
     px = UniformScaling{eltype(nsolt)}(1) * px
     hP = fld(nsolt.nChannels, 2)
-    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θdks)
-    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θks
+    for d in reverse(nsolt.perm)
         xu = @view px[1:hP, :]
         xl = @view px[(1:hP) .+ hP, :]
 
-        params_d = (1:nstage, Wks, Uks, θks)
+        params_d = (1:nsolt.nStages[d], nsolt.Wdks[d], nsolt.Udks[d], nsolt.θdks[d])
         foreach(reverse.(params_d)...) do k, W, U, θ
             xu .= W' * xu
             xl .= U' * xl
 
             B = getMatrixB(nsolt.nChannels, θ)
             px .= B' * px
-            adjshiftcoefs!(Val(border), k, xu, xl, nshift)
+            adjshiftcoefs!(Val(border), k, xu, xl, nShifts[d])
             px .= B * px
         end
-        px = rdfcn(px)
+        px = irotatedimsfcns[d](px)
     end
     return px
 end
 
-function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
+function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, irotatedimsfcns; border=:circular)
     px = UniformScaling{eltype(nsolt)}(1) * px
     fP, cP = fld(nsolt.nChannels, 2), cld(nsolt.nChannels, 2)
-    params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks, nsolt.θ1dks, nsolt.Ŵdks, nsolt.Ûdks, nsolt.θ2dks)
-    foreach(reverse.(params)...) do rdfcn, nshift, nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks
+    for d in reverse(nsolt.perm)
         xW = @view px[1:fP, :]
         xU = @view px[(1:fP) .+ fP, :]
         xb = @view px[(fP+1):end, :]
@@ -137,23 +133,23 @@ function concatenateAtoms(nsolt::CnsoltTypeII, px::AbstractMatrix, nShifts::NTup
         xÛ = @view px[(1:cP) .+ fP, :]
         xe  = @view px[1:end-1, :]
 
-        params_d = (1:nstage, Wks, Uks, θ1ks, Ŵks, Ûks, θ2ks)
+        params_d = (1:nsolt.nStages[d], nsolt.Wdks[d], nsolt.Udks[d], nsolt.θ1dks[d], nsolt.Ŵdks[d], nsolt.Ûdks[d], nsolt.θ2dks[d])
         foreach(reverse.(params_d)...) do k, W, U, θ1, Ŵ, Û, θ2
             xŴ .= Ŵ' * xŴ
             xÛ .= Û' * xÛ
             B2 = getMatrixB(nsolt.nChannels, θ2)
             xe .= B2' * xe
-            adjshiftcoefs!(Val(border), 2k, xW, xb, nshift)
+            adjshiftcoefs!(Val(border), 2k, xW, xb, nShifts[d])
             xe .= B2 * xe
 
             xW .= W' * xW
             xU .= U' * xU
             B1 = getMatrixB(nsolt.nChannels, θ1)
             xe .= B1' * xe
-            adjshiftcoefs!(Val(border), 2k-1, xW, xU, nshift)
+            adjshiftcoefs!(Val(border), 2k-1, xW, xU, nShifts[d])
             xe .= B1 * xe
         end
-        px = rdfcn(px)
+        px = irotatedimsfcns[d](px)
     end
     return px
 end

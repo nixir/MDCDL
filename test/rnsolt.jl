@@ -93,21 +93,42 @@ using LinearAlgebra
     @testset "AnalysisSynthesis" begin
         # output mode options for analyzer
         oms = [ Shapes.Separated, Shapes.Combined, Shapes.Vec ]
-        for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
-            szx = df .* (ord .+ 1)
-            nsolt = Rnsolt(df, ord, nch)
-            rand!(nsolt)
+        @testset "NormalOrder" begin
+            for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
+                szx = df .* (ord .+ 1)
+                nsolt = Rnsolt(df, ord, nch)
+                rand!(nsolt)
 
-            x = rand(Float64, szx...)
+                x = rand(Float64, szx...)
 
-            foreach(oms) do om
-                nsop = createTransform(nsolt, om(size(x)))
+                foreach(oms) do om
+                    nsop = createTransform(nsolt, om(size(x)))
 
-                y = analyze(nsop, x)
-                rx = synthesize(nsop, y)
+                    y = analyze(nsop, x)
+                    rx = synthesize(nsop, y)
 
-                @test size(x) == size(rx)
-                @test rx ≈ x
+                    @test size(x) == size(rx)
+                    @test rx ≈ x
+                end
+            end
+        end
+        @testset "DimensionPermutation" begin
+            for d in 1:length(rcsd), (df, ord, nch) in rcsd[d]
+                szx = df .* (ord .+ 1)
+                nsolt = Rnsolt(df, ord, nch, perm=(randperm(d)...,))
+                rand!(nsolt)
+
+                x = rand(Float64, szx...)
+
+                foreach(oms) do om
+                    nsop = createTransform(nsolt, om(size(x)))
+
+                    y = analyze(nsop, x)
+                    rx = synthesize(nsop, y)
+
+                    @test size(x) == size(rx)
+                    @test rx ≈ x
+                end
             end
         end
     end
