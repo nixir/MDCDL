@@ -263,6 +263,77 @@ function supertype_nsolt(::Type{NS}) where {NS<:AbstractNsolt}
     typeintersect(RNS, CNS)
 end
 
+function copy_params!(dst::NS, src::NS) where {NS<:RnsoltTypeI}
+    mycp(a,b) = foreach(a, b) do ad, bd
+        foreach((adk, bdk) -> adk .= bdk, ad, bd)
+    end
+
+    dst.CJ .= src.CJ
+
+    dst.W0 .= src.W0
+    dst.U0 .= src.U0
+
+    mycp(dst.Udks, src.Udks)
+
+    return dst
+end
+
+function copy_params!(dst::NS, src::NS) where {NS<:RnsoltTypeII}
+    mycp(a,b) = foreach(a, b) do ad, bd
+        foreach((adk, bdk) -> adk .= bdk, ad, bd)
+    end
+
+    dst.CJ .= src.CJ
+
+    dst.W0 .= src.W0
+    dst.U0 .= src.U0
+
+    mycp(dst.Wdks, src.Wdks)
+    mycp(dst.Udks, src.Udks)
+
+    return dst
+end
+
+function copy_params!(dst::NS, src::NS) where {NS<:CnsoltTypeI}
+    mycp(a,b) = foreach(a, b) do ad, bd
+        foreach((adk, bdk) -> adk .= bdk, ad, bd)
+    end
+
+    dst.FJ .= src.FJ
+
+    dst.V0 .= src.V0
+
+    mycp(dst.Wdks, src.Wdks)
+    mycp(dst.Udks, src.Udks)
+    mycp(dst.θdks, src.θdks)
+
+    dst.Φ .= src.Φ
+
+    return dst
+end
+
+function copy_params!(dst::NS, src::NS) where {NS<:CnsoltTypeII}
+    mycp(a,b) = foreach(a, b) do ad, bd
+        foreach((adk, bdk) -> adk .= bdk, ad, bd)
+    end
+
+    dst.FJ .= src.FJ
+
+    dst.W0 .= src.W0
+    dst.U0 .= src.U0
+
+    mycp(dst.Wdks, src.Wdks)
+    mycp(dst.Udks, src.Udks)
+    mycp(dst.θ1dks, src.θ1dks)
+    mycp(dst.Ŵdks, src.Ŵdks)
+    mycp(dst.Ûdks, src.Ûdks)
+    mycp(dst.θ2dks, src.θ2dks)
+
+    dst.Φ .= src.Φ
+
+    return dst
+end
+
 Cnsolt(rn::RnsoltTypeI) = CnsoltTypeI(rn)
 
 function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}

@@ -20,7 +20,7 @@ export  istype1, istype2, permdctmtx, cdftmtx, analyze, synthesize,
         analysisbank, decimations, orders, nchannels, nstages, kernels,
         analysiskernels, synthesiskernels, kernelsize, getrotations,
         setrotations!, mdarray2polyphase, polyphase2mdarray, iht,
-        createTransform, loadfb, savefb
+        createTransform, loadfb, savefb, copy_params!
 
 include("sparsecoders/SparseCoders.jl")
 include("optimizers/Optimizers.jl")
