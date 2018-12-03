@@ -77,5 +77,6 @@ include("recipes.jl")
 include("io.jl")
 
 include("utils.jl")
+include("compatibles.jl")
 
 end
