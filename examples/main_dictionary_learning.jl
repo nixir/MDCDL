@@ -25,8 +25,8 @@ szx = (8,8)
 nSubData = 16
 
 # path of log files (do nothing if isa(logdir, Nothing))
-# logdir = joinpath(@__DIR__, "results", Dates.format(now(), "yyyymmdd_HH_MM_SS_sss"))
-logdir = nothing
+logdir = joinpath(@__DIR__, "results", Dates.format(now(), "yyyymmdd_HH_MM_SS_sss"))
+# logdir = nothing
 # save minibatches?
 do_save_trainingset = false
 do_export_atoms = false
