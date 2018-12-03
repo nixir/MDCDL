@@ -4,24 +4,24 @@ ngivensangles(n::Integer) = fld(n*(n-1),2)
 
 mat2rotations(args...) = mat2rotations_lowmemory(args...)
 
-function mat2rotations_normal(mtx::AbstractMatrix{T}) where T <: Real
+function mat2rotations_reference(mtx::AbstractMatrix{T}) where T <: Real
     P = size(mtx, 1)
 
     ids = givensids(P)
     res = similar(mtx, length(ids))
-    mtx = Array(mtx)
-    R = similar(mtx)
-    for nr in 1:length(ids)
-        a = givens(mtx, ids[nr][1], ids[nr][2], ids[nr][1])
+
+    for (nr, (idx1, idx2)) in enumerate(ids)
+        a = givens(mtx, idx1, idx2, idx1)
         g = a[1]
 
         res[nr] = atan(g.s, g.c)
 
-        R .= Matrix(I,P,P)
+        R = Matrix(I,P,P)
         R[g.i1, g.i1] =  g.c
         R[g.i1, g.i2] =  g.s
         R[g.i2, g.i1] = -g.s
         R[g.i2, g.i2] =  g.c
+
         mtx .= R*mtx
     end
     (res, round.(diag(mtx)))
@@ -38,9 +38,10 @@ function mat2rotations_lowmemory(mtx::AbstractMatrix{T}) where {T<:Real}
 
         res[nr] = atan(g.s, g.c)
 
-        row1 = mtx[g.i1,:]
-        mtx[g.i1,:] =  g.c * row1 + g.s * @view mtx[g.i2,:]
-        mtx[g.i2,:] = -g.s * row1 + g.c * @view mtx[g.i2,:]
+        row1 = mtx[g.i1, :]
+        vrw2 = @view mtx[g.i2, :]
+        mtx[g.i1, :] =  g.c * row1 + g.s * vrw2
+        mtx[g.i2, :] = -g.s * row1 + g.c * vrw2
     end
     (res, round.(diag(mtx)))
 end
@@ -51,16 +52,13 @@ end
 
 rotations2mat(θs, sig, P) = rotations2mat_lowmemory(θs, sig, P)
 
-function rotations2mat_normal(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
+function rotations2mat_reference(θs::AbstractArray{TA}, sig::AbstractArray{TS}, P::Integer) where {TA<:Real,TS<:Number}
     mtx = Matrix{TA}(I,P,P)
-    R = similar(mtx)
 
-    ids = givensids(P)
-    for nr in 1:length(ids)
+    for (nr, (idx1, idx2)) in enumerate(givensids(P))
         c, s = cos(θs[nr]), sin(θs[nr])
-        idx1, idx2 = ids[nr]
 
-        R .= Matrix(I,P,P)
+        R = Matrix(I,P,P)
         R[idx1, idx1] =  c
         R[idx1, idx2] = -s
         R[idx2, idx1] =  s
@@ -77,10 +75,11 @@ function rotations2mat_lowmemory(θs::AbstractArray{TA}, sig::AbstractArray{TS},
     for (nr, (idx1, idx2)) in enumerate(givensids(P))
         s, c = sincos(θs[nr])
 
-        col1 = mtx[:,idx1]
+        col1 = mtx[:, idx1]
+        vcl2 = @view mtx[:, idx2]
 
-        mtx[:, idx1] =  c * col1 + s * @view mtx[:,idx2]
-        mtx[:, idx2] = -s * col1 + c * @view mtx[:,idx2]
+        mtx[:, idx1] =  c * col1 + s * vcl2
+        mtx[:, idx2] = -s * col1 + c * vcl2
     end
     mtx * diagm(0 => sig)
 end
