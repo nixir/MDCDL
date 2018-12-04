@@ -1,8 +1,4 @@
 *.jl.cov
 *.jl.*.cov
 *.jl.mem
-*.ipynb
-/tmp
 /examples/results
-/examples/.ipynb_checkpoints
-/.vscode
