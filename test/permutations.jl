@@ -14,7 +14,7 @@ using Random
 
                 nBlocks = pvx.nBlocks
                 expctd = copy(pvx.data)
-                actual = MDCDL.ishiftdimspv(MDCDL.shiftdimspv(pvx.data, nBlocks[1]), nBlocks[1])
+                actual = MDCDL.irotatedimspv(MDCDL.rotatedimspv(pvx.data, nBlocks[1]), nBlocks[1])
                 @test actual == expctd
             end
         end
@@ -33,7 +33,7 @@ using Random
                 nBlocks = pvx.nBlocks
 
                 for blk in nBlocks
-                    pvdata = MDCDL.shiftdimspv(pvdata, blk)
+                    pvdata = MDCDL.rotatedimspv(pvdata, blk)
                 end
 
                 rpvx = MDCDL.PolyphaseVector(pvdata, nBlocks)
@@ -56,9 +56,29 @@ using Random
                 pvx = MDCDL.mdarray2polyphase(x, df)
                 nBlocks = pvx.nBlocks
 
-                permdata = MDCDL.shiftdimspv(pvx.data, nBlocks[1])
+                permdata = MDCDL.rotatedimspv(pvx.data, nBlocks[1])
                 permpvx = PolyphaseVector(permdata, ([nBlocks[2:d]..., nBlocks[1]]...,))
 
+                actual = MDCDL.polyphase2mdarray(permpvx, df)
+                @test actual == expctd
+            end
+        end
+    end
+
+    @testset "PolyphaseVector Type" begin
+        for d = 1:5
+            for n = 1:20
+                df = (fill(1,d)...,)
+                szx = rand(1:16, d)
+                x = rand(szx...)
+                nrot = rand(1:d)
+
+                expctd = permutedims(x, circshift(collect(1:d), -nrot))
+
+                pvx = MDCDL.mdarray2polyphase(x, df)
+                permpvx = foldl(1:nrot, init = pvx) do prevpvx, k
+                    MDCDL.rotatedimspv(prevpvx)
+                end
                 actual = MDCDL.polyphase2mdarray(permpvx, df)
                 @test actual == expctd
             end

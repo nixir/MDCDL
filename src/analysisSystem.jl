@@ -13,7 +13,7 @@ function analyze(nsolt::AbstractNsolt, px::AbstractMatrix, nBlocks::NTuple; kwar
     ty = initialStep(nsolt, px; kwargs...)
 
     nShifts = fld.(size(px, 2), nBlocks)
-    rotatedimsfcns = ([ t->shiftdimspv(t, blk) for blk in nBlocks ]...,)
+    rotatedimsfcns = ([ t->rotatedimspv(t, blk) for blk in nBlocks ]...,)
     exty = extendAtoms(nsolt, ty, nShifts, rotatedimsfcns; kwargs...)
     return shiftFilterSymmetry(nsolt, exty)
 end
@@ -22,9 +22,9 @@ end
 #     ty = initialStep(nsolt, px; kwargs...)
 #
 #     nShifts = fld.(size(px, 2), nBlocks)
-#     rotatedimsfcns = (t->copy(t), [ t->shiftdimspv(t, blk) for blk in nBlocks[1:end-1] ]...,)
+#     rotatedimsfcns = (t->copy(t), [ t->rotatedimspv(t, blk) for blk in nBlocks[1:end-1] ]...,)
 #     exty = extendAtoms(nsolt, ty, nShifts, rotatedimsfcns; kwargs...)
-#     exty = shiftdimspv(exty, nBlocks[end])
+#     exty = rotatedimspv(exty, nBlocks[end])
 #     return shiftFilterSymmetry(nsolt, exty)
 # end
 

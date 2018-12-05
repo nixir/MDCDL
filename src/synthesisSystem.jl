@@ -13,7 +13,7 @@ function synthesize(nsolt::AbstractNsolt, py::AbstractMatrix, nBlocks::NTuple; k
     sy = ishiftFilterSymmetry(nsolt, py)
 
     nShifts = fld.(size(sy, 2), nBlocks)
-    irotatedimsfcns = ([ t->ishiftdimspv(t, blk) for blk in nBlocks ]...,)
+    irotatedimsfcns = ([ t->irotatedimspv(t, blk) for blk in nBlocks ]...,)
     ty = concatenateAtoms(nsolt, sy, nShifts, irotatedimsfcns; kwargs...)
 
     finalStep(nsolt, ty; kwargs...)

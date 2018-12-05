@@ -12,6 +12,11 @@ function downsample(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D}=
     x[StepRange.(offset .+ 1, factor, size(x))...]
 end
 
+# function downsampledview(x::AbstractArray{T,D}, factor::NTuple{D}, offset::NTuple{D}=(fill(0,D)...,)) where {T,D}
+#     @assert all(0 .<= offset .< factor) "offset is out of range"
+#     @view x[StepRange.(offset .+ 1, factor, size(x))...]
+# end
+
 representationmatrix(f, sz::NTuple) = representationmatrix(f, sz...)
 function representationmatrix(f::Function, sz::Integer...)
     hcat([ setindex!(zeros(sz), 1, idx) |> f |> vec for idx in 1:prod(sz) ]...)
@@ -162,11 +167,23 @@ function polyphase2mdarray(x::PolyphaseVector{TX,D}, szBlock::NTuple{D,TS}) wher
     out
 end
 
-function shiftdimspv(x::AbstractMatrix, nBlocks::Integer)
+function rotatedimspv(x::PolyphaseVector{T,D}) where {T,D}
+    data = rotatedimspv(x.data, x.nBlocks[1])
+    nBlocks = (x.nBlocks[2:end]..., x.nBlocks[1])
+    return PolyphaseVector(data, nBlocks)
+end
+
+function irotatedimspv(x::PolyphaseVector{T,D}) where {T,D}
+    data = irotatedimspv(x.data, x.nBlocks[1])
+    nBlocks = (x.nBlocks[end], x.nBlocks[2:end]...)
+    return PolyphaseVector(data, nBlocks)
+end
+
+function rotatedimspv(x::AbstractMatrix, nBlocks::Integer)
     @views hcat([ x[:, (1:nBlocks:end) .+ idx] for idx = 0:nBlocks-1 ]...)
 end
 
-ishiftdimspv(x::AbstractMatrix, nBlocks::Integer) = shiftdimspv(x, fld(size(x, 2), nBlocks))
+irotatedimspv(x::AbstractMatrix, nBlocks::Integer) = rotatedimspv(x, fld(size(x, 2), nBlocks))
 
 @inline function unnormalized_butterfly!(xu::T, xl::T) where {T<:AbstractMatrix}
     tu, tl = (xu + xl, xu - xl)
