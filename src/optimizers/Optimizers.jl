@@ -43,11 +43,11 @@ module Optimizers
     (stp::Adam)(x0; kwargs...) = optimize(∇f, stp, x0; kwargs...)
 
     struct GlobalOpt <: AbstractOptimizer
-        ∇f
+        f
         iterations::Integer
         xtolrel::Real
         bounds::NTuple{2}
-        GlobalOpt(∇f; iterations=1, xtolrel=eps(), bounds=(-Float64(pi), Float64(pi))) = new(∇f, iterations, xtolrel, bounds)
+        GlobalOpt(f; iterations=1, xtolrel=eps(), bounds=(-Float64(pi), Float64(pi))) = new(f, iterations, xtolrel, bounds)
     end
 
     struct CRS <: AbstractOptimizer
@@ -100,14 +100,14 @@ module Optimizers
         opt = Opt(:GN_MLSL_LDS, length(x0))
         lower_bounds!(opt, gopt.bounds[1]*ones(size(x0)))
         upper_bounds!(opt, gopt.bounds[2]*ones(size(x0)))
-        xtol_rel!(opt, nlopt.xtolrel)
+        xtol_rel!(opt, gopt.xtolrel)
         xtol_abs!(opt, eps())
-        maxeval!(opt, nlopt.iterations)
+        maxeval!(opt, gopt.iterations)
 
-        min_objective!(opt, f)
-        minf, x_opt, ret = optimize(opt, x0)
+        min_objective!(opt, gopt.f)
+        minf, x_opt, ret = NLopt.optimize(opt, x0)
 
-        return x
+        return x_opt
     end
 
     function (gopt::CRS)(x0; kwargs...)
