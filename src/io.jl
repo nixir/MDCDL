@@ -76,7 +76,11 @@ function create_nsolt_by_dict(::Type{NS}, T::Type, dict::Dict) where {NS<:Abstra
     df = get_nsolt_config(NS, dict, "decimationFactor")
     ord = get_nsolt_config(NS, dict, "polyphaseOrder")
     nch = get_nsolt_config(NS, dict, "nChannels")
-    perm = get_nsolt_config(NS, dict, "perm")
+    perm = if haskey(dict, "perm")
+        get_nsolt_config(NS, dict, "perm")
+    else
+        (collect(1:length(df))...,)
+    end
 
     NS(T, df, ord, nch, perm=perm)
 end
@@ -146,7 +150,7 @@ function get_nsolt_config(::Type{NS}, ::Val{:nChannels}, data) where {NS<:Rnsolt
     (Int.(data)...,)
 end
 
-function get_nsolt_config(::Type{NS}, ::Val{:perm}, data) where {NS<:Rnsolt}
+function get_nsolt_config(::Type{NS}, ::Val{:perm}, data) where {NS<:AbstractNsolt}
     (Int.(data)...,)
 end
 
