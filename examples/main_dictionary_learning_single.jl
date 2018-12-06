@@ -2,6 +2,7 @@ using MDCDL
 using LinearAlgebra
 
 using TestImages: testimage
+using Images: imresize
 using Plots: plot, png
 
 using Base.Filesystem
@@ -38,10 +39,12 @@ function main()
         iterations = 1000,
         nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution,)
     # options for dictionary update
-    optimizer = Optimizers.Steepest
-    optimizer_options = (
-        rate = 1e-4,
-        iterations=1,)
+    # optimizer = Optimizers.Steepest
+    # optimizer_options = (
+    #     rate = 1e-4,
+    #     iterations=1,)
+    optimizer = Optimizers.CRS
+    optimizer_options = ()
 
     # general options of dictionary learning
     options = ( epochs  = 1000,

@@ -11,6 +11,20 @@ function updateDictionary(optr_t::Type{AG}, opt_params, cb::DT, x::AbstractArray
     return (params_opt, loss_opt,)
 end
 
+function updateDictionary(nlopt_t::Type{Optimizers.CRS}, opt_params, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
+    vecpm, pminfo = decompose_params(DT, params)
+    f(t, grad=nothing) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
+
+
+    nlopt = nlopt_t(f; opt_params...)
+
+    vecpm_opt = nlopt(vecpm)
+    minf = f(vecpm_opt)
+    params_opt = compose_params(DT, vecpm_opt, pminfo)
+    # vlevel >= 0 && println("fopt(θ) = $minf, f(θ) = $(f(minx))")
+    return (params_opt, minf)
+end
+
 function updateDictionary(nlopt_t::Type{Optimizers.GlobalOpt}, opt_params, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
     nlopt = nlopt_t(; opt_params...)
     vecpm, pminfo = decompose_params(DT, params)
