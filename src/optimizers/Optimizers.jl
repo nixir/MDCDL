@@ -44,10 +44,11 @@ module Optimizers
 
     struct GlobalOpt <: AbstractOptimizer
         f
+        alg::Symbol
         iterations::Integer
         xtolrel::Real
         bounds::NTuple{2}
-        GlobalOpt(f; iterations=1, xtolrel=eps(), bounds=(-Float64(pi), Float64(pi))) = new(f, iterations, xtolrel, bounds)
+        GlobalOpt(f; alg=:GN_MLSL_LDS, iterations=1, xtolrel=eps(), bounds=(-Float64(pi), Float64(pi))) = new(f, alg, iterations, xtolrel, bounds)
     end
 
     struct CRS <: AbstractOptimizer
@@ -97,7 +98,7 @@ module Optimizers
     end
 
     function (gopt::GlobalOpt)(x0; kwargs...)
-        opt = Opt(:GN_MLSL_LDS, length(x0))
+        opt = Opt(gopt.alg, length(x0))
         lower_bounds!(opt, gopt.bounds[1]*ones(size(x0)))
         upper_bounds!(opt, gopt.bounds[2]*ones(size(x0)))
         xtol_rel!(opt, gopt.xtolrel)
