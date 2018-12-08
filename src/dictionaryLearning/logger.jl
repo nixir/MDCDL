@@ -4,6 +4,7 @@ using DataFrames
 using FileIO
 using Base.Filesystem: joinpath
 using Dates: now
+using Statistics
 
 savesettings(::Nothing, args...; kwargs...) = nothing
 function savesettings(dirname::AbstractString, nsolt::AbstractNsolt{T,D}, trainingset::AbstractArray; vlevel=0, epochs, sc_options=(), du_options=(), filename="settings", kwargs...) where {T,D}
@@ -73,6 +74,19 @@ function savelogs(  dirname::AbstractString, target, epoch::Integer,
     open(joinpath(dirname, cfg_du.filename), append=true) do io
         dat = DataFrame([ epoch timestamp loss_dictionary_update...], cfg_du.csvheader)
         save(Stream(format"CSV", io), dat, header = false)
+    end
+
+    repname = "report.txt"
+    open(joinpath(dirname, repname), write=true) do io
+        txt = """
+            time = $timestamp
+            #epoch = $epoch
+            sum of sparse coding loss = $(sum(loss_sparse_coding))
+            var. of sparse coding loss = $(var(loss_sparse_coding))
+            sum of dictionary update loss $(sum(loss_dictionary_update))
+            var. of sparse coding loss = $(var(loss_dictionary_update))
+        """
+        print(io, txt)
     end
 end
 
