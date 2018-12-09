@@ -59,14 +59,22 @@ module Optimizers
         CRS(f; iterations=1, xtolrel=eps(), bounds=(-Float64(pi), Float64(pi))) = new(f, iterations, xtolrel, bounds)
     end
 
+    struct SGD <: AbstractGradientDescent
+        ∇f
+        iterations::Integer
+        rate::Function
+        SGD(∇f; iterations=1, rate=t->1e-3) = new(∇f, iterations, rate)
+    end
+    (stp::SGD)(x0; kwargs...) = optimize(stp, x0; kwargs...)
+
     iterations(abopt::AbstractOptimizer) = abopt.iterations
 
-    function optimize(abopt::AbstractGradientDescent, x0::AbstractArray; isverbose::Bool=false)
+    function optimize(abopt::AbstractGradientDescent, x0::AbstractArray; isverbose::Bool=false, kwargs...)
         x = x0
-        state = initialstate(abopt, x0)
+        state = initialstate(abopt, x0; kwargs...)
         for k = 1:iterations(abopt)
             grad = gradient(abopt, x0)
-            Δx, state = updatestep(abopt, grad, state, k)
+            Δx, state = updatestep(abopt, grad, state, k; kwargs...)
             x = x - Δx
 
             # if norm(Δx) < eps; break
@@ -77,17 +85,18 @@ module Optimizers
 
     gradient(abopt::AbstractOptimizer, x0) = abopt.∇f(x0)
 
-    initialstate(::Steepest, args...) = ()
-    initialstate(::AdaGrad, args...) = 0
-    initialstate(adam::Adam, x0) = (zero(x0), 0)
+    initialstate(::Steepest, args...; kwargs...) = ()
+    initialstate(::AdaGrad, args...; kwargs...) = 0
+    initialstate(adam::Adam, x0; kwargs...) = (zero(x0), 0)
+    initialstate(sgd::SGD, args...; epoch=1, kwargs...) = (sgd.rate(epoch))
 
-    updatestep(stp::Steepest, grad, args...) = (stp.rate .* grad, ())
-    function updatestep(agd::AdaGrad, grad, state, v)
+    updatestep(stp::Steepest, grad, args...; kwargs...) = (stp.rate .* grad, ())
+    function updatestep(agd::AdaGrad, grad, v, itr; kwargs...)
         v = v + norm(grad)^2
         Δx = (agd.rate / (sqrt(v) + agd.ϵ)) * grad
         (upm, v)
     end
-    function updatestep(adam::Adam, grad, (m, v), itr)
+    function updatestep(adam::Adam, grad, (m, v), itr; kwargs...)
         m = adam.β1 * m + (1 - adam.β1) * grad
         v = adam.β2 * v + (1 - adam.β2) * norm(grad)^2
         m̂ = m / (1 - adam.β1^(itr))
@@ -95,6 +104,9 @@ module Optimizers
 
         Δx = adam.rate * m̂ / (sqrt(v̂) + adam.ϵ)
         (Δx, (m, v))
+    end
+    function updatestep(sgd::SGD, grad, rate, itr; kwargs...)
+        (rate .* grad, rate)
     end
 
     function (gopt::GlobalOpt)(x0; kwargs...)

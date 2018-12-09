@@ -10,13 +10,13 @@ using Dates: format, now
 function main()
     ########## Configurations #########
     # choose NSOLT type: (Rnsolt | Cnsolt)>
-    Nsolt = Rnsolt
+    Nsolt = Cnsolt
     # TP := eltype(Nsolt) (<:AbstractFloat)
     TP = Float64
     # decimation factor: (<:NTuple{D,Int} where D is #dims)
     df = (2,2)
     # polyphase order: (<:NTuple{D,Int} where D)
-    ord = (4,4)
+    ord = (2,2)
     # number of channels: (<:Union{Integer,Tuple{Int,Int}} for Rnsolt)
     #                     (<:Integer for Cnsolt)
     nch = 8
@@ -40,10 +40,14 @@ function main()
         iterations = 400,
         nonzeros = trunc(Int, sparsity * prod(szx)), filter_domain=:convolution,)
     # options for dictionary update
-    optimizer = Optimizers.Steepest
+    # optimizer = Optimizers.Steepest
+    # optimizer_options = (
+    #     rate = 1e-4,
+    #     iterations=10,)
+    optimizer = Optimizers.SGD
     optimizer_options = (
-        rate = 1e-4,
-        iterations=10,)
+        rate = t->1e-2 * exp(-1e3*(t-1)),
+    )
 
     # general options of dictionary learning
     options = ( epochs  = 1000,

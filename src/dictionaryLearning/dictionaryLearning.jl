@@ -34,7 +34,7 @@ function train!(target::LearningTarget, trainingSet::AbstractArray;
             x = gettrainingdata(trainingSet[k])
             shapek = getvalidshape(shape, target, sparsecoder, optimizer, x)
 
-            aresult = trainPerData!(target, x, params_dic;
+            aresult = trainPerData!(target, x, params_dic, itr;
                                     shape=shapek, sparsecoder=sparsecoder,
                                     sparsecoder_options=sparsecoder_options,
                                     optimizer=optimizer,
@@ -60,7 +60,7 @@ function train!(target::LearningTarget, trainingSet::AbstractArray;
     return setParamsDictionary!(target, params_dic)
 end
 
-function trainPerData!(target, x, params_dic_init;
+function trainPerData!(target, x, params_dic_init, epoch;
                         sparsecoder=SparseCoders.IHT,
                         sparsecoder_options=(),
                         optimizer=Optimizers.Steepest,
@@ -68,11 +68,11 @@ function trainPerData!(target, x, params_dic_init;
                         shape, vlevel)
 
     vlevel >= 3 && println("start Sparse Coding Stage.")
-    sparse_coefs, loss_sp = stepSparseCoding(sparsecoder, sparsecoder_options, target, x; shape=shape, vlevel=vlevel)
+    sparse_coefs, loss_sp = stepSparseCoding(sparsecoder, sparsecoder_options, target, x; epoch=epoch, shape=shape, vlevel=vlevel)
     vlevel >= 3 && println("end Sparse Coding Stage.")
 
     vlevel >= 3 && println("start Dictionary Update.")
-    params_dic, loss_du = updateDictionary(optimizer, optimizer_options, target, x, sparse_coefs, params_dic_init; shape=shape, vlevel=vlevel)
+    params_dic, loss_du = updateDictionary(optimizer, optimizer_options, target, x, sparse_coefs, params_dic_init; epoch=epoch, shape=shape, vlevel=vlevel)
     vlevel >= 3 && println("end Dictionary Update Stage.")
 
     vlevel >= 2 && println("epoch #$itr, data #$k: loss(Sparse coding) = $(loss_sps[k]), loss(Dic. update) = $(loss_dus[k]).")
