@@ -4,7 +4,7 @@ function updateDictionary(optr_t::Type{AG}, opt_params, cb::DT, x::AbstractArray
     ∇f(t) = ForwardDiff.gradient(f, t)
     optr = optr_t(∇f; opt_params...)
 
-    vecpm_opt = optr(vecpm)
+    vecpm_opt = optr(vecpm; kwargs...)
 
     params_opt = compose_params(DT, vecpm_opt, pminfo)
     loss_opt = f(vecpm_opt)
@@ -14,7 +14,6 @@ end
 function updateDictionary(nlopt_t::Type{Optimizers.CRS}, opt_params, cb::DT, x::AbstractArray, hy::AbstractArray, params; shape=Shapes.Vec(size(x)), vlevel::Integer=0, kwargs...) where {DT<:LearningTarget}
     vecpm, pminfo = decompose_params(DT, params)
     f(t, grad=nothing) = lossfcn(cb, x, hy, compose_params(DT, t, pminfo); shape=shape)
-
 
     nlopt = nlopt_t(f; opt_params...)
 
