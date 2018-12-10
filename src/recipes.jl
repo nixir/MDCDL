@@ -142,7 +142,7 @@ end
 
 function apply_colorscheme(::Type{Val{:polar}}, x::AbstractArray{T}, cscheme::AbstractVector{C}, rangescale::Tuple{R,R}, atomscale::Integer) where {T,C<:Colorant,R<:Real}
     mxv = norm(rangescale)
-    rx = get(cscheme, abs.(x), (0, mxv))
+    rx = get(cscheme, abs.(x), (0.0, mxv))
     ax = RGB.(HSV.(x .|> angle .|> rad2deg .|> wrapdeg, 1.0, abs.(x) / mxv))
     resize_by_nn.((rx, ax), atomscale)
 end

@@ -36,7 +36,7 @@ function (ista::ISTA)(x0; iterations=ista.iterations, verboseFunction::Function=
             break
         end
     end
-    xₖ
+    (xₖ, ())
 end
 
 struct FISTA
@@ -74,5 +74,5 @@ function (fista::FISTA)(x0; iterations=fista.iterations, verboseFunction::Functi
             break
         end
     end
-    xₖ
+    (xₖ, ())
 end

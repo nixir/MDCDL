@@ -38,12 +38,12 @@ function (pds::PDS)(x0, v0=pds.L(x0); iterations=pds.iterations, verboseFunction
         q = cproxG(v + pds.L(2.0*p - xₖ₋₁), pds.σ^-1)
 
         # (x, v) <- (x, v) + λ((p,q) - (x,v)) for　λ == 1
-        xₖ, v = (x, v) + λ .* (p - x, q - v)
+        xₖ, v = (x, v) .+ λ .* (p - x, q - v)
         # xₖ, v = p, q
 
         errx = norm(xₖ - xₖ₋₁)^2 /2
         verboseFunction(nItr, xₖ, errx)
         # TODO: break condition
     end
-    xₖ
+    (xₖ, ())
 end

@@ -62,8 +62,6 @@ end
 # TODO:
 function extendAtoms(nsolt::RnsoltTypeII, px::AbstractMatrix, nShifts::NTuple, rotatedimsfcns; border=:circular)
     mnP, mxP = minmax(nsolt.nChannels...)
-    # params = (rotatedimsfcns, nShifts, nsolt.nStages, nsolt.Wdks, nsolt.Udks)
-    # foreach(params...) do rdfcn, nShifts[d], nstage, Wks, Uks
     for d in nsolt.perm
         px = rotatedimsfcns[d](px)
 
