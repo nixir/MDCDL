@@ -52,6 +52,17 @@ similar_dictionary(target::Multiscale, params::NTuple{N}) where {N} = Multiscale
 getParamsDictionary(nsolt::AbstractNsolt) = getrotations(nsolt)
 setParamsDictionary!(nsolt::AbstractNsolt, pm::NTuple{2}) = setrotations!(nsolt, pm...)
 
+function getParamsDictionary(nsolt::Cnsolt)
+    θ, μ = getrotations(nsolt)
+    ([angle.(diag(nsolt.Φ)); θ], μ)
+end
+
+function setParamsDictionary(nsolt::Cnsolt, (ϕnθ, μ))
+    P = nchannels(nsolt)
+    nsolt.Φ .= Diagonal(cis.(ϕnθ[1:P]))
+    return setrotations!(nsolt, ϕnθ[(P+1):end], μ)
+end
+
 getParamsDictionary(targets::Multiscale) = map(t->getParamsDictionary(t), targets.filterbanks)
 setParamsDictionary!(targets::Multiscale, pm::NTuple) = map((t,p)->setParamsDictionary!(t, p), targets.filterbanks, pm)
 
