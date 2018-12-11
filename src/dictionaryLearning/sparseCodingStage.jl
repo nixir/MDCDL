@@ -14,7 +14,7 @@ function stepSparseCoding(istasc::Type{TI}, options, cb::DT, x::AbstractArray; s
     ts = createTransform(cb, shape)
     # number of non-zero coefficients
     ∇f = (_y) -> begin
-        -analyze(ts, x - synthesize(ts, _y))
+        -real.(analyze(ts, x - synthesize(ts, _y)))
     end
     ista = istasc(∇f; options...)
 
