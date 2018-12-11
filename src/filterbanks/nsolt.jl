@@ -344,7 +344,7 @@ function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}
 
     cn = CnsoltTypeI(T, decimations(rn), orders(rn), nchannels(rn))
 
-    cn.FJ .= diagm( 0 => [ ones(cM); 1im * ones(fM) ] ) * rn.CJ
+    # cn.FJ .= diagm( 0 => [ ones(cM); 1im * ones(fM) ] ) * rn.CJ
 
     cn.V0 .= begin
         pms = [ collect(1:cM)...,
@@ -356,7 +356,10 @@ function CnsoltTypeI(rn::RnsoltTypeI{T}) where {T}
             setindex!(mtx, 1, idx, pmi)
         end
 
-        cat(rn.W0, rn.U0, dims=[1,2]) * pmtx
+        # cat(rn.W0, rn.U0, dims=[1,2]) * pmtx
+        sgnmtx = diagm( 0 => [ ones(cM); 1im * ones(fM) ] )
+        C0 = cat(real( sgnmtx * rn.CJ * cn.FJ'), Matrix(I, (size(cn.V0) .- M)...), dims=[1,2])
+        cat(rn.W0, rn.U0, dims=[1,2]) * pmtx * C0
     end
 
     foreach(cn.Wdks) do cWs
