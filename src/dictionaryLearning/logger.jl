@@ -84,7 +84,7 @@ function savelogs(  dirname::AbstractString, target, epoch::Integer,
             sum of sparse coding loss = $(sum(loss_sparse_coding))
             var. of sparse coding loss = $(var(loss_sparse_coding))
             sum of dictionary update loss $(sum(loss_dictionary_update))
-            var. of sparse coding loss = $(var(loss_dictionary_update))
+            var. of dictionary update loss = $(var(loss_dictionary_update))
         """
         print(io, txt)
     end
